@@ -1,3 +1,9 @@
+## [1.2.4](https://github.com/SkeLLLa/klopit/compare/v1.2.3...v1.2.4) (2026-04-12)
+
+### 🛠 Fixes
+
+* **routing:** 404 with trailing slash ([20c4259](https://github.com/SkeLLLa/klopit/commit/20c42594271b1fb98fef0aded11ef50adfd3b3d3))
+
 ## [1.2.3](https://github.com/SkeLLLa/klopit/compare/v1.2.2...v1.2.3) (2026-04-12)
 
 ### 🛠 Fixes
