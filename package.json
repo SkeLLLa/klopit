@@ -105,6 +105,9 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "cookie": "^0.7.0"
+    }
   }
 }
