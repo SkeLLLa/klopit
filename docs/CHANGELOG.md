@@ -1,3 +1,13 @@
+## [1.0.2](https://github.com/SkeLLLa/klopit/compare/v1.0.1...v1.0.2) (2026-04-12)
+
+### 🛠 Fixes
+
+* build release ([ef67849](https://github.com/SkeLLLa/klopit/commit/ef67849b28e65ae598831271c4454563a443efcb))
+
+### 🧾 Other
+
+* bump mise tools ([73dceb4](https://github.com/SkeLLLa/klopit/commit/73dceb4b022862b574141c67360bcb1d0efd273f))
+
 ## [1.0.1](https://github.com/SkeLLLa/klopit/compare/v1.0.0...v1.0.1) (2026-04-12)
 
 ### 🛠 Fixes
