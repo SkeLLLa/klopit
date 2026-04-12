@@ -30,20 +30,23 @@
     const overrides = overridesQuery.current ?? [];
 
     const overrideMap = new Map(overrides.map((o) => [o.symbol, o.country]));
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable inside $derived.by, not reactive state
     const symbolMap = new Map<string, { isin?: string }>();
 
     for (const t of trades) {
-      if (!symbolMap.has(t.symbol)) {
+      const existing = symbolMap.get(t.symbol);
+      if (!existing) {
         symbolMap.set(t.symbol, { isin: t.isin });
-      } else if (t.isin && !symbolMap.get(t.symbol)!.isin) {
-        symbolMap.get(t.symbol)!.isin = t.isin;
+      } else if (t.isin && !existing.isin) {
+        existing.isin = t.isin;
       }
     }
     for (const d of dividends) {
-      if (!symbolMap.has(d.symbol)) {
+      const existing = symbolMap.get(d.symbol);
+      if (!existing) {
         symbolMap.set(d.symbol, { isin: d.isin });
-      } else if (d.isin && !symbolMap.get(d.symbol)!.isin) {
-        symbolMap.get(d.symbol)!.isin = d.isin;
+      } else if (d.isin && !existing.isin) {
+        existing.isin = d.isin;
       }
     }
 
@@ -97,7 +100,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each entries as entry}
+          {#each entries as entry (entry.symbol)}
             <tr class="border-b border-slate-100 dark:border-slate-700">
               <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100"
                 >{entry.symbol}</td

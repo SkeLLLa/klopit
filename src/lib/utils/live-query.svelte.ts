@@ -11,7 +11,7 @@ export function useLiveQuery<T>(querier: () => T | Promise<T>): {
     // Call querier synchronously so Svelte tracks any reactive reads
     // (e.g. $derived sessionId) that happen before the first await.
     // This ensures the effect re-runs when those dependencies change.
-    querier();
+    void querier();
 
     const observable: Observable<T> = liveQuery(querier);
     const subscription = observable.subscribe({

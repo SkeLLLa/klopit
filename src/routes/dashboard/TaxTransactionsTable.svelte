@@ -120,7 +120,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each sellTrades as trade}
+          {#each sellTrades as trade (trade.symbol + trade.datetime)}
             {@const taxOnTrade = Math.max(trade.gainLossPln, 0) * TAX_RATE}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
@@ -216,7 +216,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each corporateActionTrades as trade}
+          {#each corporateActionTrades as trade (trade.symbol + trade.datetime)}
             {@const taxOnTrade = Math.max(trade.gainLossPln, 0) * TAX_RATE}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
@@ -308,7 +308,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each dividendResults as div}
+          {#each dividendResults as div (div.symbol + div.date)}
             {@const taxPl = div.amountPln * TAX_RATE}
             {@const deductible = Math.min(div.withholdingTaxPln, taxPl)}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}

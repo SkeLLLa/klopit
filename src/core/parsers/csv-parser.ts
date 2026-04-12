@@ -67,16 +67,16 @@ export abstract class CsvStatementParser implements StatementParser {
     // appear AFTER other sections in the CSV, so ISINs might be missing
     // at parse time but available now.
     for (const t of this.trades) {
-      if (!t.isin) t.isin = this.symbolToIsin.get(t.symbol);
+      t.isin ??= this.symbolToIsin.get(t.symbol);
     }
     for (const d of this.dividends) {
-      if (!d.isin) d.isin = this.symbolToIsin.get(d.symbol);
+      d.isin ??= this.symbolToIsin.get(d.symbol);
     }
     for (const w of this.withholdingTaxes) {
-      if (!w.isin) w.isin = this.symbolToIsin.get(w.symbol);
+      w.isin ??= this.symbolToIsin.get(w.symbol);
     }
     for (const ca of this.corporateActions) {
-      if (!ca.isin) ca.isin = this.symbolToIsin.get(ca.symbol);
+      ca.isin ??= this.symbolToIsin.get(ca.symbol);
     }
 
     // Year inference fallback — max year from all parsed dates

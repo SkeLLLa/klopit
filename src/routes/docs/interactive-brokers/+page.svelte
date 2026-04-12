@@ -16,6 +16,7 @@
     <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
       {m.docs_ib_export_title()}
     </h2>
+    <!-- eslint-disable svelte/no-at-html-tags -- i18n messages are compile-time constants from Paraglide, not user input -->
     <ol class="list-decimal space-y-2 pl-6 text-slate-700 dark:text-slate-300">
       <li>{@html m.docs_ib_step1()}</li>
       <li>{@html m.docs_ib_step2()}</li>
@@ -23,6 +24,7 @@
       <li>{@html m.docs_ib_step4()}</li>
       <li>{@html m.docs_ib_step5()}</li>
     </ol>
+    <!-- eslint-enable svelte/no-at-html-tags -->
   </section>
 
   <section class="space-y-3">

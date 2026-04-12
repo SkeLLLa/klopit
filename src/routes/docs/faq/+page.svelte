@@ -53,7 +53,8 @@
     },
   ];
 
-  const jsonLd = {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used in svelte:head template
+  const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: faqs.map((faq) => ({
@@ -68,6 +69,7 @@
 </script>
 
 <svelte:head>
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data from compile-time i18n, not user input -->
   <script type="application/ld+json">
     {@html JSON.stringify(jsonLd)}
   </script>
@@ -76,7 +78,8 @@
 <div class="space-y-4">
   <h1 class="text-3xl font-bold">{m.nav_faq()}</h1>
 
-  {#each faqs as { question, answer }}
+  <!-- eslint-disable svelte/no-at-html-tags -- i18n messages are compile-time constants from Paraglide, not user input -->
+  {#each faqs as { question, answer }, i (i)}
     <details class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <summary class="cursor-pointer text-lg font-semibold text-slate-900 dark:text-slate-100">
         {@html question()}
@@ -84,4 +87,5 @@
       <p class="mt-3 text-slate-700 dark:text-slate-300">{@html answer()}</p>
     </details>
   {/each}
+  <!-- eslint-enable svelte/no-at-html-tags -->
 </div>

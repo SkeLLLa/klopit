@@ -73,13 +73,15 @@ void describe('buildPitZg', () => {
     const result = buildPitZg({ trades, dividends: [] });
     assert.equal(result.length, 2);
 
-    const us = result.find((r) => r.country === 'US')!;
+    const us = result.find((r) => r.country === 'US');
+    assert.ok(us);
     assert.equal(us.proceedsPln, 60000);
     assert.equal(us.costPln, 38000);
     assert.equal(us.gainPln, 22000);
     assert.equal(us.lossPln, 0);
 
-    const de = result.find((r) => r.country === 'DE')!;
+    const de = result.find((r) => r.country === 'DE');
+    assert.ok(de);
     assert.equal(de.proceedsPln, 5000);
     assert.equal(de.costPln, 6000);
     assert.equal(de.gainPln, 0);
@@ -96,13 +98,15 @@ void describe('buildPitZg', () => {
     const result = buildPitZg({ trades: [], dividends });
     assert.equal(result.length, 2);
 
-    const us = result.find((r) => r.country === 'US')!;
+    const us = result.find((r) => r.country === 'US');
+    assert.ok(us);
     assert.equal(us.dividendIncomePln, 300);
     assert.equal(us.foreignTaxPaidPln, 50);
     // Deductible: min(30, 100*0.19=19) + min(20, 200*0.19=38) = 19 + 20 = 39
     assert.ok(Math.abs(us.deductibleForeignTaxPln - 39) < 0.01);
 
-    const de = result.find((r) => r.country === 'DE')!;
+    const de = result.find((r) => r.country === 'DE');
+    assert.ok(de);
     assert.equal(de.dividendIncomePln, 50);
     assert.equal(de.foreignTaxPaidPln, 5);
     assert.ok(Math.abs(de.deductibleForeignTaxPln - 5) < 0.01);

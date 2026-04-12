@@ -72,7 +72,7 @@
 
       <!-- Country children -->
       {#if pitZgExpanded}
-        {#each countries as country}
+        {#each countries as country (country)}
           <button
             class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 pl-12 text-left {isActive({ pitZg: country }) ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}"
             onclick={() => onselect({ pitZg: country })}
@@ -112,7 +112,7 @@
     }}
   >
     <option value="pit38">PIT-38</option>
-    {#each countries as country}
+    {#each countries as country (country)}
       <option value="pitzg:{country}">PIT/ZG — {country}</option>
     {/each}
   </select>

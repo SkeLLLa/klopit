@@ -10,7 +10,7 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { sessionState } from '$lib/state/session.svelte.js';
   import { db } from '$lib/db.js';
-  import type { TaxSummaryRecord, TradeResultRecord, DividendResultRecord } from '$lib/db.js';
+  import type { TradeResultRecord, DividendResultRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
 
   $effect(() => {

@@ -12,7 +12,6 @@
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
   import PitZgView from './PitZgView.svelte';
-  import type { PitZgFields } from '../../core/types.js';
   import SectionC from './SectionC.svelte';
   import SectionD from './SectionD.svelte';
   import SectionE from './SectionE.svelte';
