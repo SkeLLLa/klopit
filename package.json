@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
-    "@fontsource/outfit": "^5.2.8",
+    "@fontsource/onest": "^5.2.11",
     "@unovis/svelte": "^1.6.4",
     "@unovis/ts": "^1.6.4",
     "dexie": "^4.4.2",

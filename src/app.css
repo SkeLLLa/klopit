@@ -1,8 +1,8 @@
 @import 'tailwindcss';
-@import '@fontsource/outfit/400.css';
-@import '@fontsource/outfit/500.css';
-@import '@fontsource/outfit/600.css';
-@import '@fontsource/outfit/700.css';
+@import '@fontsource/onest/400.css';
+@import '@fontsource/onest/500.css';
+@import '@fontsource/onest/600.css';
+@import '@fontsource/onest/700.css';
 @import '@fontsource/jetbrains-mono/400.css';
 
 @custom-variant dark (&:is(.dark *));
@@ -32,6 +32,6 @@
 }
 
 @theme {
-  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-sans: 'Onest', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
