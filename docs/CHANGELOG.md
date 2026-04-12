@@ -1,3 +1,9 @@
+## [1.1.2](https://github.com/SkeLLLa/klopit/compare/v1.1.1...v1.1.2) (2026-04-12)
+
+### 🛠 Fixes
+
+* **metainfo:** incorrect urls ([72114c4](https://github.com/SkeLLLa/klopit/commit/72114c4d562307f740a8c821474bd82e5e14bdd3))
+
 ## [1.1.1](https://github.com/SkeLLLa/klopit/compare/v1.1.0...v1.1.1) (2026-04-12)
 
 ### 🛠 Fixes
