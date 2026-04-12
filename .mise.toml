@@ -1,6 +1,16 @@
+[settings]
+lockfile = true
+http_retries = 3
+pin = true
+fetch_remote_versions_cache = "4h"
+use_versions_host_track = false
+
+[settings.status]
+missing_tools = "always"
+
 [tools]
-node = "24.14.0"
-pnpm = "10.32.1"
+node = "24.14.1"
+pnpm = "10.33.0"
 mkcert = "1.4.4"
 
 [tasks.sync-versions]
