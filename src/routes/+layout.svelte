@@ -8,11 +8,23 @@
   import Sidebar from '$lib/components/layout/Sidebar.svelte';
   import Header from '$lib/components/layout/Header.svelte';
   import Footer from '$lib/components/layout/Footer.svelte';
+  import Breadcrumb from '$lib/components/ui/Breadcrumb.svelte';
 
   let { children } = $props();
 
   const locale = $derived(getLocale());
   const currentPath = $derived(page.url.pathname);
+
+  const publisher = {
+    '@type': 'Organization',
+    name: 'kloPIT',
+    url: 'https://klopit.co.pl/',
+    logo: {
+      '@type': 'ImageObject',
+      url: 'https://klopit.co.pl/icons/icon-512.svg',
+    },
+    sameAs: ['https://github.com/SkeLLLa/klopit'],
+  };
 
   const jsonLd = $derived(
     `<script type="application/ld+json">${JSON.stringify({
@@ -26,6 +38,7 @@
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'PLN' },
       inLanguage: locale,
       browserRequirements: 'Requires JavaScript',
+      publisher,
     })}${'</'}script>`,
   );
 
@@ -99,6 +112,7 @@
     <Header />
     <main class="flex-1 overflow-y-auto p-5">
       <div class="mx-auto max-w-6xl">
+        <Breadcrumb />
         {@render children()}
       </div>
     </main>
