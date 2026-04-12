@@ -33,14 +33,18 @@
 
 {#each section.items as item (item.labelKey)}
   <NavItem
-    href={item.children ? '#' : localizeHref(item.href)}
+    href={item.children
+      ? sidebar.collapsed
+        ? localizeHref(item.href)
+        : '#'
+      : localizeHref(item.href)}
     label={t(item.labelKey)}
     iconName={item.icon}
     active={isActive(item.href)}
     collapsed={sidebar.collapsed}
-    hasChildren={!!item.children}
+    hasChildren={!sidebar.collapsed && !!item.children}
     expanded={!!expandedItems[item.labelKey]}
-    onclick={item.children ? () => toggleExpand(item.labelKey) : undefined}
+    onclick={!sidebar.collapsed && item.children ? () => toggleExpand(item.labelKey) : undefined}
   />
 
   {#if item.children && expandedItems[item.labelKey] && !sidebar.collapsed}

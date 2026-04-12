@@ -17,7 +17,7 @@ export const navigation: NavSection[] = [
       { labelKey: 'nav_home', href: '/', icon: 'House' },
       {
         labelKey: 'nav_docs',
-        href: '#',
+        href: '/docs',
         icon: 'FolderOpen',
         children: [
           {
