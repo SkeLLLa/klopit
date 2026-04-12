@@ -52,8 +52,11 @@
   <h1 class="mb-4 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
     {m.home_welcome()}
   </h1>
-  <p class="mb-5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+  <p class="mb-2 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
     {m.home_description()}
+  </p>
+  <p class="mb-5 text-[11px] italic text-slate-400 dark:text-slate-500">
+    {m.home_name_origin()}
   </p>
 
   <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">

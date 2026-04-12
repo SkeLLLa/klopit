@@ -59,6 +59,13 @@
       {m.about_intro()}
     </p>
 
+    <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+      <h3 class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{m.about_name_origin_title()}</h3>
+      <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+        {m.about_name_origin()}
+      </p>
+    </div>
+
     <ul class="mt-4 space-y-1">
       {#each KLO_ACRONYMS as acronym (acronym)}
         <li class="text-sm text-slate-500 dark:text-slate-400">
