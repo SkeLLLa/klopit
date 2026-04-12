@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/SkeLLLa/klopit/compare/v1.2.1...v1.2.2) (2026-04-12)
+
+### 🛠 Fixes
+
+* navigation on mobile ([d342ec7](https://github.com/SkeLLLa/klopit/commit/d342ec79bdae8faed8716b71408fd419c514413e))
+
 ## [1.2.1](https://github.com/SkeLLLa/klopit/compare/v1.2.0...v1.2.1) (2026-04-12)
 
 ### 🛠 Fixes
