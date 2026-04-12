@@ -1,3 +1,13 @@
+## [1.1.1](https://github.com/SkeLLLa/klopit/compare/v1.1.0...v1.1.1) (2026-04-12)
+
+### 🛠 Fixes
+
+* menu reorder ([df0a40a](https://github.com/SkeLLLa/klopit/commit/df0a40a10e2bcb5bc4eeb9e5dfbf51560148243b))
+
+### 🧾 Other
+
+* **deps-dev:** bump the all-minor-patch group with 2 updates ([ae86cae](https://github.com/SkeLLLa/klopit/commit/ae86cae0248a3b52903da2f90fdaa85797ef5406))
+
 ## [1.1.0](https://github.com/SkeLLLa/klopit/compare/v1.0.2...v1.1.0) (2026-04-12)
 
 ### 🛠 Fixes
