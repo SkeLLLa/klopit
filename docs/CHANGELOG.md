@@ -1,3 +1,9 @@
+## [1.2.3](https://github.com/SkeLLLa/klopit/compare/v1.2.2...v1.2.3) (2026-04-12)
+
+### 🛠 Fixes
+
+* **navbar:** reload flickering and highlight ([2c696ad](https://github.com/SkeLLLa/klopit/commit/2c696ad578f9ba81990bde0b5b7005902599fcf2))
+
 ## [1.2.2](https://github.com/SkeLLLa/klopit/compare/v1.2.1...v1.2.2) (2026-04-12)
 
 ### 🛠 Fixes
