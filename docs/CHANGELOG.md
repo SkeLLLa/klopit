@@ -1,3 +1,13 @@
+## [1.1.0](https://github.com/SkeLLLa/klopit/compare/v1.0.2...v1.1.0) (2026-04-12)
+
+### 🛠 Fixes
+
+* use typeid to allow work on http localhost ([1555571](https://github.com/SkeLLLa/klopit/commit/15555714f28ecf78345df2b5b2cfdd5e8c7c2263))
+
+### 🚀 Features
+
+* add proper cname ([ef16813](https://github.com/SkeLLLa/klopit/commit/ef1681369b8da916e7e56526b5e0380dcc9a33c9))
+
 ## [1.0.2](https://github.com/SkeLLLa/klopit/compare/v1.0.1...v1.0.2) (2026-04-12)
 
 ### 🛠 Fixes
