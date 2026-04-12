@@ -64,6 +64,7 @@
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
     "@semantic-release/release-notes-generator": "^14.1.0",
     "@skellla/lint-config": "^3.0.0",
     "@sveltejs/adapter-static": "^3.0.10",
@@ -90,7 +91,7 @@
     "vite": "^8.0.8",
     "vite-plugin-mkcert": "^2.0.0"
   },
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=20",
     "pnpm": ">=10"

@@ -7,6 +7,8 @@ module.exports = {
     require('./commit-analyzer.cjs'),
     require('./release-notes.cjs'),
     require('./changelog.cjs'),
+    require('./npm.cjs'),
+    require('./build.cjs'),
     require('./git.cjs'),
     require('./github.cjs'),
   ],

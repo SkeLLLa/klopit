@@ -107,10 +107,6 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       - name: Install dependencies
         run: pnpm install
-      - name: Build
-        run: pnpm run build:app
-      - name: Create pages bundle
-        run: tar -czf klopit-pages.tar.gz -C build .
       - name: Semantic Release
         run: pnpm run release
         env:
