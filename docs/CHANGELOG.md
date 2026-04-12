@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/SkeLLLa/klopit/compare/v1.1.2...v1.2.0) (2026-04-12)
+
+### 🚀 Features
+
+* add breadcrumbs for easier navigation ([56ee4b5](https://github.com/SkeLLLa/klopit/commit/56ee4b5dd8b7e17e7720a4364d655fae4adfc517))
+
 ## [1.1.2](https://github.com/SkeLLLa/klopit/compare/v1.1.1...v1.1.2) (2026-04-12)
 
 ### 🛠 Fixes
