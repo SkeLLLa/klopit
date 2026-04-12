@@ -72,6 +72,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    outputs:
+      pages-ready: ${{ steps.build-check.outputs.exists }}
     needs:
       - verify
       - osv
@@ -132,7 +134,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: release
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && needs.release.outputs.pages-ready == 'true'
     permissions:
       pages: write
       id-token: write
