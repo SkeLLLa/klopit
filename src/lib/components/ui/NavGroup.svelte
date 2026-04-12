@@ -16,7 +16,11 @@
   }
 
   function isActive(href: string): boolean {
-    if (href === '/') return currentPath === '/' || currentPath === localizeHref('/');
+    if (href === '/') {
+      const localizedRoot = localizeHref('/').replace(/\/$/, '');
+      const normalized = currentPath.replace(/\/$/, '');
+      return normalized === '' || normalized === localizedRoot;
+    }
     return currentPath.startsWith(localizeHref(href));
   }
 

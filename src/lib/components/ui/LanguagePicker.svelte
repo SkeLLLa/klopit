@@ -6,11 +6,24 @@
 
   const locale = $derived(getLocale());
   const currentPath = $derived(page.url.pathname);
+  const nextLocale = $derived(() => {
+    const idx = locales.indexOf(locale);
+    return locales[(idx + 1) % locales.length];
+  });
 </script>
 
-<div class="flex gap-1">
-  {#each locales as loc (loc)}
-    {#if !collapsed || loc === locale}
+{#if collapsed}
+  <a
+    href={localizeHref(currentPath, { locale: nextLocale() })}
+    data-sveltekit-reload
+    class="rounded-[5px] px-2.5 py-0.5 text-[10px] font-medium border border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-500/25 dark:bg-emerald-500/12 dark:text-emerald-400 transition-colors"
+    title={nextLocale().toUpperCase()}
+  >
+    {locale.toUpperCase()}
+  </a>
+{:else}
+  <div class="flex gap-1">
+    {#each locales as loc (loc)}
       <a
         href={localizeHref(currentPath, { locale: loc })}
         data-sveltekit-reload
@@ -21,6 +34,6 @@
       >
         {loc.toUpperCase()}
       </a>
-    {/if}
-  {/each}
-</div>
+    {/each}
+  </div>
+{/if}

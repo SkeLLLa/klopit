@@ -7,6 +7,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Prevent sidebar flash on reload: hold collapsed layout until Svelte hydrates */
+@media (width >= 48rem) {
+  :root[data-sidebar-collapsed] [data-sidebar] {
+    width: 3.5rem !important;
+    visibility: hidden;
+    transition: none !important;
+  }
+
+  :root[data-sidebar-collapsed] [data-main-content] {
+    margin-left: 3.5rem !important;
+    transition: none !important;
+  }
+}
+
 @media (width < 48rem) {
   [data-sidebar] {
     transform: translateX(-100%);

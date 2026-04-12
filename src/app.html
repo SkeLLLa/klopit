@@ -17,6 +17,9 @@
         ) {
           document.documentElement.classList.add('dark');
         }
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+          document.documentElement.dataset.sidebarCollapsed = '';
+        }
       })();
     </script>
     %sveltekit.head%
