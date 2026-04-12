@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/SkeLLLa/klopit/compare/v1.0.0...v1.0.1) (2026-04-12)
+
+### 🛠 Fixes
+
+* **deps:** bump svelte from 5.55.2 to 5.55.3 ([b33f8e0](https://github.com/SkeLLLa/klopit/commit/b33f8e0858e4284b737ccb239b6e7bc4cfeba521))
+
 ## 1.0.0 (2026-04-12)
 
 ### 🧾 Other
