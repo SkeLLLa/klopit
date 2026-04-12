@@ -19,7 +19,7 @@
       '@context': 'https://schema.org',
       '@type': 'WebApplication',
       name: 'kloPIT',
-      url: 'https://klopit.pl/',
+      url: 'https://klopit.co.pl/',
       description: m.meta_description(),
       applicationCategory: 'FinanceApplication',
       operatingSystem: 'All',
@@ -41,19 +41,19 @@
   <meta name="keywords" content={m.meta_keywords()} />
   <meta name="author" content="kloPIT" />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://klopit.pl{currentPath}" />
+  <link rel="canonical" href="https://klopit.co.pl{currentPath}" />
 
   {#each locales as loc (loc)}
     <link
       rel="alternate"
       hreflang={loc}
-      href="https://klopit.pl{localizeHref(currentPath, { locale: loc })}"
+      href="https://klopit.co.pl{localizeHref(currentPath, { locale: loc })}"
     />
   {/each}
   <link
     rel="alternate"
     hreflang="x-default"
-    href="https://klopit.pl{localizeHref(currentPath, { locale: 'en' })}"
+    href="https://klopit.co.pl{localizeHref(currentPath, { locale: 'en' })}"
   />
 
   <!-- Open Graph -->
@@ -62,12 +62,18 @@
     property="og:locale"
     content={locale === 'pl' ? 'pl_PL' : locale === 'uk' ? 'uk_UA' : 'en_GB'}
   />
+  {#each locales.filter((l) => l !== locale) as altLocale (altLocale)}
+    <meta
+      property="og:locale:alternate"
+      content={altLocale === 'pl' ? 'pl_PL' : altLocale === 'uk' ? 'uk_UA' : 'en_GB'}
+    />
+  {/each}
   <meta property="og:title" content={m.meta_title()} />
   <meta property="og:description" content={m.meta_description()} />
-  <meta property="og:url" content="https://klopit.pl{currentPath}" />
+  <meta property="og:url" content="https://klopit.co.pl{currentPath}" />
   <meta property="og:site_name" content="kloPIT" />
 
-  <meta property="og:image" content="https://klopit.pl/og-image.png" />
+  <meta property="og:image" content="https://klopit.co.pl/og-image.png" />
   <meta property="og:image:width" content="1280" />
   <meta property="og:image:height" content="640" />
 
@@ -75,7 +81,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={m.meta_title()} />
   <meta name="twitter:description" content={m.meta_description()} />
-  <meta name="twitter:image" content="https://klopit.pl/og-image.png" />
+  <meta name="twitter:image" content="https://klopit.co.pl/og-image.png" />
 
   <!-- Structured Data -->
   <!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data, no user input -->
