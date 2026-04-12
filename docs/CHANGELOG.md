@@ -1,3 +1,9 @@
+## [1.2.5](https://github.com/SkeLLLa/klopit/compare/v1.2.4...v1.2.5) (2026-04-12)
+
+### 🛠 Fixes
+
+* **i18n:** link to fink translations ([b81ea2a](https://github.com/SkeLLLa/klopit/commit/b81ea2acc9721b2149c128c7bcce375d6dadf809))
+
 ## [1.2.4](https://github.com/SkeLLLa/klopit/compare/v1.2.3...v1.2.4) (2026-04-12)
 
 ### 🛠 Fixes
