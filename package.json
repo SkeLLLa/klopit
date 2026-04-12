@@ -55,7 +55,8 @@
     "@unovis/ts": "^1.6.4",
     "dexie": "^4.4.2",
     "lucide-svelte": "^1.0.1",
-    "svelte": "^5.55.3"
+    "svelte": "^5.55.3",
+    "typeid-js": "^1.2.0"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.15.2",

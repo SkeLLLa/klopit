@@ -1,3 +1,4 @@
+import { typeid } from 'typeid-js';
 import { db, type ImportedFileRecord, type SessionRecord } from '../db.js';
 
 /** Create a new tax calculation session */
@@ -5,7 +6,7 @@ export async function createSession(args: {
   year: number;
 }): Promise<SessionRecord> {
   const session: SessionRecord = {
-    id: crypto.randomUUID(),
+    id: typeid('session').toString(),
     year: args.year,
     createdAt: new Date(),
     updatedAt: new Date(),
