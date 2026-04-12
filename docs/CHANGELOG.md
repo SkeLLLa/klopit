@@ -1,3 +1,13 @@
+## [1.2.1](https://github.com/SkeLLLa/klopit/compare/v1.2.0...v1.2.1) (2026-04-12)
+
+### 🛠 Fixes
+
+* pages publishing job ([8c9347b](https://github.com/SkeLLLa/klopit/commit/8c9347b61011223cc0f6dc740d446b4f2852c887))
+
+### 📔 Docs
+
+* note on naming origin ([f1ea527](https://github.com/SkeLLLa/klopit/commit/f1ea52738c9d78323c5ec7c4e4286f798341362f))
+
 ## [1.2.0](https://github.com/SkeLLLa/klopit/compare/v1.1.2...v1.2.0) (2026-04-12)
 
 ### 🚀 Features
