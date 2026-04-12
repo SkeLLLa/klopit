@@ -1,3 +1,9 @@
+## [1.2.6](https://github.com/SkeLLLa/klopit/compare/v1.2.5...v1.2.6) (2026-04-12)
+
+### 🛠 Fixes
+
+* replace font and inlang config ([368006b](https://github.com/SkeLLLa/klopit/commit/368006b25301e197250ca008cd00e88c559d4110))
+
 ## [1.2.5](https://github.com/SkeLLLa/klopit/compare/v1.2.4...v1.2.5) (2026-04-12)
 
 ### 🛠 Fixes
