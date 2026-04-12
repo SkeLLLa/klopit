@@ -1,10 +1,19 @@
 # kloPIT
 
+[![CI](https://github.com/SkeLLLa/klopit/actions/workflows/verify.yml/badge.svg)](https://github.com/SkeLLLa/klopit/actions/workflows/verify.yml)
+[![CodeQL](https://github.com/SkeLLLa/klopit/actions/workflows/codeql.yml/badge.svg)](https://github.com/SkeLLLa/klopit/actions/workflows/codeql.yml)
+[![OSV](https://github.com/SkeLLLa/klopit/actions/workflows/osv.yml/badge.svg)](https://github.com/SkeLLLa/klopit/actions/workflows/osv.yml)
+[![Release](https://github.com/SkeLLLa/klopit/actions/workflows/release.yml/badge.svg)](https://github.com/SkeLLLa/klopit/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/SkeLLLa/klopit)](https://github.com/SkeLLLa/klopit/releases/latest)
+[![License: AGPL-3.0](https://img.shields.io/github/license/SkeLLLa/klopit)](LICENSE)
+[![SvelteKit](https://img.shields.io/badge/svelte-5-orange)](https://svelte.dev)
+[![inlang status](https://badge.inlang.com/?url=github.com/SkeLLLa/klopit&project=%2Fproject.inlang)](https://fink.inlang.com/github.com/SkeLLLa/klopit?project=%2Fproject.inlang)
+
 **Polish PIT-38 tax calculator for brokerage income** — runs entirely in your browser, no server, no accounts, no data leaves your machine.
 
 > **The only external call the app makes is to the [NBP public API](https://api.nbp.pl/) to fetch PLN exchange rates.** All other processing — CSV parsing, FIFO calculations, tax math, storage — happens locally in your browser.
 
-**Live app: [klopit.co.pl](https://klopit.co.pl)**
+**Live app: [klopit.co.pl](https://klopit.co.pl)** | Found a mistake in translations? [Fix it on Fink](https://fink.inlang.com/github.com/SkeLLLa/klopit?project=%2Fproject.inlang)
 
 > **kloPIT** — from Ukrainian "клопіт" and Polish "kłopot" (worry, hassle, trouble). Filing taxes is a hassle — this tool handles it for you.
 
@@ -83,6 +92,7 @@ Bug reports and pull requests are welcome at [github.com/SkeLLLa/klopit](https:/
 
 - **Found a calculation error?** Open an issue — attach your anonymised CSV or a minimal reproduction and describe the expected vs. actual result
 - **Using a broker not yet supported?** Open an issue with a sample (anonymised) activity statement, or implement the parser and send a PR
+- **Found a mistake in translations?** Fix it directly on [Fink](https://fink.inlang.com/github.com/SkeLLLa/klopit?project=%2Fproject.inlang) — no coding required
 - **Have a feature idea?** Check existing issues first, then open a new one describing the use case
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines, legal references for tax logic changes, and notes on AI-assisted contributions.
