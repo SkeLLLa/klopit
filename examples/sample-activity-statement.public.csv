@@ -1,0 +1,32 @@
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,"2024-01-15, 10:30:00",10,185.50,185.50,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,MSFT,"2024-02-01, 11:00:00",5,405.20,405.20,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,NVDA,"2024-02-20, 09:45:00",15,680.00,680.00,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,AAPL,"2024-03-10, 14:20:00",5,172.30,172.30,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,GOOGL,"2024-04-05, 10:15:00",8,155.80,155.80,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,AAPL,"2024-05-15, 11:30:00",-8,189.90,189.90,1519.20,-1.00,0,50.00,0,C
+Trades,Data,Order,Stocks,USD,NVDA,"2024-06-20, 13:00:00",-10,1050.00,1050.00,10500.00,-1.00,0,3700.00,0,C
+Trades,Data,Order,Stocks,USD,MSFT,"2024-07-10, 10:00:00",3,445.60,445.60,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,GOOGL,"2024-08-05, 15:30:00",-8,170.25,170.25,1362.00,-1.00,0,115.60,0,C
+Trades,Data,Order,Stocks,USD,MSFT,"2024-09-20, 12:00:00",-5,430.10,430.10,2150.50,-1.00,0,124.50,0,C
+Trades,Data,Order,Stocks,USD,NVDA,"2024-10-15, 09:30:00",8,870.00,870.00,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,AAPL,"2024-11-08, 11:00:00",-7,225.40,225.40,1577.80,-1.00,0,290.30,0,C
+Trades,Data,Order,Stocks,USD,NVDA,"2024-12-10, 14:00:00",-8,950.00,950.00,7600.00,-1.00,0,640.00,0,C
+Dividends,Header,Currency,Date,Description,Amount
+Dividends,Data,USD,2024-02-15,"AAPL (US0378331005) Cash Dividend USD 0.24 per Share (Ordinary Dividend)",2.40
+Dividends,Data,USD,2024-03-14,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend)",3.75
+Dividends,Data,USD,2024-05-16,"AAPL (US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend)",2.50
+Dividends,Data,USD,2024-06-13,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend)",3.75
+Dividends,Data,USD,2024-08-15,"AAPL (US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend)",1.75
+Dividends,Data,USD,2024-09-12,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend)",6.00
+Dividends,Data,USD,2024-11-14,"AAPL (US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend)",0.75
+Dividends,Data,USD,2024-12-12,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend)",2.25
+Withholding Tax,Header,Currency,Date,Description,Amount
+Withholding Tax,Data,USD,2024-02-15,"AAPL (US0378331005) Cash Dividend USD 0.24 per Share - US Tax",-0.36
+Withholding Tax,Data,USD,2024-03-14,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share - US Tax",-0.56
+Withholding Tax,Data,USD,2024-05-16,"AAPL (US0378331005) Cash Dividend USD 0.25 per Share - US Tax",-0.38
+Withholding Tax,Data,USD,2024-06-13,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share - US Tax",-0.56
+Withholding Tax,Data,USD,2024-08-15,"AAPL (US0378331005) Cash Dividend USD 0.25 per Share - US Tax",-0.26
+Withholding Tax,Data,USD,2024-09-12,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share - US Tax",-0.90
+Withholding Tax,Data,USD,2024-11-14,"AAPL (US0378331005) Cash Dividend USD 0.25 per Share - US Tax",-0.11
+Withholding Tax,Data,USD,2024-12-12,"MSFT (US5949181045) Cash Dividend USD 0.75 per Share - US Tax",-0.34

@@ -1,0 +1,30 @@
+{
+  "background_color": "#10B981",
+  "display": "standalone",
+  "icons": [
+    {
+      "sizes": "16x16",
+      "src": "/icons/icon-16.svg",
+      "type": "image/svg+xml"
+    },
+    {
+      "sizes": "32x32",
+      "src": "/icons/icon-32.svg",
+      "type": "image/svg+xml"
+    },
+    {
+      "sizes": "48x48",
+      "src": "/icons/icon-48.svg",
+      "type": "image/svg+xml"
+    },
+    {
+      "purpose": "any maskable",
+      "sizes": "512x512",
+      "src": "/icons/icon-512.svg",
+      "type": "image/svg+xml"
+    }
+  ],
+  "name": "kloPIT",
+  "short_name": "kloPIT",
+  "theme_color": "#10B981"
+}

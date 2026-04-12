@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+@import '@fontsource/outfit/400.css';
+@import '@fontsource/outfit/500.css';
+@import '@fontsource/outfit/600.css';
+@import '@fontsource/outfit/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@media (width < 48rem) {
+  [data-sidebar] {
+    transform: translateX(-100%);
+  }
+
+  [data-main-content] {
+    margin-left: 0 !important;
+  }
+}
+
+@theme {
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}

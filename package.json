@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json.schemastore.org/package.json",
+  "name": "klopit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Polish PIT tax calculator from brokerage income.",
+  "keywords": [
+    "pit",
+    "pit-38",
+    "tax",
+    "calculator",
+    "poland",
+    "brokerage",
+    "dividends",
+    "shares"
+  ],
+  "homepage": "https://github.com/SkeLLLa/klopit/blob/master/README.md",
+  "bugs": {
+    "url": "https://github.com/SkeLLLa/klopit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SkeLLLa/klopit.git"
+  },
+  "license": "AGPL-3.0-only",
+  "author": "m03geek",
+  "type": "module",
+  "directories": {
+    "lib": "src",
+    "doc": "docs",
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "build": "pnpm run build:app && pnpm run build:format",
+    "build:app": "vite build && svelte-sitemap",
+    "build:clean": "rm -rf build",
+    "build:format": "pretty-quick",
+    "dev": "vite dev",
+    "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations",
+    "lint": "pnpm run lint:types && pnpm run lint:codestyle && pnpm run lint:packages",
+    "lint:codestyle": "eslint",
+    "lint:packages": "pnpm audit --prod --audit-level=high",
+    "lint:types": "svelte-check --tsconfig ./tsconfig.json",
+    "preview": "vite preview",
+    "release": "semantic-release",
+    "test": "pnpm run lint && pnpm run test:unit",
+    "test:unit": "node --no-warnings --import tsx --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test 'test/*.test.ts' --test-coverage-exclude=test/**",
+    "test:unit:local": "node --no-warnings --import tsx --experimental-test-coverage --test 'test/*.test.ts' --test-coverage-exclude=test/**"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/outfit": "^5.2.8",
+    "@unovis/svelte": "^1.6.4",
+    "@unovis/ts": "^1.6.4",
+    "dexie": "^4.4.2",
+    "lucide-svelte": "^1.0.1",
+    "svelte": "^5.55.2"
+  },
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.15.2",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "@skellla/lint-config": "^3.0.0",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.57.1",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tsconfig/node-lts": "^24.0.0",
+    "@tsconfig/strictest": "^2.0.8",
+    "@types/node": "^24.12.0",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
+    "eslint": "^10.1.0",
+    "eslint-plugin-svelte": "^3.17.0",
+    "globals": "^17.4.0",
+    "globstar": "^1.0.0",
+    "prettier": "^3.8.1",
+    "pretty-quick": "^4.2.2",
+    "semantic-release": "^25.0.3",
+    "svelte-check": "^4.4.6",
+    "svelte-eslint-parser": "^1.6.0",
+    "svelte-sitemap": "^3.1.0",
+    "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.1",
+    "vite": "^8.0.8",
+    "vite-plugin-mkcert": "^2.0.0"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=20"
+    }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver"
+    ]
+  }
+}

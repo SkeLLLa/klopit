@@ -1,0 +1,229 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { buildPit38 } from '../src/core/tax/pit38.js';
+import type { TaxSummary } from '../src/core/types.js';
+
+function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
+  return {
+    year: 2024,
+    totalProceedsPln: 0,
+    totalCostPln: 0,
+    capitalGainPln: 0,
+    capitalGainTaxPln: 0,
+    totalDividendsPln: 0,
+    totalWithholdingPln: 0,
+    totalDeductibleWithholdingPln: 0,
+    dividendTaxOwedPln: 0,
+    ...overrides,
+  };
+}
+
+void describe('buildPit38', () => {
+  void it('calculates profitable year with dividends', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+      totalDividendsPln: 1000,
+      totalWithholdingPln: 150,
+      totalDeductibleWithholdingPln: 150, // 15% < 19%, fully deductible
+    });
+
+    const result = buildPit38({ summary });
+
+    // Section C
+    assert.equal(result[20], 0);
+    assert.equal(result[21], 0);
+    assert.equal(result[22], 50000);
+    assert.equal(result[24], 0);
+    assert.equal(result[25], 0);
+    assert.equal(result[26], 50000);
+    assert.equal(result[27], 30000);
+    assert.equal(result[28], 20000);
+    assert.equal(result[29], 0);
+
+    // Section D
+    assert.equal(result[30], 0);
+    assert.equal(result[31], 20000);
+    assert.equal(result[33], 3800);
+    assert.equal(result[34], 0);
+    assert.equal(result[35], 3800);
+
+    // Section G
+    assert.equal(result[47], 190);
+    assert.equal(result[48], 150);
+    assert.equal(result[49], 40);
+    assert.equal(result[51], 3840);
+    assert.equal(result[52], 0);
+  });
+
+  void it('handles loss year', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 10000,
+      totalCostPln: 15000,
+    });
+
+    const result = buildPit38({ summary });
+
+    assert.equal(result[28], 0);
+    assert.equal(result[29], 5000);
+    assert.equal(result[31], 0);
+    assert.equal(result[33], 0);
+    assert.equal(result[35], 0);
+    assert.equal(result[51], 0);
+  });
+
+  void it('reduces tax base by prior year loss', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+    });
+
+    const result = buildPit38({ summary, priorYearLoss: 5000 });
+
+    assert.equal(result[28], 20000);
+    assert.equal(result[30], 5000);
+    assert.equal(result[31], 15000);
+    assert.ok(
+      Math.abs(result[33] - 2850) < 0.01,
+      `poz33: ${String(result[33])}`,
+    );
+    assert.equal(result[35], 2850);
+  });
+
+  void it('clamps prior year loss at gain amount', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+    });
+
+    const result = buildPit38({ summary, priorYearLoss: 25000 });
+
+    assert.equal(result[30], 20000);
+    assert.equal(result[31], 0);
+    assert.equal(result[35], 0);
+  });
+
+  void it('caps withholding credit at dividend tax', () => {
+    const summary = makeSummary({
+      totalDividendsPln: 100,
+      totalWithholdingPln: 50,
+      totalDeductibleWithholdingPln: 19, // capped at 19% of 100
+    });
+
+    const result = buildPit38({ summary });
+
+    assert.equal(result[47], 19);
+    assert.equal(result[48], 19);
+    assert.equal(result[49], 0);
+  });
+
+  void it('returns all zeros for empty summary', () => {
+    const summary = makeSummary();
+    const result = buildPit38({ summary });
+
+    assert.equal(result[22], 0);
+    assert.equal(result[26], 0);
+    assert.equal(result[27], 0);
+    assert.equal(result[28], 0);
+    assert.equal(result[29], 0);
+    assert.equal(result[31], 0);
+    assert.equal(result[35], 0);
+    assert.equal(result[47], 0);
+    assert.equal(result[49], 0);
+    assert.equal(result[51], 0);
+    assert.equal(result[52], 0);
+  });
+
+  void it('applies rounding correctly at boundaries', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 2000.5,
+      totalCostPln: 1000,
+    });
+
+    const result = buildPit38({ summary });
+
+    assert.equal(result[28], 1000.5);
+    assert.equal(result[31], 1001);
+    assert.ok(
+      Math.abs(result[33] - 190.19) < 0.01,
+      `poz33: ${String(result[33])}`,
+    );
+    assert.equal(result[35], 190);
+  });
+
+  void it('maintains invariant poz51 = poz35 + poz49', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 100000,
+      totalCostPln: 50000,
+      totalDividendsPln: 5000,
+      totalWithholdingPln: 750,
+      totalDeductibleWithholdingPln: 750,
+    });
+
+    const result = buildPit38({ summary });
+
+    assert.equal(result[51], result[35] + result[49]);
+  });
+
+  void it('handles no dividends (Section G dividend fields zero)', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+    });
+
+    const result = buildPit38({ summary });
+
+    assert.equal(result[47], 0);
+    assert.equal(result[48], 0);
+    assert.equal(result[49], 0);
+    assert.equal(result[51], result[35]);
+  });
+
+  void it('handles no trades (Sections C/D all zeros)', () => {
+    const summary = makeSummary({
+      totalDividendsPln: 1000,
+      totalWithholdingPln: 150,
+      totalDeductibleWithholdingPln: 150,
+    });
+
+    const result = buildPit38({ summary });
+
+    assert.equal(result[22], 0);
+    assert.equal(result[26], 0);
+    assert.equal(result[27], 0);
+    assert.equal(result[35], 0);
+    assert.equal(result[51], result[49]);
+  });
+
+  void it('sets all placeholder sections to zero', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+    });
+
+    const result = buildPit38({ summary });
+
+    // Section E
+    assert.equal(result[36], 0);
+    assert.equal(result[37], 0);
+    assert.equal(result[38], 0);
+    assert.equal(result[39], 0);
+    assert.equal(result[40], 0);
+
+    // Section F
+    assert.equal(result[41], 0);
+    assert.equal(result[43], 0);
+    assert.equal(result[44], 0);
+    assert.equal(result[45], 0);
+
+    // Section H
+    for (const poz of [
+      53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+    ] as const) {
+      assert.equal(result[poz], 0, `poz${String(poz)} should be 0`);
+    }
+
+    // Section I
+    assert.equal(result[65], 0);
+  });
+});

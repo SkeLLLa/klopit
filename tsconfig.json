@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true
+  },
+  "exclude": ["build/**/*", "coverage/**/*", "node_modules/**/*"],
+  "extends": "./.svelte-kit/tsconfig.json",
+  "include": ["src/**/*", "src/**/*.svelte", "package.json", "test/**/*"]
+}

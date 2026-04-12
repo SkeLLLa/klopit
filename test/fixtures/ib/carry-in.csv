@@ -1,0 +1,8 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Mark-to-Market Performance Summary,Header,Asset Category,Symbol,Prior Quantity,Current Quantity,Prior Price,Current Price,Mark-to-Market P/L Position,Mark-to-Market P/L Transaction,Mark-to-Market P/L Commissions,Mark-to-Market P/L Other,Mark-to-Market P/L Total,Code
+Mark-to-Market Performance Summary,Data,Stocks,AAPL,25,30,175.50,195.20,492.50,0,-1.00,0,491.50,
+Mark-to-Market Performance Summary,Data,Stocks,MSFT,10,10,380.00,420.80,408.00,0,0,0,408.00,
+Mark-to-Market Performance Summary,Data,Stocks,TSLA,0,15,--,250.00,0,0,-1.50,0,-1.50,
+Mark-to-Market Performance Summary,Data,Total,,,,,,900.50,0,-2.50,0,898.00,

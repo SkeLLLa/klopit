@@ -1,0 +1,15 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Dividends,Header,Currency,Date,Description,Amount
+Dividends,Data,USD,2024-02-15,AAPL(US0378331005) Cash Dividend USD 0.24 per Share (Ordinary Dividend),2.40
+Dividends,Data,USD,2024-05-16,AAPL(US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend),2.50
+Dividends,Data,USD,2024-03-14,MSFT(US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend),3.75
+Dividends,Data,USD,2024-06-13,MSFT(US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend),3.75
+Dividends,Data,Total,,,12.40
+Withholding Tax,Header,Currency,Date,Description,Amount
+Withholding Tax,Data,USD,2024-02-15,AAPL(US0378331005) Cash Dividend USD 0.24 per Share - US Tax,-0.36
+Withholding Tax,Data,USD,2024-05-16,AAPL(US0378331005) Cash Dividend USD 0.25 per Share - US Tax,-0.38
+Withholding Tax,Data,USD,2024-03-14,MSFT(US5949181045) Cash Dividend USD 0.75 per Share - US Tax,-0.56
+Withholding Tax,Data,USD,2024-06-13,MSFT(US5949181045) Cash Dividend USD 0.75 per Share - US Tax,-0.56
+Withholding Tax,Data,Total,,,-1.86

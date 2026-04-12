@@ -1,0 +1,37 @@
+<script lang="ts">
+  import { m } from '$lib/paraglide/messages.js';
+  import { pageTitle } from '$lib/state/page-title.svelte.js';
+
+  $effect(() => {
+    pageTitle.set(m.page_docs_ib());
+  });
+</script>
+
+<div class="space-y-6">
+  <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+    {m.page_docs_ib()}
+  </h1>
+
+  <section class="space-y-3">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
+      {m.docs_ib_export_title()}
+    </h2>
+    <ol class="list-decimal space-y-2 pl-6 text-slate-700 dark:text-slate-300">
+      <li>{@html m.docs_ib_step1()}</li>
+      <li>{@html m.docs_ib_step2()}</li>
+      <li>{@html m.docs_ib_step3()}</li>
+      <li>{@html m.docs_ib_step4()}</li>
+      <li>{@html m.docs_ib_step5()}</li>
+    </ol>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
+      {m.docs_ib_tips_title()}
+    </h2>
+    <ul class="list-disc space-y-2 pl-6 text-slate-700 dark:text-slate-300">
+      <li>{m.docs_ib_tip1()}</li>
+      <li>{m.docs_ib_tip2()}</li>
+    </ul>
+  </section>
+</div>

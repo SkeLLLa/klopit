@@ -1,0 +1,119 @@
+<script lang="ts">
+  import { m } from '$lib/paraglide/messages.js';
+  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
+  import { Bug, FileText, Lock, Scale } from 'lucide-svelte';
+
+  $effect(() => {
+    pageTitle.set(m.page_about());
+  });
+
+  const githubIssuesLink = 'https://github.com/SkeLLLa/klopit/issues';
+  const githubRepoLink = 'https://github.com/SkeLLLa/klopit';
+  const pitlyLink = 'https://github.com/volodymyr-kovtun/Pitly';
+
+  const inspiredParts = $derived.by(() => {
+    const text = m.about_inspired_content({ pitlyLink: '{pitlyLink}' });
+    const [before, after] = text.split('{pitlyLink}');
+    return { before, after: after ?? '' };
+  });
+
+  const githubCards = $derived([
+    {
+      title: m.about_card_repo_title(),
+      description: m.about_card_repo_desc(),
+      href: githubRepoLink,
+      cta: m.about_card_repo_cta(),
+      icon: FileText
+    },
+    {
+      title: m.about_card_security_title(),
+      description: m.about_card_security_desc(),
+      href: '/docs/faq',
+      cta: m.about_card_security_cta(),
+      icon: Lock
+    },
+    {
+      title: m.about_card_license_title(),
+      description: m.about_card_license_desc(),
+      href: 'https://github.com/SkeLLLa/klopit/blob/main/LICENSE',
+      cta: m.about_card_license_cta(),
+      icon: Scale
+    },
+    {
+      title: m.about_card_issues_title(),
+      description: m.about_card_issues_desc(),
+      href: githubIssuesLink,
+      cta: m.about_card_issues_cta(),
+      icon: Bug
+    }
+  ]);
+</script>
+
+<div class="space-y-8 max-w-4xl">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+      {m.page_about()}
+    </h2>
+    <p class="mt-4 text-base text-slate-700 dark:text-slate-300 leading-relaxed">
+      {m.about_intro()}
+    </p>
+
+    <ul class="mt-4 space-y-1">
+      {#each KLO_ACRONYMS as acronym (acronym)}
+        <li class="text-sm text-slate-500 dark:text-slate-400">
+          <span class="font-semibold text-emerald-600 dark:text-emerald-400">klo</span>PIT &mdash; {acronym}
+        </li>
+      {/each}
+    </ul>
+  </div>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+    <h3 class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{m.about_inspired_title()}</h3>
+    <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+      {inspiredParts.before}<a
+        href={pitlyLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-semibold text-emerald-700 underline hover:opacity-80 dark:text-emerald-400"
+      >Pitly</a>{inspiredParts.after}
+    </p>
+  </section>
+
+  <section class="space-y-3">
+    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+      {m.about_opensource_content()}
+    </p>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {#each githubCards as card (card.title)}
+        <a
+          href={card.href}
+          target={card.href.startsWith('http') ? '_blank' : undefined}
+          rel={card.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+          class="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-emerald-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:border-emerald-500/45"
+        >
+          <div class="mb-2 flex items-center gap-2">
+            <div class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-500/12">
+              <card.icon size={14} class="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{card.title}</h3>
+          </div>
+          <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{card.description}</p>
+          <p class="mt-3 text-xs font-semibold text-emerald-700 transition group-hover:opacity-80 dark:text-emerald-400">
+            {card.cta} ->
+          </p>
+        </a>
+      {/each}
+    </div>
+  </section>
+
+  <section class="border-l-4 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
+    <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">
+      {m.about_disclaimer_title()}
+    </h3>
+    <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+      {m.about_disclaimer_content()}
+    </p>
+  </section>
+</div>

@@ -1,0 +1,5 @@
+Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code
+Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Stocks,MSFT,MICROSOFT CORP,272093,US5949181045,MSFT,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Stocks,TSLA,TESLA INC,76792991,US88160R1014,TSLA,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Bonds,SP 0 08/15/53,SP 0 08/15/53,647800128,US912803GU11,SP,,1,Govt,

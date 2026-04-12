@@ -1,0 +1,12 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Corporate Actions,Header,Asset Category,Currency,Report Date,Date/Time,Description,Quantity,Proceeds,Value,Realized P/L,Code
+Corporate Actions,Data,Stocks,USD,2024-06-10,"2024-06-09, 20:25:00","NVDA(US67066G1040) Split 10 for 1 (NVDA, NVIDIA CORP, US67066G1040)",90,0,0,0,
+Corporate Actions,Data,Stocks,USD,2024-08-15,"2024-08-14, 20:25:00","TSLA(US88160R1014) Reverse Split 1 for 3 (TSLA, TESLA INC, US88160R1014)",-10,0,0,0,
+Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code
+Financial Instrument Information,Data,Stocks,MAG,MAG SILVER CORP.,12345,CA55903Q1046,,ARCA,1,COMMON,
+Financial Instrument Information,Data,Stocks,PAAS,PAN AMERICAN SILVER CORP,67890,CA6979001089,,NASDAQ,1,COMMON,
+Corporate Actions,Data,Stocks,USD,2025-09-09,"2025-09-08, 20:25:00","MAG(CA55903Q1046) Cash and Stock Merger (Acquisition) CA6979001089 58844257 for 100000000 and USD 4.52847757 (MAG, MAG SILVER CORP., CA55903Q1046)",-30.1469,136.51956,-746.437244,135.93663,
+Corporate Actions,Data,Stocks,USD,2025-09-09,"2025-09-08, 20:25:00","MAG(CA55903Q1046) Cash and Stock Merger (Acquisition) CA6979001089 58844257 for 100000000 and USD 4.52847757 (PAAS, PAN AMERICAN SILVER CORP, CA6979001089)",17.7397,0,627.98538,0,
+Corporate Actions,Data,Total,,,,,,0,0,0,

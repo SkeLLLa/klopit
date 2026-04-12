@@ -1,0 +1,16 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code
+Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Stocks,MSFT,MICROSOFT CORP,272093,US5949181045,MSFT,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Stocks,TSLA,TESLA INC,76792991,US88160R1014,TSLA,NASDAQ,1,COMMON,
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,"2024-03-15, 10:30:00",10,175.50,175.50,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,MSFT,"2024-04-10, 11:00:00",5,420.80,420.80,0,-1.25,0,0,0,O
+Trades,SubTotal,,Stocks,USD,AAPL,,10,,,0,-1.00,0,0,0,
+Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00,0,157.60,0,C
+Trades,Data,Order,Stocks,USD,TSLA,"2024-07-05, 09:45:00",15,250.00,250.00,0,-1.50,0,0,0,O
+Trades,Data,Order,Stocks,USD,TSLA,"2024-09-12, 13:30:00",-15,280.00,280.00,4200.00,-1.50,0,450.00,0,C
+Trades,SubTotal,,Stocks,USD,TSLA,,0,,,4200.00,-3.00,0,450.00,0,
+Trades,Total,,Stocks,USD,,,,,5761.60,-5.75,0,607.60,0,

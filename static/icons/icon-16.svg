@@ -1,0 +1,9 @@
+<svg width="16" height="16" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="kloPIT icon 16">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#10B981"/>
+  <rect x="18" y="14" width="28" height="36" rx="3" fill="#FFFFFF" opacity="0.96"/>
+  <polyline points="36,14 46,24 36,24 36,14" fill="#D1FAE5"/>
+  <line x1="22" y1="29" x2="42" y2="29" stroke="#6EE7B7" stroke-width="2" stroke-linecap="round"/>
+  <line x1="22" y1="34" x2="35" y2="34" stroke="#6EE7B7" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="22,43 28,38 33,40 41,33" fill="none" stroke="#059669" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="41" cy="33" r="1.8" fill="#059669"/>
+</svg>

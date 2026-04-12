@@ -1,0 +1,10 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,"2024-03-15, 10:30:00",10,175.50,175.50,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,MSFT,"bad-date",abc,420.80,420.80,0,-1.25,0,0,0,O
+Trades,Data,Order,Stocks,USD
+Dividends,Header,Currency,Date,Description,Amount
+Dividends,Data,USD,2024-02-15,AAPL(US0378331005) Cash Dividend USD 0.24 per Share (Ordinary Dividend),2.40
+Dividends,Data,USD,not-a-date,BROKEN DESCRIPTION,abc

@@ -1,0 +1,35 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Account Information,Header,Field Name,Field Value
+Account Information,Data,Name,Test User
+Account Information,Data,Account,U0000000
+Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code
+Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Stocks,MSFT,MICROSOFT CORP,272093,US5949181045,MSFT,NASDAQ,1,COMMON,
+Financial Instrument Information,Data,Stocks,NVDA,NVIDIA CORP,4815747,US67066G1040,NVDA,NASDAQ,1,COMMON,
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,"2024-01-15, 10:30:00",10,185.50,185.50,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,MSFT,"2024-02-01, 11:00:00",5,405.20,405.20,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,AAPL,"2024-05-15, 11:30:00",-8,189.90,189.90,1519.20,-1.00,0,35.20,0,C
+Trades,Data,Order,Stocks,USD,NVDA,"2024-06-20, 13:00:00",20,130.00,130.00,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,NVDA,"2024-10-15, 14:00:00",-20,142.50,142.50,2850.00,-1.00,0,250.00,0,C
+Trades,SubTotal,,Stocks,USD,NVDA,,0,,,2850.00,-2.00,0,250.00,0,
+Trades,Total,,Stocks,USD,,,,,4369.20,-5.00,0,285.20,0,
+Dividends,Header,Currency,Date,Description,Amount
+Dividends,Data,USD,2024-02-15,AAPL(US0378331005) Cash Dividend USD 0.24 per Share (Ordinary Dividend),2.40
+Dividends,Data,USD,2024-05-16,AAPL(US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend),2.50
+Dividends,Data,USD,2024-03-14,MSFT(US5949181045) Cash Dividend USD 0.75 per Share (Ordinary Dividend),3.75
+Dividends,Data,Total,,,8.65
+Withholding Tax,Header,Currency,Date,Description,Amount
+Withholding Tax,Data,USD,2024-02-15,AAPL(US0378331005) Cash Dividend USD 0.24 per Share - US Tax,-0.36
+Withholding Tax,Data,USD,2024-05-16,AAPL(US0378331005) Cash Dividend USD 0.25 per Share - US Tax,-0.38
+Withholding Tax,Data,USD,2024-03-14,MSFT(US5949181045) Cash Dividend USD 0.75 per Share - US Tax,-0.56
+Withholding Tax,Data,Total,,,-1.30
+Corporate Actions,Header,Asset Category,Currency,Report Date,Date/Time,Description,Quantity,Proceeds,Value,Realized P/L,Code
+Corporate Actions,Data,Stocks,USD,2024-06-10,"2024-06-09, 20:25:00","NVDA(US67066G1040) Split 10 for 1 (NVDA, NVIDIA CORP, US67066G1040)",180,0,0,0,
+Corporate Actions,Data,Total,,,,,,0,0,0,
+Mark-to-Market Performance Summary,Header,Asset Category,Symbol,Prior Quantity,Current Quantity,Prior Price,Current Price,Mark-to-Market P/L Position,Mark-to-Market P/L Transaction,Mark-to-Market P/L Commissions,Mark-to-Market P/L Other,Mark-to-Market P/L Total,Code
+Mark-to-Market Performance Summary,Data,Stocks,AAPL,5,2,180.00,189.90,49.50,0,-1.00,0,48.50,
+Mark-to-Market Performance Summary,Data,Stocks,MSFT,0,5,--,405.20,0,0,-1.00,0,-1.00,
+Mark-to-Market Performance Summary,Data,Total,,,,,,49.50,0,-2.00,0,47.50,
