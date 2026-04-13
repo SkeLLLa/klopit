@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/SkeLLLa/klopit/compare/v1.4.2...v1.5.0) (2026-04-13)
+
+### 🚀 Features
+
+* **tax:** add prior losses handling ([4f97dca](https://github.com/SkeLLLa/klopit/commit/4f97dca272938c461b4e9b38de8721222e4e8003))
+
 ## [1.4.2](https://github.com/SkeLLLa/klopit/compare/v1.4.1...v1.4.2) (2026-04-13)
 
 ### 🛠 Fixes
