@@ -366,22 +366,48 @@ totalDeductibleWithholdingPln = sum of deductibleWithholding for all dividends
 dividendTaxOwedPln = max(totalDividendsPln × 0.19 − totalDeductibleWithholdingPln, 0)
 ```
 
-Currently mapped treaty rates (portfolio / default column). Full official list of Polish double-tax treaties: [Wykaz umów o unikaniu podwójnego opodatkowania — Ministerstwo Finansów](https://www.podatki.gov.pl/podatkowa-wspolpraca-miedzynarodowa/wykaz-umow-o-unikaniu-podwojnego-opodatkowania/).
+Mapped treaty rates (portfolio / default column — the higher rate from each "X/Y" treaty entry, since individual investors virtually never hold the ≥10–25 % stakes required to unlock the reduced rate). Data source: [PwC Worldwide Tax Summaries — Poland, Withholding taxes](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes). Cross-reference the full official list: [Wykaz umów o unikaniu podwójnego opodatkowania — Ministerstwo Finansów](https://www.podatki.gov.pl/podatkowa-wspolpraca-miedzynarodowa/wykaz-umow-o-unikaniu-podwojnego-opodatkowania/).
 
-| ISO | Country        | Rate | Source                                          |
-|-----|----------------|------|-------------------------------------------------|
-| US  | United States  | 15%  | UPO PL-USA 1974, art. 11 ust. 2 lit. b          |
-| GB  | United Kingdom | 10%  | UPO PL-UK 2006, art. 10 ust. 2 lit. b           |
-| DE  | Germany        | 15%  | UPO PL-DE 2003, art. 10 ust. 2 lit. b           |
-| FR  | France         | 15%  | UPO PL-FR 1975, art. 10 ust. 2 lit. b           |
-| NL  | Netherlands    | 15%  | UPO PL-NL 2002, art. 10 ust. 2 lit. b           |
-| IE  | Ireland        | 15%  | UPO PL-IE 1995, art. 10 ust. 2 lit. b           |
-| CH  | Switzerland    | 15%  | UPO PL-CH 1991 (ze zm.), art. 10 ust. 2 lit. b  |
-| CA  | Canada         | 15%  | UPO PL-CA 2012, art. 10 ust. 2 lit. b           |
-| JP  | Japan          | 10%  | UPO PL-JP 1980, art. 10 ust. 2 lit. b           |
-| NO  | Norway         | 15%  | UPO PL-NO 2009 (ze zm. 2012), art. 10 ust. 2 lit. b |
+| ISO | Country              | Rate | ISO | Country              | Rate | ISO | Country              | Rate |
+| --- | -------------------- | ---- | --- | -------------------- | ---- | --- | -------------------- | ---- |
+| AE  | United Arab Emirates | 5 %  | GB  | United Kingdom       | 10 % | MY  | Malaysia             | 5 %  |
+| AL  | Albania              | 10 % | GE  | Georgia              | 5 %  | NG  | Nigeria              | 10 % |
+| AM  | Armenia              | 10 % | GR  | Greece               | 19 % | NL  | Netherlands          | 15 % |
+| AT  | Austria              | 15 % | HR  | Croatia              | 15 % | NO  | Norway               | 15 % |
+| AU  | Australia            | 15 % | HU  | Hungary              | 10 % | NZ  | New Zealand          | 15 % |
+| AZ  | Azerbaijan           | 10 % | ID  | Indonesia            | 15 % | PH  | Philippines          | 15 % |
+| BA  | Bosnia & Herzegovina | 15 % | IE  | Ireland              | 15 % | PK  | Pakistan             | 15 % |
+| BD  | Bangladesh           | 15 % | IL  | Israel               | 10 % | PT  | Portugal             | 15 % |
+| BE  | Belgium              | 10 % | IN  | India                | 10 % | QA  | Qatar                | 5 %  |
+| BG  | Bulgaria             | 10 % | IR  | Iran                 | 7 %  | RO  | Romania              | 15 % |
+| BR  | Brazil               | 15 % | IS  | Iceland              | 15 % | RS  | Serbia               | 15 % |
+| BY  | Belarus              | 15 % | IT  | Italy                | 10 % | SA  | Saudi Arabia         | 5 %  |
+| CA  | Canada               | 15 % | JO  | Jordan               | 10 % | SE  | Sweden               | 15 % |
+| CH  | Switzerland          | 15 % | JP  | Japan                | 10 % | SG  | Singapore            | 10 % |
+| CL  | Chile                | 15 % | KG  | Kyrgyzstan           | 10 % | SI  | Slovenia             | 15 % |
+| CN  | China                | 10 % | KR  | Korea (South)        | 10 % | SK  | Slovak Republic      | 5 %  |
+| CY  | Cyprus               | 5 %  | KW  | Kuwait               | 5 %  | SY  | Syria                | 10 % |
+| CZ  | Czech Republic       | 5 %  | KZ  | Kazakhstan           | 15 % | TH  | Thailand             | 19 % |
+| DE  | Germany              | 15 % | LB  | Lebanon              | 5 %  | TJ  | Tajikistan           | 15 % |
+| DK  | Denmark              | 15 % | LK  | Sri Lanka            | 10 % | TN  | Tunisia              | 10 % |
+| DZ  | Algeria              | 15 % | LT  | Lithuania            | 15 % | TR  | Turkey               | 15 % |
+| EE  | Estonia              | 15 % | LU  | Luxembourg           | 15 % | TW  | Taiwan               | 10 % |
+| EG  | Egypt                | 12 % | LV  | Latvia               | 15 % | UA  | Ukraine              | 15 % |
+| ES  | Spain                | 15 % | MA  | Morocco              | 15 % | US  | United States        | 15 % |
+| ET  | Ethiopia             | 10 % | MD  | Moldova              | 15 % | UY  | Uruguay              | 15 % |
+| FI  | Finland              | 15 % | ME  | Montenegro           | 15 % | UZ  | Uzbekistan           | 15 % |
+| FR  | France               | 15 % | MK  | North Macedonia      | 15 % | VN  | Vietnam              | 15 % |
+|     |                      |      | MN  | Mongolia             | 10 % | ZA  | South Africa         | 15 % |
+|     |                      |      | MT  | Malta                | 10 % | ZM  | Zambia               | 15 % |
+|     |                      |      | MX  | Mexico               | 15 % | ZW  | Zimbabwe             | 15 % |
 
-All other countries (including unknown `XX`) fall back to the domestic 19% cap. Excess withholding above the treaty rate is **not** deductible in Poland — taxpayers must reclaim it from the foreign tax authority.
+Notes:
+
+- Greece (GR) — the treaty's dividend rate equals the Polish domestic 19 %, so there is effectively no foreign-credit benefit.
+- Thailand (TH) — treaty rate is 20 %; stored at 19 % because the domestic cap applies anyway.
+- Rates reflect the **portfolio** column (default, higher) from each treaty. Reduced inter-company rates (typically requiring ≥10–25 % ownership for 12–24 months) are intentionally not used by kloPIT.
+
+All other countries (including unknown `XX`) fall back to the domestic 19 % cap. Excess withholding above the treaty rate is **not** deductible in Poland — taxpayers must reclaim it from the foreign tax authority.
 
 The per-dividend cap ensures that excess foreign tax on one dividend **cannot** offset tax owed on another dividend.
 
@@ -784,6 +810,7 @@ Key Polish tax law provisions used in kloPIT calculations:
 | Filing deadline (April 30)       | Art. 45 ust. 1 ustawy o PIT        | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)  |
 | PIT/ZG attachment                | Art. 45 ust. 1a ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)  |
 | US-Poland tax treaty (dividends) | Art. 11 Konwencji PL-US            | [isap.sejm.gov.pl](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19760310178)   |
+| DTT withholding rates (all countries) | Polish double-tax treaties (UPO) | [PwC Worldwide Tax Summaries — Poland](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes) |
 
 **Full legal texts:**
 
