@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/SkeLLLa/klopit/compare/v1.4.1...v1.4.2) (2026-04-13)
+
+### 🛠 Fixes
+
+* **dashboard:** add capped witholding tax ([7ce7124](https://github.com/SkeLLLa/klopit/commit/7ce71245bf5e54e8c63f81ca09b295531734851a))
+
 ## [1.4.1](https://github.com/SkeLLLa/klopit/compare/v1.4.0...v1.4.1) (2026-04-13)
 
 ### 🛠 Fixes
