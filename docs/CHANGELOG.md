@@ -1,3 +1,26 @@
+## [1.3.0](https://github.com/SkeLLLa/klopit/compare/v1.2.7...v1.3.0) (2026-04-13)
+
+### 🚀 Features
+
+* add stale bar to dashboard as well ([62c23bb](https://github.com/SkeLLLa/klopit/commit/62c23bb619d08d37ed57b620ba499fea41a35761))
+* **data:** show recalculate button in ActionBar when results are stale ([477caed](https://github.com/SkeLLLa/klopit/commit/477caede7809f80f3e5475576946ff0536beea38))
+* **db:** add dataUpdatedAt and calculatedAt to SessionRecord (schema v4) ([01ab431](https://github.com/SkeLLLa/klopit/commit/01ab43141e278a70ba09bfc5a697e6d4d93ebb20))
+* **db:** bump session dataUpdatedAt via Dexie hooks on source tables ([71ab149](https://github.com/SkeLLLa/klopit/commit/71ab149fb58eda150f7c8ea68c532f73b47b5a78))
+* **i18n:** add stale recalculation prompt strings ([7bf887e](https://github.com/SkeLLLa/klopit/commit/7bf887e60948dbaf6936a14590e49a386b0fcafc))
+* **session:** allow updating dataUpdatedAt and calculatedAt ([a0e0986](https://github.com/SkeLLLa/klopit/commit/a0e09863b029de0ca791c31344cd9b6b0658d3e6))
+* **stale:** add session staleness predicate helper ([fc8e5e3](https://github.com/SkeLLLa/klopit/commit/fc8e5e30ad581343555c352679f08584a4c87187))
+* **tax-form:** show stale banner above PIT-38 when data has changed ([41cee56](https://github.com/SkeLLLa/klopit/commit/41cee560ce59689b4bbd4fbe04cf2cae7a0ab4c2))
+* **tax:** record calculatedAt timestamp on session ([c1219eb](https://github.com/SkeLLLa/klopit/commit/c1219eb6a740eef7af71efa02e137f1d235fb06e))
+
+### 🛠 Fixes
+
+* match project lint conventions in stale helper and db hooks ([ef10123](https://github.com/SkeLLLa/klopit/commit/ef10123256e5dc59bfdb77c20b1250ab23d9b9bd))
+* **i18n:** fink crazy escaping ([4b48301](https://github.com/SkeLLLa/klopit/commit/4b48301479fc354008d3efee5fa9ebf3bd9760ae))
+
+### 🧾 Other
+
+* apply lint/prettier fixups from earlier commits ([26519c1](https://github.com/SkeLLLa/klopit/commit/26519c19fbd36fec15a43e641764ff068c88e157))
+
 ## [1.2.7](https://github.com/SkeLLLa/klopit/compare/v1.2.6...v1.2.7) (2026-04-13)
 
 ### 🛠 Fixes
