@@ -1,3 +1,9 @@
+## [1.2.7](https://github.com/SkeLLLa/klopit/compare/v1.2.6...v1.2.7) (2026-04-13)
+
+### 🛠 Fixes
+
+* **report:** manual adding trades ([4abd841](https://github.com/SkeLLLa/klopit/commit/4abd841183028ab7f1d0230c10e6fc6338799fee))
+
 ## [1.2.6](https://github.com/SkeLLLa/klopit/compare/v1.2.5...v1.2.6) (2026-04-12)
 
 ### 🛠 Fixes
