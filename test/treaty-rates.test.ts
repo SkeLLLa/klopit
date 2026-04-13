@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  TREATY_DIVIDEND_RATE_MAP,
   getDividendCreditCapRate,
+  TREATY_DIVIDEND_RATE_MAP,
 } from '../src/core/tax/treaty-rates.js';
 
 void describe('TREATY_DIVIDEND_RATE_MAP', () => {
