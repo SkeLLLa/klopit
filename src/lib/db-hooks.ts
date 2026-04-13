@@ -12,7 +12,12 @@ interface HasSessionId {
  */
 function scheduleStaleBump(db: KlopitDB, sessionId: string | undefined): void {
   if (!sessionId) return;
-  const trans = Dexie.currentTransaction;
+  // Dexie's typings declare currentTransaction as non-nullable, but at
+  // runtime it can be null when invoked outside any active transaction
+  // (e.g. when scheduleStaleBump is called via queueMicrotask itself).
+  const trans = Dexie.currentTransaction as
+    | typeof Dexie.currentTransaction
+    | null;
   const fire = (): void => {
     void db.sessions.update(sessionId, { dataUpdatedAt: new Date() });
   };
