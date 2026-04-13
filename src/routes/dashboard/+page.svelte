@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertCircle, ArrowRight, AlertTriangle, LoaderCircle } from 'lucide-svelte';
+  import { AlertCircle, ArrowRight, AlertTriangle, LoaderCircle, RefreshCw } from 'lucide-svelte';
   import MetricCards from './MetricCards.svelte';
   import GainsTaxDonut from './GainsTaxDonut.svelte';
   import PortfolioDonut from './PortfolioDonut.svelte';
@@ -12,6 +12,11 @@
   import { db } from '$lib/db.js';
   import type { TradeResultRecord, DividendResultRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { isSessionStale } from '$lib/utils/stale.js';
+  import {
+    calculateSessionTaxes,
+    clearSessionResults,
+  } from '$lib/services/tax.js';
 
   $effect(() => {
     pageTitle.set(m.page_dashboard());
@@ -99,6 +104,26 @@
     const select = e.target as HTMLSelectElement;
     sessionState.setActiveSession(select.value);
   }
+
+  // --- Stale detection ---
+  const stale = $derived(
+    isSessionStale({
+      calculatedAt: session?.calculatedAt,
+      dataUpdatedAt: session?.dataUpdatedAt,
+    }),
+  );
+  let recalculating = $state(false);
+
+  async function handleRecalculate() {
+    if (!sessionId) return;
+    recalculating = true;
+    try {
+      await clearSessionResults({ sessionId });
+      await calculateSessionTaxes({ sessionId });
+    } finally {
+      recalculating = false;
+    }
+  }
 </script>
 
 {#if loading}
@@ -152,6 +177,26 @@
         </select>
       {/if}
     </div>
+
+    <!-- Stale banner -->
+    {#if stale}
+      <div
+        class="flex items-center justify-between gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
+      >
+        <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle size={16} />
+          <span>{m.tax_stale_banner()}</span>
+        </div>
+        <button
+          onclick={() => void handleRecalculate()}
+          disabled={recalculating}
+          class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+        >
+          <RefreshCw size={14} class={recalculating ? 'animate-spin' : ''} />
+          {m.tax_recalculate()}
+        </button>
+      </div>
+    {/if}
 
     <!-- Rate warning banner -->
     {#if hasRateWarning}

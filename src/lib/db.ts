@@ -154,6 +154,20 @@ export class KlopitDB extends Dexie {
     this.version(4).stores({
       sessions: 'id, year',
     });
+    this.version(5).upgrade(async (tx) => {
+      // Backfill calculatedAt for sessions that were marked 'calculated'
+      // before the v4 schema introduced the timestamp. Without this, the
+      // stale-recalculation UI has no baseline and keeps the recalc button
+      // hidden forever for pre-existing sessions.
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((s) => {
+          if (s.status === 'calculated' && !s.calculatedAt) {
+            s.calculatedAt = s.updatedAt;
+          }
+        });
+    });
   }
 }
 
