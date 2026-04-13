@@ -53,6 +53,7 @@
   "dash_tx_amount": "Kwota",
   "dash_tx_gain_loss": "Zysk / Strata",
   "dash_tx_tax_abroad": "Podatek za granicą",
+  "dash_tx_tax_abroad_capped": "Do odliczenia (limit UPO)",
   "dash_tx_tax_pl": "Podatek PL",
   "dash_tx_tax_to_pay": "Do zapłaty",
   "dash_tx_total": "Razem",

@@ -81,6 +81,9 @@
   const divTotalWithholdingPct = $derived(
     divTotalAmount > 0 ? (divTotalWithholding / divTotalAmount) * 100 : 0,
   );
+  const divTotalDeductiblePct = $derived(
+    divTotalAmount > 0 ? (divTotalDeductible / divTotalAmount) * 100 : 0,
+  );
   const divTotalToPay = $derived(
     Math.max(divTotalTaxPl - divTotalDeductible, 0),
   );
@@ -309,6 +312,7 @@
               >{m.dash_tx_tax_pl()} ({formatPct(TAX_PCT)})</th
             >
             <th class="px-3 py-2 text-right">{m.dash_tx_tax_abroad()}</th>
+            <th class="px-3 py-2 text-right">{m.dash_tx_tax_abroad_capped()}</th>
             <th class="px-3 py-2 text-right">{m.dash_tx_tax_to_pay()}</th>
             <th class="px-3 py-2"></th>
           </tr>
@@ -319,6 +323,7 @@
             {@const creditCap = div.amountPln * getDividendCreditCapRate({ country: div.country })}
             {@const deductible = Math.min(div.withholdingTaxPln, creditCap)}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
+            {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const taxToPay = Math.max(taxPl - deductible, 0)}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}
             <tr
@@ -345,6 +350,14 @@
                 {formatPlnValue(div.withholdingTaxPln)}
                 <span class="text-xs text-slate-400">
                   ({formatPct(effectiveWithholdingPct)})
+                </span>
+              </td>
+              <td
+                class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
+              >
+                {formatPlnValue(deductible)}
+                <span class="text-xs text-slate-400">
+                  ({formatPct(effectiveDeductiblePct)})
                 </span>
               </td>
               <td
@@ -385,6 +398,14 @@
               {formatPlnValue(divTotalWithholding)}
               <span class="text-xs text-slate-400">
                 ({formatPct(divTotalWithholdingPct)})
+              </span>
+            </td>
+            <td
+              class="px-3 py-2 text-right tabular-nums text-slate-900 dark:text-slate-100"
+            >
+              {formatPlnValue(divTotalDeductible)}
+              <span class="text-xs text-slate-400">
+                ({formatPct(divTotalDeductiblePct)})
               </span>
             </td>
             <td

@@ -53,6 +53,7 @@
   "dash_tx_amount": "Сума",
   "dash_tx_gain_loss": "Прибуток / Збиток",
   "dash_tx_tax_abroad": "Податок за кордоном",
+  "dash_tx_tax_abroad_capped": "До відрахування (ліміт DTT)",
   "dash_tx_tax_pl": "Податок PL",
   "dash_tx_tax_to_pay": "До сплати",
   "dash_tx_total": "Всього",

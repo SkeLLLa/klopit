@@ -58,6 +58,7 @@
   "dash_tx_amount": "Amount",
   "dash_tx_gain_loss": "Gain / Loss",
   "dash_tx_tax_abroad": "Tax Paid Abroad",
+  "dash_tx_tax_abroad_capped": "Deductible (DTT cap)",
   "dash_tx_tax_pl": "Tax PL",
   "dash_tx_tax_to_pay": "Tax to Pay",
   "dash_tx_total": "Total",
