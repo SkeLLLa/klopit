@@ -14,6 +14,9 @@ import { TAX_RATE } from '../types.js';
  * Rates below are the "portfolio" (default) dividend rate — kloPIT targets
  * individual investors who virtually never hold ≥10% stakes that unlock the
  * reduced inter-company rates.
+ *
+ * Official treaty list (Ministerstwo Finansów):
+ * https://www.podatki.gov.pl/podatkowa-wspolpraca-miedzynarodowa/wykaz-umow-o-unikaniu-podwojnego-opodatkowania/
  */
 export const TREATY_DIVIDEND_RATE_MAP: ReadonlyMap<string, number> = new Map([
   ['US', 0.15], // UPO PL-USA 1974, art. 11 ust. 2 lit. b
@@ -25,6 +28,7 @@ export const TREATY_DIVIDEND_RATE_MAP: ReadonlyMap<string, number> = new Map([
   ['CH', 0.15], // UPO PL-CH 1991 (ze zmianami), art. 10 ust. 2 lit. b
   ['CA', 0.15], // UPO PL-CA 2012, art. 10 ust. 2 lit. b
   ['JP', 0.1], // UPO PL-JP 1980, art. 10 ust. 2 lit. b
+  ['NO', 0.15], // UPO PL-NO 2009 (ze zm. 2012), art. 10 ust. 2 lit. b
 ]);
 
 /**

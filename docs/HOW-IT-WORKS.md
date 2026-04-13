@@ -366,7 +366,7 @@ totalDeductibleWithholdingPln = sum of deductibleWithholding for all dividends
 dividendTaxOwedPln = max(totalDividendsPln × 0.19 − totalDeductibleWithholdingPln, 0)
 ```
 
-Currently mapped treaty rates (portfolio / default column):
+Currently mapped treaty rates (portfolio / default column). Full official list of Polish double-tax treaties: [Wykaz umów o unikaniu podwójnego opodatkowania — Ministerstwo Finansów](https://www.podatki.gov.pl/podatkowa-wspolpraca-miedzynarodowa/wykaz-umow-o-unikaniu-podwojnego-opodatkowania/).
 
 | ISO | Country        | Rate | Source                                          |
 |-----|----------------|------|-------------------------------------------------|
@@ -379,6 +379,7 @@ Currently mapped treaty rates (portfolio / default column):
 | CH  | Switzerland    | 15%  | UPO PL-CH 1991 (ze zm.), art. 10 ust. 2 lit. b  |
 | CA  | Canada         | 15%  | UPO PL-CA 2012, art. 10 ust. 2 lit. b           |
 | JP  | Japan          | 10%  | UPO PL-JP 1980, art. 10 ust. 2 lit. b           |
+| NO  | Norway         | 15%  | UPO PL-NO 2009 (ze zm. 2012), art. 10 ust. 2 lit. b |
 
 All other countries (including unknown `XX`) fall back to the domestic 19% cap. Excess withholding above the treaty rate is **not** deductible in Poland — taxpayers must reclaim it from the foreign tax authority.
 

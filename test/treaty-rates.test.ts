@@ -14,8 +14,8 @@ void describe('TREATY_DIVIDEND_RATE_MAP', () => {
     assert.equal(TREATY_DIVIDEND_RATE_MAP.get('GB'), 0.1);
   });
 
-  void it('contains DE, FR, NL, IE, CH, CA at 15%', () => {
-    for (const code of ['DE', 'FR', 'NL', 'IE', 'CH', 'CA']) {
+  void it('contains DE, FR, NL, IE, CH, CA, NO at 15%', () => {
+    for (const code of ['DE', 'FR', 'NL', 'IE', 'CH', 'CA', 'NO']) {
       assert.equal(
         TREATY_DIVIDEND_RATE_MAP.get(code),
         0.15,
