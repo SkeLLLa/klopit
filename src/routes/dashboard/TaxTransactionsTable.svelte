@@ -5,6 +5,7 @@
   import { formatDatetime, formatDate } from '$lib/utils/format-date.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { TAX_RATE } from '../../core/types.js';
+  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
   let {
     tradeResults,
@@ -68,7 +69,12 @@
   );
   const divTotalDeductible = $derived(
     dividendResults.reduce(
-      (s, d) => s + Math.min(d.withholdingTaxPln, d.amountPln * TAX_RATE),
+      (s, d) =>
+        s +
+        Math.min(
+          d.withholdingTaxPln,
+          d.amountPln * getDividendCreditCapRate({ country: d.country }),
+        ),
       0,
     ),
   );
@@ -310,7 +316,8 @@
         <tbody>
           {#each dividendResults as div (div.symbol + div.date)}
             {@const taxPl = div.amountPln * TAX_RATE}
-            {@const deductible = Math.min(div.withholdingTaxPln, taxPl)}
+            {@const creditCap = div.amountPln * getDividendCreditCapRate({ country: div.country })}
+            {@const deductible = Math.min(div.withholdingTaxPln, creditCap)}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const taxToPay = Math.max(taxPl - deductible, 0)}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}

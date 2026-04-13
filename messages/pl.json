@@ -72,6 +72,7 @@
   "data_country_override": "Nadpisanie",
   "data_country_override_placeholder": "np. US, DE",
   "data_currency": "Waluta",
+  "data_dtt_rate": "Stawka UPO",
   "data_date": "Data",
   "data_datetime": "Data/Czas",
   "data_delete": "Usuń",

@@ -5,6 +5,7 @@
   import { formatPln } from '$lib/utils/format-pln.js';
   import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
   import { TAX_RATE } from '../../core/types.js';
+  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
@@ -30,7 +31,12 @@
     const divTotal = dividendResults.reduce((s, d) => s + d.amountPln, 0);
     const divPlTax = divTotal * TAX_RATE;
     const divDeductible = dividendResults.reduce(
-      (s, d) => s + Math.min(d.withholdingTaxPln, d.amountPln * TAX_RATE),
+      (s, d) =>
+        s +
+        Math.min(
+          d.withholdingTaxPln,
+          d.amountPln * getDividendCreditCapRate({ country: d.country }),
+        ),
       0,
     );
     const divTaxToPay = Math.max(divPlTax - divDeductible, 0);

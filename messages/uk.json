@@ -72,6 +72,7 @@
   "data_country_override": "Перевизначити",
   "data_country_override_placeholder": "напр. US, DE",
   "data_currency": "Валюта",
+  "data_dtt_rate": "Ставка УПО",
   "data_date": "Дата",
   "data_datetime": "Дата/Час",
   "data_delete": "Видалити",

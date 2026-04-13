@@ -3,6 +3,7 @@
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { isinToCountry } from '../../core/tax/country.js';
+  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
   let { sessionId }: { sessionId: string } = $props();
 
@@ -97,10 +98,13 @@
             <th class="px-3 py-2">{m.data_isin()}</th>
             <th class="px-3 py-2">{m.data_country_detected()}</th>
             <th class="px-3 py-2">{m.data_country_override()}</th>
+            <th class="px-3 py-2 text-right">{m.data_dtt_rate()}</th>
           </tr>
         </thead>
         <tbody>
           {#each entries as entry (entry.symbol)}
+            {@const effectiveCountry = entry.override || entry.detected}
+            {@const dttRate = getDividendCreditCapRate({ country: effectiveCountry })}
             <tr class="border-b border-slate-100 dark:border-slate-700">
               <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100"
                 >{entry.symbol}</td
@@ -119,6 +123,10 @@
                   onchange={(e) => void handleOverrideChange(entry.symbol, e.currentTarget.value)}
                 />
               </td>
+              <td
+                class="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300"
+                >{(dttRate * 100).toFixed(0)}%</td
+              >
             </tr>
           {/each}
         </tbody>

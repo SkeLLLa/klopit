@@ -77,6 +77,7 @@
   "data_country_override": "Override",
   "data_country_override_placeholder": "e.g. US, DE",
   "data_currency": "Currency",
+  "data_dtt_rate": "DTT Rate",
   "data_date": "Date",
   "data_datetime": "Date/Time",
   "data_delete": "Delete",
