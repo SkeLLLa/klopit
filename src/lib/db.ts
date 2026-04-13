@@ -116,7 +116,7 @@ export interface NbpRateRecord {
 // Database
 // ---------------------------------------------------------------------------
 
-class KlopitDB extends Dexie {
+export class KlopitDB extends Dexie {
   sessions!: EntityTable<SessionRecord, 'id'>;
   trades!: EntityTable<TradeRecord, 'id'>;
   dividends!: EntityTable<DividendRecord, 'id'>;
@@ -157,3 +157,7 @@ class KlopitDB extends Dexie {
 }
 
 export const db = new KlopitDB();
+
+import { installStaleHooks } from './db-hooks.js';
+
+installStaleHooks(db);
