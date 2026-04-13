@@ -16,6 +16,7 @@ import { calculateCapitalGains } from './capital-gains.js';
 import { calculateDividends } from './dividends.js';
 import { buildPitZg } from './pit-zg.js';
 import { buildPit38 } from './pit38.js';
+import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
@@ -106,10 +107,17 @@ function buildSummary(args: {
     (sum, d) => sum + d.withholdingTaxPln,
     0,
   );
-  // Cap each dividend's deductible withholding at 19% of its gross PLN amount
-  // per art. 30a ust. 9 ustawy o PIT — excess foreign tax cannot offset other dividends
+  // Cap each dividend's deductible withholding at min(treaty rate, 19%) of its
+  // gross PLN amount. art. 30a ust. 2 (stosowanie UPO) + art. 30a ust. 9
+  // (krajowy cap 19%) ustawy o PIT. Excess foreign tax on one dividend cannot
+  // offset tax owed on another dividend.
   const totalDeductibleWithholdingPln = args.dividendResults.reduce(
-    (sum, d) => sum + Math.min(d.withholdingTaxPln, d.amountPln * TAX_RATE),
+    (sum, d) =>
+      sum +
+      Math.min(
+        d.withholdingTaxPln,
+        d.amountPln * getDividendCreditCapRate({ country: d.country }),
+      ),
     0,
   );
   const dividendTaxOwedPln = Math.max(

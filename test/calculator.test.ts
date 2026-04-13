@@ -223,6 +223,10 @@ void describe('calculateTaxes', () => {
       corporateActions: [],
       carryInPositions: [],
       taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([
+        ['HIGH', 'ZZ'],
+        ['ZERO', 'ZZ'],
+      ]),
     });
 
     // Raw withholding: 30 PLN total
@@ -242,6 +246,48 @@ void describe('calculateTaxes', () => {
     );
     // PIT-38 poz49 should reflect the per-dividend cap
     assert.equal(result.pit38[49], 19);
+  });
+
+  void it('caps US dividend withholding at 15% treaty rate, not 19%', () => {
+    // One US dividend, 100 PLN gross, 19 PLN withheld (broker over-withholds
+    // vs. the 15% treaty rate — e.g. IB rounding or missing W-8BEN).
+    // Domestic-only 19% cap would deduct 19 PLN → net Polish tax = 0.
+    // Treaty cap (15% × 100 = 15) limits deduction to 15 PLN → net Polish tax = 4.
+    const div = makeDiv({
+      symbol: 'AAPL',
+      amount: 25, // 25 USD × 4.0 = 100 PLN
+      date: new Date(2024, 2, 15),
+    });
+    const tax = makeTax({
+      symbol: 'AAPL',
+      amount: -4.75, // 4.75 USD × 4.0 = 19 PLN
+      date: new Date(2024, 2, 15),
+    });
+
+    const result = calculateTaxes({
+      trades: [],
+      dividends: [div],
+      withholdingTaxes: [tax],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+    });
+
+    assert.ok(
+      Math.abs(result.summary.totalWithholdingPln - 19) < 0.01,
+      `totalWithholdingPln: ${String(result.summary.totalWithholdingPln)}`,
+    );
+    // Treaty cap: min(19, 100 * 0.15) = 15
+    assert.ok(
+      Math.abs(result.summary.totalDeductibleWithholdingPln - 15) < 0.01,
+      `totalDeductibleWithholdingPln: ${String(result.summary.totalDeductibleWithholdingPln)}`,
+    );
+    // Tax owed: 100 * 19% − 15 = 4 PLN
+    assert.ok(
+      Math.abs(result.summary.dividendTaxOwedPln - 4) < 0.01,
+      `dividendTaxOwedPln: ${String(result.summary.dividendTaxOwedPln)}`,
+    );
   });
 
   void it('accounts for merger cash-per-share in capital gains', () => {
