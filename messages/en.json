@@ -150,7 +150,7 @@
   "faq_06_question": "How are buy and sell trades matched?",
   "faq_07_answer": "Amounts in foreign currencies are converted to PLN using the NBP average rate from the last business day before the transaction date. Trades use rates for both trade amount and commission. Dividends and withholding taxes are also converted with their own applicable rates.",
   "faq_07_question": "How are PLN values calculated from USD/EUR transactions?",
-  "faq_08_answer": "For dividends, foreign withholding tax is capped per dividend at 19% of that dividend amount in PLN. Any excess withholding on one dividend cannot reduce tax due on another dividend.",
+  "faq_08_answer": "For each dividend, kloPIT caps the creditable foreign withholding tax at the lower of the Polish domestic rate (19%) and the bilateral tax-treaty (UPO) rate for the issuer's country — for example 15% for US, Germany, France, and Netherlands, or 10% for the UK and Japan. Countries without a mapped treaty fall back to the 19% domestic cap. Any excess withholding on one dividend cannot reduce tax due on another dividend, and excess above the treaty rate is never deductible in Poland — recover it from the foreign tax authority if needed.",
   "faq_08_question": "How is foreign withholding tax deducted for dividends?",
   "faq_09_answer": "kloPIT maps results to PIT-38 fields step by step: proceeds and costs in Section C, tax base and capital gains tax in Section D, and dividend tax summary in Section G. It also builds PIT/ZG values per country from ISIN-based country mapping.",
   "faq_09_question": "How are PIT-38 and PIT/ZG fields calculated?",

@@ -145,7 +145,7 @@
   "faq_06_question": "Jak dopasowywane są transakcje kupna i sprzedaży?",
   "faq_07_answer": "Kwoty w walutach obcych są przeliczane na PLN według średniego kursu NBP z ostatniego dnia roboczego poprzedzającego datę transakcji. Dla transakcji używane są kursy dla kwoty transakcji i prowizji. Dywidendy i podatek u źródła również są przeliczane własnymi właściwymi kursami.",
   "faq_07_question": "Jak wyliczane są wartości PLN dla transakcji w USD/EUR?",
-  "faq_08_answer": "Dla dywidend podatek zapłacony za granicą jest limitowany dla każdej dywidendy osobno do 19% jej kwoty brutto w PLN. Nadwyżka podatku z jednej dywidendy nie może obniżyć podatku od innej dywidendy.",
+  "faq_08_answer": "Dla każdej dywidendy kloPIT ogranicza podatek zapłacony za granicą, który można odliczyć, do niższej z dwóch kwot: polskiej stawki krajowej (19%) i stawki z właściwej umowy o unikaniu podwójnego opodatkowania (UPO) dla kraju emitenta — np. 15% dla USA, Niemiec, Francji i Holandii lub 10% dla Wielkiej Brytanii i Japonii. Dla krajów bez zmapowanej UPO stosujemy krajowy limit 19%. Nadwyżka podatku pobranego przy jednej dywidendzie nie pomniejsza podatku od innej dywidendy, a nadwyżka ponad stawkę UPO nie podlega odliczeniu w Polsce — o jej zwrot należy wystąpić do zagranicznego urzędu skarbowego.",
   "faq_08_question": "Jak odliczany jest zagraniczny podatek u źródła od dywidend?",
   "faq_09_answer": "kloPIT mapuje wyniki do pól PIT-38 krok po kroku: przychody i koszty w sekcji C, podstawa i podatek od zysków w sekcji D oraz podsumowanie podatku od dywidend w sekcji G. Dodatkowo wylicza wartości PIT/ZG per kraj na podstawie mapowania kraju z ISIN.",
   "faq_09_question": "Jak wyliczane są pola PIT-38 i PIT/ZG?",
