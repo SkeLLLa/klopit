@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/SkeLLLa/klopit/compare/v1.4.0...v1.4.1) (2026-04-13)
+
+### 🛠 Fixes
+
+* **dashboard:** display properly capped taxes ([a4c34a1](https://github.com/SkeLLLa/klopit/commit/a4c34a19fb7392b5e1e8fffa37d315f235117b00))
+
 ## [1.4.0](https://github.com/SkeLLLa/klopit/compare/v1.3.0...v1.4.0) (2026-04-13)
 
 ### 🚀 Features
