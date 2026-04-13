@@ -1,3 +1,18 @@
+## [1.4.0](https://github.com/SkeLLLa/klopit/compare/v1.3.0...v1.4.0) (2026-04-13)
+
+### 🚀 Features
+
+* add all DTT rates ([e6d9079](https://github.com/SkeLLLa/klopit/commit/e6d9079dbcf59fa90aeaca3cd87b3189d7f0e22a))
+* **tax:** add Norway DTT rate and link official treaty list ([f52aa8e](https://github.com/SkeLLLa/klopit/commit/f52aa8e4b1df03649396f1ebe60ae5938d667ecf))
+* **tax:** add treaty-based dividend withholding cap map ([c0fa358](https://github.com/SkeLLLa/klopit/commit/c0fa358ad924ddea1a1646f9104e96a4c673d758))
+* **tax:** cap dividend credit by DTT rate in buildSummary ([5fe9208](https://github.com/SkeLLLa/klopit/commit/5fe9208803fd7de352247f870a4974ff27683853))
+* **tax:** cap dividend credit by DTT rate in PIT/ZG per-country ([882412a](https://github.com/SkeLLLa/klopit/commit/882412ac1602093fe8ce25fbc880475921b809d6))
+
+### 📔 Docs
+
+* document DTT-based dividend credit cap in HOW-IT-WORKS ([c4af36e](https://github.com/SkeLLLa/klopit/commit/c4af36ecbb8cfc95a195bf44ad11700c279cf2ed))
+* **i18n:** update faq_08 to describe DTT-based dividend cap ([ef8cc47](https://github.com/SkeLLLa/klopit/commit/ef8cc479d0a405fb50e55ab7d51f0da427827fce))
+
 ## [1.3.0](https://github.com/SkeLLLa/klopit/compare/v1.2.7...v1.3.0) (2026-04-13)
 
 ### 🚀 Features
