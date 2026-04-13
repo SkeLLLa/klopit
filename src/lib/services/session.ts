@@ -41,6 +41,8 @@ export async function updateSession(args: {
       | 'oppKrs'
       | 'oppDetails'
       | 'oppConsent'
+      | 'dataUpdatedAt'
+      | 'calculatedAt'
     >
   >;
 }): Promise<void> {
