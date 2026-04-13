@@ -69,3 +69,6 @@ examples/**/*.private.*
 .*/
 !.github/
 !.release/
+
+# Docs tmp files
+docs/**/

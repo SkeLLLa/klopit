@@ -13,7 +13,7 @@
 
 > **The only external call the app makes is to the [NBP public API](https://api.nbp.pl/) to fetch PLN exchange rates.** All other processing — CSV parsing, FIFO calculations, tax math, storage — happens locally in your browser.
 
-**Live app: [klopit.co.pl](https://klopit.co.pl)** | Found a mistake in translations? [Fix it on Fink](https://fink.inlang.com/github.com/SkeLLLa/klopit?project=%2Fproject.inlang)
+**Live app: [klopit.co.pl](https://klopit.co.pl)** | Found a mistake in translations? [Fix it on Fink](https://fink.inlang.com/github.com/SkeLLLa/klopit?project=%2Fproject.inlang) (if Fink will fix all their issues :)
 
 > **kloPIT** — from Ukrainian "клопіт" and Polish "kłopot" (worry, hassle, trouble). Filing taxes is a hassle — this tool handles it for you.
 
