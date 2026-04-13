@@ -284,4 +284,119 @@ void describe('calculateDividends', () => {
     assert.equal(result.length, 1);
     assert.ok(Math.abs(result[0].amountPln - 123.5) < 0.01); // 325 * 0.38
   });
+
+  void it('warns when US dividend has 30% withholding vs 15% treaty rate', () => {
+    const div = makeDiv({
+      symbol: 'AAPL',
+      amount: 100,
+      exchangeRate: 4.0,
+    });
+    // 30 USD withheld on 100 USD = 30% effective rate
+    const tax = makeTax({
+      amount: -30,
+      exchangeRate: 4.0,
+    });
+
+    const symbolMap = new Map([['AAPL', 'US']]);
+
+    const result = calculateDividends({
+      dividends: [div],
+      withholdingTaxes: [tax],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: symbolMap,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].country, 'US');
+    assert.ok(result[0].warnings?.length === 1);
+    const whtLapseWarning = result[0].warnings?.[0];
+    assert.ok(whtLapseWarning);
+    assert.equal(whtLapseWarning.kind, 'wht-lapse');
+  });
+
+  void it('does not warn for US dividend with 15% withholding (matches treaty)', () => {
+    const div = makeDiv({
+      symbol: 'AAPL',
+      amount: 100,
+      exchangeRate: 4.0,
+    });
+    // 15 USD withheld on 100 USD = 15% effective rate (matches treaty)
+    const tax = makeTax({
+      amount: -15,
+      exchangeRate: 4.0,
+    });
+
+    const symbolMap = new Map([['AAPL', 'US']]);
+
+    const result = calculateDividends({
+      dividends: [div],
+      withholdingTaxes: [tax],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: symbolMap,
+    });
+
+    assert.equal(result.length, 1);
+    assert.ok(
+      !result[0].warnings || result[0].warnings.length === 0,
+      'Should not warn when withheld rate matches treaty rate',
+    );
+  });
+
+  void it('does not warn for US dividend with 15.05% withholding (within tolerance)', () => {
+    const div = makeDiv({
+      symbol: 'AAPL',
+      amount: 100,
+      exchangeRate: 4.0,
+    });
+    // 15.05 USD withheld on 100 USD = 15.05% effective rate (within tolerance of 15%)
+    const tax = makeTax({
+      amount: -15.05,
+      exchangeRate: 4.0,
+    });
+
+    const symbolMap = new Map([['AAPL', 'US']]);
+
+    const result = calculateDividends({
+      dividends: [div],
+      withholdingTaxes: [tax],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: symbolMap,
+    });
+
+    assert.equal(result.length, 1);
+    assert.ok(
+      !result[0].warnings || result[0].warnings.length === 0,
+      'Should not warn when withheld rate is within tolerance',
+    );
+  });
+
+  void it('adds unknown-country warning when country mapping is unavailable', () => {
+    const div = makeDiv({
+      symbol: 'UNKNOWN',
+      amount: 100,
+      exchangeRate: 4.0,
+    });
+    // 19 USD withheld on 100 USD = 19% (matches fallback domestic rate)
+    const tax = makeTax({
+      symbol: 'UNKNOWN',
+      amount: -19,
+      exchangeRate: 4.0,
+    });
+
+    const symbolMap = new Map(); // No country mapping provided
+
+    const result = calculateDividends({
+      dividends: [div],
+      withholdingTaxes: [tax],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: symbolMap,
+    });
+
+    assert.equal(result.length, 1);
+    assert.ok(result[0].warnings?.some((w) => w.kind === 'unknown-country'));
+    assert.ok(
+      !result[0].warnings?.some((w) => w.kind === 'wht-lapse'),
+      'Should not add wht-lapse warning for 19% fallback case',
+    );
+  });
 });

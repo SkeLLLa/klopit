@@ -1,9 +1,11 @@
 import type {
   DividendResult,
+  DividendWarning,
   EnrichedRawDividend,
   EnrichedWithholdingTax,
   TaxPeriod,
 } from '../types.js';
+import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface CalculateDividendsArgs {
   dividends: EnrichedRawDividend[];
@@ -72,6 +74,26 @@ export function calculateDividends(
     const rateUnavailable =
       div.rateUnavailable || matchedTaxes.some((tax) => tax.rateUnavailable);
 
+    const country = symbolCountryMap.get(div.symbol) ?? 'XX';
+    const warnings: DividendWarning[] = [];
+
+    if (country === 'XX') {
+      warnings.push({ kind: 'unknown-country' });
+    }
+
+    // Check for W-8BEN lapse: withheld rate exceeds treaty rate
+    if (div.amount > 0 && withholdingTaxOriginal > 0) {
+      const withheldRate = withholdingTaxOriginal / div.amount;
+      const treatyRate = getDividendCreditCapRate({ country });
+      const tolerance = 0.005; // ±0.5% tolerance for rounding
+
+      if (withheldRate > treatyRate + tolerance) {
+        warnings.push({
+          kind: 'wht-lapse',
+        });
+      }
+    }
+
     results.push({
       symbol: div.symbol,
       currency: div.currency,
@@ -82,7 +104,8 @@ export function calculateDividends(
       withholdingTaxPln,
       exchangeRate: div.exchangeRate,
       rateUnavailable,
-      country: symbolCountryMap.get(div.symbol) ?? 'XX',
+      country,
+      warnings: warnings.length > 0 ? warnings : undefined,
     });
   }
 

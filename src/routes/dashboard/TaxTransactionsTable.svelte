@@ -322,6 +322,19 @@
             {@const taxPl = div.amountPln * TAX_RATE}
             {@const creditCap = div.amountPln * getDividendCreditCapRate({ country: div.country })}
             {@const deductible = Math.min(div.withholdingTaxPln, creditCap)}
+            {@const hasWhtLapse =
+              div.warnings?.some((w) => w.kind === 'wht-lapse') ??
+              (div.amountPln > 0 &&
+                div.withholdingTaxPln / div.amountPln >
+                  getDividendCreditCapRate({ country: div.country }) + 0.005)}
+            {@const hasUnknownCountry =
+              div.warnings?.some((w) => w.kind === 'unknown-country') ??
+              div.country === 'XX'}
+            {@const warningText = hasWhtLapse
+              ? m.dividend_warning_wht_lapse_description()
+              : hasUnknownCountry
+                ? m.dividend_warning_unknown_country_description()
+                : undefined}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const taxToPay = Math.max(taxPl - deductible, 0)}
@@ -347,7 +360,15 @@
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
               >
-                {formatPlnValue(div.withholdingTaxPln)}
+                <span
+                  class={warningText
+                    ? 'cursor-help text-amber-600 dark:text-amber-400'
+                    : ''}
+                  title={warningText}
+                  aria-label={warningText}
+                >
+                  {formatPlnValue(div.withholdingTaxPln)}
+                </span>
                 <span class="text-xs text-slate-400">
                   ({formatPct(effectiveWithholdingPct)})
                 </span>

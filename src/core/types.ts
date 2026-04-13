@@ -148,6 +148,15 @@ export interface TradeResult {
   country: string;
 }
 
+/** Warning on a dividend result */
+export type DividendWarning =
+  | {
+      kind: 'wht-lapse';
+    }
+  | {
+      kind: 'unknown-country';
+    };
+
 /** Dividend with PLN conversion and matched withholding */
 export interface DividendResult {
   symbol: string;
@@ -160,6 +169,7 @@ export interface DividendResult {
   exchangeRate: number;
   rateUnavailable: boolean;
   country: string;
+  warnings?: DividendWarning[];
 }
 
 /** Per-country PIT/ZG attachment fields */
