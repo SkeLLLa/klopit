@@ -28,6 +28,10 @@ export interface SessionRecord {
   oppKrs?: string;
   oppDetails?: string;
   oppConsent?: boolean;
+  /** Bumped by Dexie hooks whenever source data tables change. */
+  dataUpdatedAt?: Date;
+  /** Set by calculateSessionTaxes on successful completion. */
+  calculatedAt?: Date;
 }
 
 export interface ImportedFileRecord {
@@ -145,6 +149,9 @@ class KlopitDB extends Dexie {
     });
     this.version(3).stores({
       symbolCountryOverrides: '++id, sessionId, symbol',
+    });
+    this.version(4).stores({
+      sessions: 'id, year',
     });
   }
 }
