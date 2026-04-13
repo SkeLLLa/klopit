@@ -1,9 +1,5 @@
-import {
-  TAX_RATE,
-  type DividendResult,
-  type PitZgFields,
-  type TradeResult,
-} from '../types.js';
+import type { DividendResult, PitZgFields, TradeResult } from '../types.js';
+import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface BuildPitZgArgs {
   trades: TradeResult[];
@@ -48,15 +44,15 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     entry.lossPln = Math.max(-net, 0);
   }
 
-  // Aggregate dividends by country
+  // Aggregate dividends by country with per-dividend credit cap.
+  // art. 30a ust. 2 (UPO) + art. 30a ust. 9 (krajowy 19%) ustawy o PIT.
   for (const div of dividends) {
     const entry = getOrCreate(div.country);
     entry.dividendIncomePln += div.amountPln;
     entry.foreignTaxPaidPln += div.withholdingTaxPln;
-    // Per-dividend withholding cap (art. 30a ust. 9)
     entry.deductibleForeignTaxPln += Math.min(
       div.withholdingTaxPln,
-      div.amountPln * TAX_RATE,
+      div.amountPln * getDividendCreditCapRate({ country: div.country }),
     );
   }
 

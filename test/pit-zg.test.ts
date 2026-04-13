@@ -88,28 +88,40 @@ void describe('buildPitZg', () => {
     assert.equal(de.lossPln, 1000);
   });
 
-  void it('groups dividends by country with per-dividend withholding cap', () => {
+  void it('groups dividends by country with per-dividend treaty cap', () => {
     const dividends = [
+      // US: 100 PLN, 30 PLN withheld → deductible = min(30, 100 * 0.15 = 15) = 15
       makeDivResult({ country: 'US', amountPln: 100, withholdingTaxPln: 30 }),
+      // US: 200 PLN, 20 PLN withheld → deductible = min(20, 200 * 0.15 = 30) = 20
       makeDivResult({ country: 'US', amountPln: 200, withholdingTaxPln: 20 }),
+      // DE: 50 PLN, 5 PLN withheld → deductible = min(5, 50 * 0.15 = 7.5) = 5
       makeDivResult({ country: 'DE', amountPln: 50, withholdingTaxPln: 5 }),
+      // ZZ (unknown): 100 PLN, 30 PLN withheld → deductible = min(30, 100 * 0.19 = 19) = 19
+      makeDivResult({ country: 'ZZ', amountPln: 100, withholdingTaxPln: 30 }),
     ];
 
     const result = buildPitZg({ trades: [], dividends });
-    assert.equal(result.length, 2);
+    assert.equal(result.length, 3);
 
     const us = result.find((r) => r.country === 'US');
     assert.ok(us);
     assert.equal(us.dividendIncomePln, 300);
     assert.equal(us.foreignTaxPaidPln, 50);
-    // Deductible: min(30, 100*0.19=19) + min(20, 200*0.19=38) = 19 + 20 = 39
-    assert.ok(Math.abs(us.deductibleForeignTaxPln - 39) < 0.01);
+    // Deductible: 15 + 20 = 35 (treaty-capped)
+    assert.ok(Math.abs(us.deductibleForeignTaxPln - 35) < 0.01);
 
     const de = result.find((r) => r.country === 'DE');
     assert.ok(de);
     assert.equal(de.dividendIncomePln, 50);
     assert.equal(de.foreignTaxPaidPln, 5);
     assert.ok(Math.abs(de.deductibleForeignTaxPln - 5) < 0.01);
+
+    const zz = result.find((r) => r.country === 'ZZ');
+    assert.ok(zz);
+    assert.equal(zz.dividendIncomePln, 100);
+    assert.equal(zz.foreignTaxPaidPln, 30);
+    // Deductible: 19 (domestic 19% fallback for non-treaty country)
+    assert.ok(Math.abs(zz.deductibleForeignTaxPln - 19) < 0.01);
   });
 
   void it('combines trades and dividends for same country', () => {
