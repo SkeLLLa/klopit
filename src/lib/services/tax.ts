@@ -227,7 +227,10 @@ export async function calculateSessionTaxes(args: {
       // 12. Update session status
       await updateSession({
         id: args.sessionId,
-        changes: { status: 'calculated' },
+        changes: {
+          status: 'calculated',
+          calculatedAt: new Date(),
+        },
       });
     },
   );
@@ -250,7 +253,10 @@ export async function clearSessionResults(args: {
       ]);
       await updateSession({
         id: args.sessionId,
-        changes: { status: 'draft' },
+        changes: {
+          status: 'draft',
+          calculatedAt: undefined,
+        },
       });
     },
   );
