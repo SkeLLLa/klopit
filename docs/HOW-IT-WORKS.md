@@ -330,11 +330,15 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 
 ---
 
-### 5. Dividend Tax (19%)
+### 5. Dividend Tax (19%) with treaty-based credit cap
 
-**Legal basis:** [Art. 30a ust. 1 pkt 4 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign dividends are taxed at a flat rate of 19% (zryczałtowany podatek dochodowy).
+**Legal basis:**
 
-**Exact algorithm** (`dividends.ts`):
+- [Art. 30a ust. 1 pkt 4 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign dividends are taxed at a flat 19% (zryczałtowany podatek dochodowy).
+- [Art. 30a ust. 2 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — the rate is applied with regard to applicable double-tax treaties (UPO).
+- [Art. 30a ust. 9 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — domestic cap: the credit cannot exceed the 19% rate applied to gross income.
+
+**Exact algorithm** (`dividends.ts` + `calculator.ts` + `treaty-rates.ts`):
 
 **Step 1 — Match dividends with withholding taxes.**
 
@@ -348,35 +352,56 @@ For each dividend in the tax period:
     withholdingTaxPln  = sum of (|tax.amount| × tax.exchangeRate) for matched taxes
 ```
 
-Note: Interactive Brokers stores withholding amounts as negative numbers — `Math.abs()` is applied.
+Note: Interactive Brokers stores withholding amounts as negative numbers — `Math.abs()` is applied. Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date).
 
-Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date).
+**Step 3 — Per-dividend credit cap** (applied in `buildSummary`):
 
-**Step 3 — Per-dividend withholding cap** (applied in `buildSummary`):
-
-**Important: [Art. 30a ust. 9](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)**
+The cap rate per dividend is the **lower of** the applicable treaty rate (from `TREATY_DIVIDEND_RATE_MAP` in `src/core/tax/treaty-rates.ts`) and the domestic 19% rate. For countries without a mapped treaty, the fallback is 19%.
 
 ```
-For each dividend:
-    deductibleWithholding = min(withholdingTaxPln, amountPln × 0.19)
+capRate               = min(treatyRate(country) ?? 0.19, 0.19)
+deductibleWithholding = min(withholdingTaxPln, amountPln × capRate)
 
 totalDeductibleWithholdingPln = sum of deductibleWithholding for all dividends
 dividendTaxOwedPln = max(totalDividendsPln × 0.19 − totalDeductibleWithholdingPln, 0)
 ```
 
+Currently mapped treaty rates (portfolio / default column):
+
+| ISO | Country        | Rate | Source                                          |
+|-----|----------------|------|-------------------------------------------------|
+| US  | United States  | 15%  | UPO PL-USA 1974, art. 11 ust. 2 lit. b          |
+| GB  | United Kingdom | 10%  | UPO PL-UK 2006, art. 10 ust. 2 lit. b           |
+| DE  | Germany        | 15%  | UPO PL-DE 2003, art. 10 ust. 2 lit. b           |
+| FR  | France         | 15%  | UPO PL-FR 1975, art. 10 ust. 2 lit. b           |
+| NL  | Netherlands    | 15%  | UPO PL-NL 2002, art. 10 ust. 2 lit. b           |
+| IE  | Ireland        | 15%  | UPO PL-IE 1995, art. 10 ust. 2 lit. b           |
+| CH  | Switzerland    | 15%  | UPO PL-CH 1991 (ze zm.), art. 10 ust. 2 lit. b  |
+| CA  | Canada         | 15%  | UPO PL-CA 2012, art. 10 ust. 2 lit. b           |
+| JP  | Japan          | 10%  | UPO PL-JP 1980, art. 10 ust. 2 lit. b           |
+
+All other countries (including unknown `XX`) fall back to the domestic 19% cap. Excess withholding above the treaty rate is **not** deductible in Poland — taxpayers must reclaim it from the foreign tax authority.
+
 The per-dividend cap ensures that excess foreign tax on one dividend **cannot** offset tax owed on another dividend.
 
-**Mathematical equivalence note:** Since `min(w, d×0.19) ≤ d×0.19` for every dividend, the per-dividend owed amount is always ≥ 0, making the aggregate formula equivalent to summing per-dividend results.
+**Mathematical equivalence note:** Since `min(w, d × capRate) ≤ d × 0.19` for every dividend, the per-dividend owed amount is always ≥ 0, making the aggregate formula equivalent to summing per-dividend results.
 
-**Example with mixed withholding rates:**
+**Example with US dividend (treaty cap at 15%):**
 
-- Dividend A: 100 PLN gross, 30% foreign tax = 30 PLN withheld
-  - Deductible: min(30, 19) = **19 PLN** (11 PLN excess is lost)
-  - To pay: 19 − 19 = **0 PLN**
-- Dividend B: 100 PLN gross, 0% foreign tax = 0 PLN withheld
-  - Deductible: min(0, 19) = **0 PLN**
+- Dividend: 100 PLN gross, broker withheld 19 PLN (≈19%, over the treaty rate).
+  - Cap: min(15%, 19%) × 100 = 15 PLN
+  - Deductible: min(19, 15) = **15 PLN** (4 PLN excess lost in PL — recover abroad)
+  - To pay in PL: 100 × 19% − 15 = **4 PLN**
+
+**Example with mixed amounts (same country, US):**
+
+- Dividend A: 100 PLN gross, 30 PLN withheld.
+  - Deductible: min(30, 100 × 0.15 = 15) = **15 PLN**
+  - To pay: 19 − 15 = **4 PLN**
+- Dividend B: 100 PLN gross, 0 PLN withheld.
+  - Deductible: min(0, 15) = **0 PLN**
   - To pay: 19 − 0 = **19 PLN**
-- **Total to pay: 19 PLN** (not 8 PLN, which would result from pooling)
+- **Total to pay: 23 PLN** (pooling would incorrectly yield 38 − 30 = 8 PLN).
 
 ---
 
@@ -467,11 +492,13 @@ For each country:
     gainPln     = max(proceedsPln − costPln, 0)
     lossPln     = max(costPln − proceedsPln, 0)
 
-    // From dividends:
-    dividendIncomePln       = sum of div.amountPln for dividends in this country
+    // From dividends (per-country):
+    dividendIncomePln       = sum of div.amountPln
     foreignTaxPaidPln       = sum of div.withholdingTaxPln
-    deductibleForeignTaxPln = sum of min(div.withholdingTaxPln, div.amountPln × 0.19)
-                              // Per-dividend cap per art. 30a ust. 9
+    capRate                 = min(treatyRate(country) ?? 0.19, 0.19)
+    deductibleForeignTaxPln = sum of min(div.withholdingTaxPln, div.amountPln × capRate)
+                              // Per-dividend cap per art. 30a ust. 2 + ust. 9
+                              // (DTT rate or 19% fallback; see Section 5 table)
 ```
 
 Results are sorted alphabetically by country code.
