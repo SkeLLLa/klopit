@@ -12,7 +12,7 @@
   import DeleteConfirm from './DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
-  let { sessionId }: { sessionId: string } = $props();
+  let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();
 
   const trades = useLiveQuery(() =>
     db.trades.where('sessionId').equals(sessionId).sortBy('datetime'),
@@ -55,7 +55,7 @@
     </div>
   {:else}
     <div class="mb-3">
-      <TradeForm onsave={handleAdd} oncancel={() => (showAddForm = false)} />
+      <TradeForm defaultYear={sessionYear} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
     </div>
   {/if}
 

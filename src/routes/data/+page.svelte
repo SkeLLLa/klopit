@@ -118,7 +118,7 @@
       <DataTabs activeTab="trades" {counts}>
         {#snippet children(tab)}
           {#if tab === 'trades'}
-            <TradesTable sessionId={activeSession.id} />
+            <TradesTable sessionId={activeSession.id} sessionYear={activeSession.year} />
           {:else if tab === 'dividends'}
             <DividendsTable sessionId={activeSession.id} />
           {:else if tab === 'withholding'}
