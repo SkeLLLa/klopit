@@ -105,9 +105,12 @@
   "data_price": "Cena",
   "data_proceeds": "Przychód",
   "data_quantity": "Ilość",
+  "data_recalculate": "Przelicz ponownie",
+  "data_recalculate_error": "Przeliczenie nie powiodło się: {error}",
   "data_save": "Zapisz",
   "data_session_label": "Sesja",
   "data_split_details": "{numerator} za {denominator}",
+  "data_stale_hint": "Dane zmienione od ostatniego przeliczenia",
   "data_symbol": "Symbol",
   "data_tab_carry_in": "Pozycje z lat ubiegłych",
   "data_tab_corporate_actions": "Zdarzenia korporacyjne",
@@ -311,5 +314,6 @@
   "tax_section_h": "H. Zrycza\u0142towany podatek dochodowy \u2014 art. 44 ust. 1b ustawy",
   "tax_sidebar_country_mapping": "Mapowanie krajów",
   "tax_sidebar_pitzg": "PIT/ZG",
-  "tax_sidebar_tax_reports": "Zeznania podatkowe"
+  "tax_sidebar_tax_reports": "Zeznania podatkowe",
+  "tax_stale_banner": "Dane zmienione od ostatniego przeliczenia."
 }

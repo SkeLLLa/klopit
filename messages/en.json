@@ -110,9 +110,12 @@
   "data_price": "Price",
   "data_proceeds": "Proceeds",
   "data_quantity": "Quantity",
+  "data_recalculate": "Recalculate",
+  "data_recalculate_error": "Recalculation failed: {error}",
   "data_save": "Save",
   "data_session_label": "Session",
   "data_split_details": "{numerator} for {denominator}",
+  "data_stale_hint": "Data changed since last calculation",
   "data_symbol": "Symbol",
   "data_tab_carry_in": "Carry-in",
   "data_tab_corporate_actions": "Corporate Actions",
@@ -317,5 +320,6 @@
   "tax_section_h": "H. Flat-rate income tax \u2014 art. 44 sec. 1b of the Act",
   "tax_sidebar_country_mapping": "Country mapping",
   "tax_sidebar_pitzg": "PIT/ZG",
-  "tax_sidebar_tax_reports": "Tax reports"
+  "tax_sidebar_tax_reports": "Tax reports",
+  "tax_stale_banner": "Data changed since last calculation."
 }

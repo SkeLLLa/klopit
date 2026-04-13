@@ -105,9 +105,12 @@
   "data_price": "Ціна",
   "data_proceeds": "Дохід",
   "data_quantity": "Кількість",
+  "data_recalculate": "Перерахувати",
+  "data_recalculate_error": "Перерахунок не вдався: {error}",
   "data_save": "Зберегти",
   "data_session_label": "Сесія",
   "data_split_details": "{numerator} за {denominator}",
+  "data_stale_hint": "Дані змінено з моменту останнього розрахунку",
   "data_symbol": "Символ",
   "data_tab_carry_in": "Позиції минулих років",
   "data_tab_corporate_actions": "Корпоративні дії",
@@ -311,5 +314,6 @@
   "tax_section_h": "H. \u0424\u0456\u043a\u0441\u043e\u0432\u0430\u043d\u0438\u0439 \u043f\u043e\u0434\u0430\u0442\u043e\u043a \u043d\u0430 \u043f\u0440\u0438\u0431\u0443\u0442\u043e\u043a \u2014 \u0441\u0442. 44 \u0447. 1b \u0437\u0430\u043a\u043e\u043d\u0443",
   "tax_sidebar_country_mapping": "Країни",
   "tax_sidebar_pitzg": "PIT/ZG",
-  "tax_sidebar_tax_reports": "Податкові звіти"
+  "tax_sidebar_tax_reports": "Податкові звіти",
+  "tax_stale_banner": "Дані змінено з моменту останнього розрахунку."
 }
