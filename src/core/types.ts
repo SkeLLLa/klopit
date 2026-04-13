@@ -76,6 +76,24 @@ export interface CarryInPosition {
   year: number;
 }
 
+/**
+ * A capital-loss carried in from a prior tax year.
+ *
+ * Per art. 9 ust. 3 updof, a loss reported in year `year` may be deducted
+ * from gains in the next 5 tax years, with at most 50% of the original
+ * loss applied in any single year.
+ *
+ * - `totalLossPln` — the original loss amount reported on PIT-38 poz29 for `year`.
+ * - `alreadyDeductedPln` — cumulative amount already deducted in prior years
+ *   (across all sessions). Used to track the residual available for the
+ *   current calculation.
+ */
+export interface PriorYearLoss {
+  year: number;
+  totalLossPln: number;
+  alreadyDeductedPln: number;
+}
+
 /** Transaction fee from broker (e.g. French transaction tax) */
 export interface TransactionFee {
   symbol: string;

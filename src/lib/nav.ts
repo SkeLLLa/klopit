@@ -38,6 +38,11 @@ export const navigation: NavSection[] = [
     labelKey: 'section_workspace',
     items: [
       { labelKey: 'nav_data', href: '/data', icon: 'Table' },
+      {
+        labelKey: 'nav_prior_losses',
+        href: '/prior-losses',
+        icon: 'TrendingDown',
+      },
       { labelKey: 'nav_tax_form', href: '/tax-form', icon: 'FileText' },
       { labelKey: 'nav_dashboard', href: '/dashboard', icon: 'BarChart3' },
       { labelKey: 'nav_rates', href: '/rates', icon: 'ArrowLeftRight' },

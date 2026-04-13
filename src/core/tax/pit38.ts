@@ -1,14 +1,26 @@
-import { TAX_RATE, type Pit38Fields, type TaxSummary } from '../types.js';
+import {
+  TAX_RATE,
+  type Pit38Fields,
+  type PriorYearLoss,
+  type TaxSummary,
+} from '../types.js';
+import { applyLossCarryForward } from './loss-carry-forward.js';
 import { roundToFullPln, roundToGroszUp } from './rounding.js';
 
 export interface BuildPit38Args {
   summary: TaxSummary;
-  priorYearLoss?: number;
+  /**
+   * Prior-year capital losses available for carry-forward (art. 9 ust. 3
+   * updof). Each entry tracks its own residual via `alreadyDeductedPln`.
+   * The 5-year window and 50%-per-year cap are enforced by
+   * `applyLossCarryForward`.
+   */
+  priorLosses?: PriorYearLoss[];
 }
 
 /** Map TaxSummary to PIT-38(18) form field values. Key = position on form. */
 export function buildPit38(args: BuildPit38Args): Pit38Fields {
-  const { summary, priorYearLoss } = args;
+  const { summary, priorLosses } = args;
   const f = {} as Pit38Fields;
 
   // Section C — Capital gains/losses
@@ -23,7 +35,13 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   f[29] = Math.max(f[27] - f[26], 0); // Loss
 
   // Section D — Tax calculation
-  f[30] = Math.min(priorYearLoss ?? 0, f[28]); // Deductible prior year loss
+  // Apply art. 9 ust. 3 updof: per-loss-year 50% cap + 5-year window.
+  const lossDeduction = applyLossCarryForward({
+    gainPln: f[28],
+    priorLosses: priorLosses ?? [],
+    currentYear: summary.year,
+  });
+  f[30] = lossDeduction.deductedPln;
   f[31] = roundToFullPln({ amount: Math.max(f[28] - f[30], 0) });
   f[33] = f[31] * TAX_RATE;
   f[34] = 0; // No foreign tax on capital gains

@@ -186,6 +186,13 @@ export async function calculateSessionTaxes(args: {
     to: new Date(session.year, 11, 31),
   };
 
+  // Load prior-year losses (art. 9 ust. 3 updof). Each entry tracks its
+  // own residual via `alreadyDeductedPln`.
+  const priorLosses = await db.priorLosses
+    .where('sessionId')
+    .equals(args.sessionId)
+    .toArray();
+
   // 10. Calculate taxes
   const result = calculateTaxes({
     trades: enrichedTrades,
@@ -193,7 +200,11 @@ export async function calculateSessionTaxes(args: {
     withholdingTaxes: enrichedWithholding,
     corporateActions: enrichedCorporateActions,
     carryInPositions,
-    priorYearLoss: session.priorYearLoss,
+    priorLosses: priorLosses.map((p) => ({
+      year: p.year,
+      totalLossPln: p.totalLossPln,
+      alreadyDeductedPln: p.alreadyDeductedPln,
+    })),
     taxPeriod,
     symbolCountryMap,
   });
@@ -222,6 +233,7 @@ export async function calculateSessionTaxes(args: {
         ...result.summary,
         pit38: result.pit38,
         pitZg: result.pitZg,
+        lossDeduction: result.lossDeduction,
       });
 
       // 12. Update session status

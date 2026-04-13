@@ -1,6 +1,7 @@
 import type {
   CarryInPosition,
   CorporateAction,
+  PriorYearLoss,
   RawDividend,
   RawWithholdingTax,
   Trade,
@@ -85,4 +86,29 @@ export async function deleteCarryInPosition(args: {
   id: number;
 }): Promise<void> {
   await db.carryInPositions.delete(args.id);
+}
+
+// --- Prior-Year Losses (full CRUD) ---
+
+export async function addPriorYearLoss(args: {
+  sessionId: string;
+  loss: PriorYearLoss;
+}): Promise<number> {
+  const id = await db.priorLosses.add({
+    ...args.loss,
+    sessionId: args.sessionId,
+  });
+  if (id === undefined) throw new Error('Failed to insert prior-year loss');
+  return id;
+}
+
+export async function updatePriorYearLoss(args: {
+  id: number;
+  changes: Partial<PriorYearLoss>;
+}): Promise<void> {
+  await db.priorLosses.update(args.id, args.changes);
+}
+
+export async function deletePriorYearLoss(args: { id: number }): Promise<void> {
+  await db.priorLosses.delete(args.id);
 }

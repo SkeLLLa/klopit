@@ -8,12 +8,17 @@ import {
   type EnrichedWithholdingTax,
   type Pit38Fields,
   type PitZgFields,
+  type PriorYearLoss,
   type TaxPeriod,
   type TaxSummary,
   type TradeResult,
 } from '../types.js';
 import { calculateCapitalGains } from './capital-gains.js';
 import { calculateDividends } from './dividends.js';
+import {
+  applyLossCarryForward,
+  type ApplyLossCarryForwardResult,
+} from './loss-carry-forward.js';
 import { buildPitZg } from './pit-zg.js';
 import { buildPit38 } from './pit38.js';
 import { getDividendCreditCapRate } from './treaty-rates.js';
@@ -24,7 +29,12 @@ export interface CalculateTaxesArgs {
   withholdingTaxes: EnrichedWithholdingTax[];
   corporateActions: EnrichedCorporateAction[];
   carryInPositions: CarryInPosition[];
-  priorYearLoss?: number;
+  /**
+   * Prior-year capital losses (art. 9 ust. 3 updof). Replaces the legacy
+   * single-number `priorYearLoss` field — each year carries its own
+   * residual and 50%-per-year cap.
+   */
+  priorLosses?: PriorYearLoss[];
   taxPeriod: TaxPeriod;
   symbolCountryMap?: Map<string, string>;
 }
@@ -35,6 +45,8 @@ export interface TaxCalculationResult {
   summary: TaxSummary;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
+  /** Per-year breakdown of how prior-year losses were applied. */
+  lossDeduction: ApplyLossCarryForwardResult;
 }
 
 /** Orchestrate full tax calculation pipeline */
@@ -45,7 +57,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     withholdingTaxes,
     corporateActions,
     carryInPositions,
-    priorYearLoss,
+    priorLosses,
     taxPeriod,
   } = args;
 
@@ -72,7 +84,16 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     year: taxPeriod.year,
   });
 
-  const pit38 = buildPit38({ summary, priorYearLoss });
+  // Compute the loss-carry-forward breakdown once so the UI and PIT-38
+  // builder agree on the deduction amount.
+  const gainPln = Math.max(summary.totalProceedsPln - summary.totalCostPln, 0);
+  const lossDeduction = applyLossCarryForward({
+    gainPln,
+    priorLosses: priorLosses ?? [],
+    currentYear: taxPeriod.year,
+  });
+
+  const pit38 = buildPit38({ summary, priorLosses });
   const pitZg = buildPitZg({
     trades: tradeResults,
     dividends: dividendResults,
@@ -84,6 +105,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     summary,
     pit38,
     pitZg,
+    lossDeduction,
   };
 }
 

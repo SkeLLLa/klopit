@@ -458,7 +458,7 @@ void describe('calculateTaxes', () => {
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
-      priorYearLoss: 10000,
+      priorLosses: [{ year: 2023, totalLossPln: 10000, alreadyDeductedPln: 0 }],
       taxPeriod: taxPeriod2024,
     });
 

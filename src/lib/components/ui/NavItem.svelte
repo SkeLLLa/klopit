@@ -8,6 +8,7 @@
     Heart,
     Info,
     ArrowLeftRight,
+    TrendingDown,
     ChevronDown,
   } from 'lucide-svelte';
   const iconMap: Record<string, typeof House> = {
@@ -19,6 +20,7 @@
     Heart,
     Info,
     ArrowLeftRight,
+    TrendingDown,
   };
 
   let {

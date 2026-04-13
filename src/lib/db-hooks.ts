@@ -43,6 +43,7 @@ export function installStaleHooks(db: KlopitDB): void {
     db.carryInPositions,
     db.corporateActions,
     db.symbolCountryOverrides,
+    db.priorLosses,
   ];
 
   for (const table of sourceTables) {

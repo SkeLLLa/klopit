@@ -35,7 +35,6 @@ export async function updateSession(args: {
   changes: Partial<
     Pick<
       SessionRecord,
-      | 'priorYearLoss'
       | 'residencyStartDate'
       | 'status'
       | 'oppKrs'
@@ -77,6 +76,7 @@ export async function deleteSession(args: { id: string }): Promise<void> {
       db.carryInPositions,
       db.transactionFees,
       db.corporateActions,
+      db.priorLosses,
       db.tradeResults,
       db.dividendResults,
       db.taxSummaries,
@@ -90,6 +90,7 @@ export async function deleteSession(args: { id: string }): Promise<void> {
         db.carryInPositions.where('sessionId').equals(args.id).delete(),
         db.transactionFees.where('sessionId').equals(args.id).delete(),
         db.corporateActions.where('sessionId').equals(args.id).delete(),
+        db.priorLosses.where('sessionId').equals(args.id).delete(),
         db.tradeResults.where('sessionId').equals(args.id).delete(),
         db.dividendResults.where('sessionId').equals(args.id).delete(),
         db.taxSummaries.delete(args.id),

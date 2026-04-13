@@ -470,12 +470,14 @@ poz29 = max(poz27 − poz26, 0)              // Loss (strata)
 #### Section D — Tax Calculation
 
 ```
-poz30 = min(priorYearLoss, poz28)            // Prior year loss deduction (capped at gain)
+poz30 = applyLossCarryForward(priorLosses, poz28).deductedPln  // Prior-year loss deduction
 poz31 = roundToFullPln(max(poz28 − poz30, 0))  // Tax base (podstawa obliczenia podatku)
 poz33 = poz31 × 0.19                        // Tax amount (podatek)
 poz34 = 0                                    // Foreign tax on capital gains (not applicable)
 poz35 = roundToFullPln(max(poz33 − poz34, 0))  // Tax due (podatek należny)
 ```
+
+`applyLossCarryForward` enforces the 5-year window and 50%-per-year cap per loss entry — see Section 9.
 
 #### Sections E & F — Crypto (placeholders, all zeros)
 
@@ -534,19 +536,34 @@ Results are sorted alphabetically by country code.
 
 ### 9. Prior Year Losses (Carry-Over)
 
-**Legal basis:** [Art. 9 ust. 3 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/) — losses from a given income source can be carried forward for up to 5 consecutive tax years, with two alternative methods:
+**Implementation:** `src/core/tax/loss-carry-forward.ts`
 
-**Option 1 (gradual):** Deduct up to **50% of the loss per year** across 5 years ([art. 9 ust. 3 pkt 1](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)).
+**Legal basis:** [Art. 9 ust. 3 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/) — losses from a given income source can be carried forward for up to **5 consecutive tax years** following the year in which they were incurred, with a cap of **50% of the original loss per year** (art. 9 ust. 3 pkt 1).
 
-**Option 2 (one-time):** Deduct the entire loss in a single year, up to **5,000,000 PLN** ([art. 9 ust. 3 pkt 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)). Any remainder above 5M PLN follows the 50% rule for subsequent years.
+> _Option 2_ (one-shot deduction up to 5,000,000 PLN, art. 9 ust. 3 pkt 2) is **not** supported by the calculator. Users who qualify can still enter an equivalent gradual deduction schedule manually.
 
-**Implementation detail:** The user manually enters the deduction amount (`priorYearLoss`). The code caps it at the current year's gain:
+**Data model:** Each loss is recorded as a `PriorYearLoss { year, totalLossPln, alreadyDeductedPln }` in the `priorLosses` Dexie table, scoped per session. The `/prior-losses` page provides CRUD for these rows; `alreadyDeductedPln` tracks the residual consumed across prior tax years.
+
+**Algorithm (`applyLossCarryForward`):**
 
 ```
-deductible = min(priorYearLoss, capitalGain)
+For each priorLoss (oldest year first):
+    ageInYears = currentYear − loss.year
+    expired    = ageInYears > 5 || ageInYears <= 0
+    cap        = expired ? 0 : min(0.5 × loss.totalLossPln,
+                                    loss.totalLossPln − loss.alreadyDeductedPln)
+    deducted   = min(cap, remainingGain)
+    remainingGain −= deducted
+    loss.alreadyDeductedPln += deducted  // returned in updatedLosses
+
+poz30 = sum of deducted across all priorLosses
 ```
 
-The 50% limit and 5-year carry-forward tracking are **not enforced by the calculator** — the user is responsible for computing the correct deduction amount. This is by design for flexibility (supports both option 1 and option 2).
+**Guarantees:**
+
+- Losses older than 5 years or newer than the tax session are silently skipped (a warning is attached for residuals lost to expiration).
+- The 50%-per-year cap is enforced per loss year — a user entering 100% of a loss as "already deducted" previously still has their residual constrained by `0.5 × totalLossPln`.
+- The per-year breakdown (`perYear`) is persisted on the `taxSummary.lossDeduction` record and rendered in Section D of the PIT-38 form.
 
 ---
 
@@ -671,7 +688,7 @@ The app supports **three languages:**
    - Compute raw (unrounded) tax amounts for dashboard display
 6. **PIT-38** (`buildPit38`):
    - Map summary values to form fields with proper rounding
-   - Apply prior-year loss deduction (capped at gain amount)
+   - Apply prior-year loss deduction via `applyLossCarryForward` (5-year window, 50%-per-year cap, FIFO across loss years)
    - Round tax base and tax due to full PLN ([art. 63 § 1](https://lexlege.pl/ordynacja-podatkowa/art-63/))
    - Round dividend tax to full groszy up ([art. 63 § 1a](https://lexlege.pl/ordynacja-podatkowa/art-63/))
 7. **PIT/ZG** (`buildPitZg`):

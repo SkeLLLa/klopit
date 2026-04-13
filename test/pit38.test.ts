@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildPit38 } from '../src/core/tax/pit38.js';
-import type { TaxSummary } from '../src/core/types.js';
+import type { PriorYearLoss, TaxSummary } from '../src/core/types.js';
 
 function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
   return {
@@ -74,11 +74,16 @@ void describe('buildPit38', () => {
 
   void it('reduces tax base by prior year loss', () => {
     const summary = makeSummary({
+      year: 2024,
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    // 10 000 PLN loss → 50% cap = 5 000.
+    const priorLosses: PriorYearLoss[] = [
+      { year: 2023, totalLossPln: 10000, alreadyDeductedPln: 0 },
+    ];
 
-    const result = buildPit38({ summary, priorYearLoss: 5000 });
+    const result = buildPit38({ summary, priorLosses });
 
     assert.equal(result[28], 20000);
     assert.equal(result[30], 5000);
@@ -90,17 +95,56 @@ void describe('buildPit38', () => {
     assert.equal(result[35], 2850);
   });
 
-  void it('clamps prior year loss at gain amount', () => {
+  void it('clamps prior year loss at 50% per-year cap', () => {
     const summary = makeSummary({
+      year: 2024,
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    // 50 000 PLN loss → 50% cap = 25 000 (still ≤ gain 20 000? No: 25k > 20k).
+    // Cap min(50% × 50 000, gain) = min(25 000, 20 000) = 20 000.
+    const priorLosses: PriorYearLoss[] = [
+      { year: 2023, totalLossPln: 50000, alreadyDeductedPln: 0 },
+    ];
 
-    const result = buildPit38({ summary, priorYearLoss: 25000 });
+    const result = buildPit38({ summary, priorLosses });
 
     assert.equal(result[30], 20000);
     assert.equal(result[31], 0);
     assert.equal(result[35], 0);
+  });
+
+  void it('excludes losses outside the 5-year carry-forward window', () => {
+    const summary = makeSummary({
+      year: 2024,
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+    });
+    // 2018 loss is 6 years old → expired.
+    const priorLosses: PriorYearLoss[] = [
+      { year: 2018, totalLossPln: 10000, alreadyDeductedPln: 0 },
+    ];
+
+    const result = buildPit38({ summary, priorLosses });
+
+    assert.equal(result[30], 0);
+    assert.equal(result[31], 20000);
+  });
+
+  void it('honours residual after prior deductions', () => {
+    const summary = makeSummary({
+      year: 2024,
+      totalProceedsPln: 50000,
+      totalCostPln: 30000,
+    });
+    // 10 000 loss already exhausted in prior years → 0 residual.
+    const priorLosses: PriorYearLoss[] = [
+      { year: 2022, totalLossPln: 10000, alreadyDeductedPln: 10000 },
+    ];
+
+    const result = buildPit38({ summary, priorLosses });
+
+    assert.equal(result[30], 0);
   });
 
   void it('caps withholding credit at dividend tax', () => {

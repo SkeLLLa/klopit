@@ -1,10 +1,12 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { ApplyLossCarryForwardResult } from '../core/tax/loss-carry-forward.js';
 import type {
   CarryInPosition,
   CorporateAction,
   DividendResult,
   Pit38Fields,
   PitZgFields,
+  PriorYearLoss,
   RawDividend,
   RawWithholdingTax,
   Trade,
@@ -12,6 +14,10 @@ import type {
   TransactionFee,
 } from '../core/types.js';
 import { installStaleHooks } from './db-hooks.js';
+import {
+  stripLegacyPriorYearLoss,
+  type LegacySessionRecord,
+} from './db-migrations.js';
 
 // ---------------------------------------------------------------------------
 // Database record types (extend domain types with DB-specific fields)
@@ -23,7 +29,6 @@ export interface SessionRecord {
   createdAt: Date;
   updatedAt: Date;
   files: ImportedFileRecord[];
-  priorYearLoss?: number;
   residencyStartDate?: Date;
   status: 'draft' | 'calculated';
   oppKrs?: string;
@@ -73,6 +78,11 @@ export interface CorporateActionRecord extends CorporateAction {
   sessionId: string;
 }
 
+export interface PriorYearLossRecord extends PriorYearLoss {
+  id?: number;
+  sessionId: string;
+}
+
 export interface SymbolCountryOverrideRecord {
   id?: number;
   sessionId: string;
@@ -103,6 +113,11 @@ export interface TaxSummaryRecord {
   dividendTaxOwedPln: number;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
+  /**
+   * Per-year loss-carry-forward breakdown (art. 9 ust. 3 updof). Only set
+   * when the calculation considered prior-year losses.
+   */
+  lossDeduction?: ApplyLossCarryForwardResult;
 }
 
 export interface NbpRateRecord {
@@ -125,6 +140,7 @@ export class KlopitDB extends Dexie {
   carryInPositions!: EntityTable<CarryInPositionRecord, 'id'>;
   transactionFees!: EntityTable<TransactionFeeRecord, 'id'>;
   corporateActions!: EntityTable<CorporateActionRecord, 'id'>;
+  priorLosses!: EntityTable<PriorYearLossRecord, 'id'>;
   tradeResults!: EntityTable<TradeResultRecord, 'id'>;
   dividendResults!: EntityTable<DividendResultRecord, 'id'>;
   taxSummaries!: EntityTable<TaxSummaryRecord, 'sessionId'>;
@@ -168,6 +184,19 @@ export class KlopitDB extends Dexie {
           }
         });
     });
+    // v6: replace the legacy single-number `priorYearLoss` field on
+    // sessions with a dedicated `priorLosses` table that captures one row
+    // per loss-year (art. 9 ust. 3 updof: 5-year window + 50%-per-year cap).
+    this.version(6)
+      .stores({
+        priorLosses: '++id, sessionId, year, [sessionId+year]',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<LegacySessionRecord>('sessions')
+          .toCollection()
+          .modify(stripLegacyPriorYearLoss);
+      });
   }
 }
 

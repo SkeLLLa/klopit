@@ -234,7 +234,7 @@
           <!-- PIT-38 sections -->
           <div class="space-y-4">
             <SectionC {pit38} />
-            <SectionD {pit38} />
+            <SectionD {pit38} lossDeduction={taxSummary?.lossDeduction} />
             <SectionE {pit38} />
             <SectionF {pit38} />
             <SectionG {pit38} />
