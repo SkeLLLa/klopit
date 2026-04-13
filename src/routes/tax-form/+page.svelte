@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RefreshCw, AlertCircle, ArrowRight } from 'lucide-svelte';
+  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { sessionState } from '$lib/state/session.svelte.js';
@@ -9,6 +9,7 @@
     calculateSessionTaxes,
     clearSessionResults,
   } from '$lib/services/tax.js';
+  import { isSessionStale } from '$lib/utils/stale.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
   import PitZgView from './PitZgView.svelte';
@@ -52,6 +53,12 @@
   );
   const taxSummary = $derived(taxSummaryQuery.current);
   const pit38 = $derived(taxSummary?.pit38);
+  const stale = $derived(
+    isSessionStale({
+      calculatedAt: session?.calculatedAt,
+      dataUpdatedAt: session?.dataUpdatedAt,
+    }),
+  );
 
   type ActiveDocument = 'pit38' | { pitZg: string };
   let activeDocument: ActiveDocument = $state('pit38');
@@ -172,6 +179,25 @@
 {:else if pit38}
   <!-- Tax form with sidebar -->
   <div class="space-y-4">
+    <!-- Stale banner -->
+    {#if stale}
+      <div
+        class="flex items-center justify-between gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
+      >
+        <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle size={16} />
+          <span>{m.tax_stale_banner()}</span>
+        </div>
+        <button
+          onclick={() => void handleRecalculate()}
+          class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
+        >
+          <RefreshCw size={14} />
+          {m.tax_recalculate()}
+        </button>
+      </div>
+    {/if}
+
     <!-- Recalculate bar -->
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
