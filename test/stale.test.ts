@@ -1,6 +1,6 @@
 // test/stale.test.ts
-import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { test } from 'node:test';
 import { isSessionStale } from '../src/lib/utils/stale.js';
 
 test('isSessionStale returns false when never calculated', () => {
@@ -28,10 +28,7 @@ test('isSessionStale returns false when data updated before calc', () => {
 
 test('isSessionStale returns false when timestamps are equal', () => {
   const t = new Date('2026-01-01T10:00:00Z');
-  assert.equal(
-    isSessionStale({ calculatedAt: t, dataUpdatedAt: t }),
-    false,
-  );
+  assert.equal(isSessionStale({ calculatedAt: t, dataUpdatedAt: t }), false);
 });
 
 test('isSessionStale returns true when data updated after calc', () => {

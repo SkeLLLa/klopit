@@ -11,6 +11,7 @@ import type {
   TradeResult,
   TransactionFee,
 } from '../core/types.js';
+import { installStaleHooks } from './db-hooks.js';
 
 // ---------------------------------------------------------------------------
 // Database record types (extend domain types with DB-specific fields)
@@ -157,7 +158,5 @@ export class KlopitDB extends Dexie {
 }
 
 export const db = new KlopitDB();
-
-import { installStaleHooks } from './db-hooks.js';
 
 installStaleHooks(db);
