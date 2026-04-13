@@ -113,7 +113,11 @@
     {#if activeSession}
       <SessionInfo files={activeSession.files} />
 
-      <ActionBar sessionId={activeSession.id} />
+      <ActionBar
+        sessionId={activeSession.id}
+        session={activeSession}
+        hasData={counts.trades > 0 || counts.dividends > 0}
+      />
 
       <DataTabs activeTab="trades" {counts}>
         {#snippet children(tab)}
