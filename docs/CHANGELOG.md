@@ -1,3 +1,20 @@
+## [1.7.0](https://github.com/SkeLLLa/klopit/compare/v1.6.0...v1.7.0) (2026-04-14)
+
+### 🛠 Fixes
+
+* lint stuff ([fa0c436](https://github.com/SkeLLLa/klopit/commit/fa0c436855786bc3ea5c490d72137895a24be03b))
+
+### ✂️ Refactor
+
+* **dashboard:** use pre-computed tax fields and aggregates module ([5406941](https://github.com/SkeLLLa/klopit/commit/540694100c328ee14225701bf6256b54d8936ab7))
+* **tax:** use aggregates module in calculator, pit38, and pit-zg ([980893b](https://github.com/SkeLLLa/klopit/commit/980893b1f834ce6e481d2cc9bb781b90cca569cf))
+
+### 🚀 Features
+
+* **db:** bump Dexie to v7 with database wipe for per-row tax fields ([b4ccd85](https://github.com/SkeLLLa/klopit/commit/b4ccd856d6f12dc26b831e0ecf15494ef8ca3ccc))
+* **tax:** add per-row tax fields to types and aggregates module ([4431888](https://github.com/SkeLLLa/klopit/commit/4431888115fd73e8c53dd271dbe77681255b82ab))
+* **tax:** populate per-row tax fields on DividendResult and TradeResult ([6a0c1a3](https://github.com/SkeLLLa/klopit/commit/6a0c1a396397fc3ac9265e9d7657205823aad369))
+
 ## [1.6.0](https://github.com/SkeLLLa/klopit/compare/v1.5.0...v1.6.0) (2026-04-14)
 
 ### 🛠 Fixes
