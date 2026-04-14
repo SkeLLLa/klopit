@@ -309,7 +309,7 @@ void describe('calculateDividends', () => {
     assert.equal(result.length, 1);
     assert.equal(result[0].country, 'US');
     assert.ok(result[0].warnings?.length === 1);
-    const whtLapseWarning = result[0].warnings?.[0];
+    const whtLapseWarning = result[0].warnings[0];
     assert.ok(whtLapseWarning);
     assert.equal(whtLapseWarning.kind, 'wht-lapse');
   });
