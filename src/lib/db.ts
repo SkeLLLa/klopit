@@ -111,6 +111,8 @@ export interface TaxSummaryRecord {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  capitalGainAfterLcfPln: number;
+  capitalGainTaxPostLcfPln: number;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**
@@ -197,6 +199,15 @@ export class KlopitDB extends Dexie {
           .toCollection()
           .modify(stripLegacyPriorYearLoss);
       });
+    // v7: wipe database — per-row tax fields added to DividendResult
+    // (creditCapRate, deductibleWithholdingPln, taxPlnGross, taxToPayPln),
+    // TradeResult (taxPln), and TaxSummary (post-LCF fields).
+    this.version(7).upgrade(async (tx) => {
+      const tableNames = tx.storeNames;
+      for (const name of tableNames) {
+        await tx.table(name).clear();
+      }
+    });
   }
 }
 
