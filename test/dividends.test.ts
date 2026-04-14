@@ -71,6 +71,14 @@ void describe('calculateDividends', () => {
       `withholdingPln: ${String(result[0].withholdingTaxPln)}`,
     ); // 0.36 * 4.0
     assert.equal(result[0].rateUnavailable, false);
+    // creditCapRate defaults to 0.19 (XX country = fallback)
+    assert.equal(result[0].creditCapRate, 0.19);
+    assert.ok(result[0].deductibleWithholdingPln >= 0);
+    assert.ok(
+      Math.abs(result[0].taxPlnGross - result[0].amountPln * 0.19) < 0.001,
+      `taxPlnGross: ${String(result[0].taxPlnGross)}`,
+    );
+    assert.ok(result[0].taxToPayPln >= 0);
   });
 
   void it('handles dividend with no withholding', () => {
@@ -312,6 +320,12 @@ void describe('calculateDividends', () => {
     const whtLapseWarning = result[0].warnings[0];
     assert.ok(whtLapseWarning);
     assert.equal(whtLapseWarning.kind, 'wht-lapse');
+    assert.equal(result[0].creditCapRate, 0.15);
+    assert.ok(result[0].deductibleWithholdingPln >= 0);
+    assert.ok(
+      Math.abs(result[0].taxPlnGross - result[0].amountPln * 0.19) < 0.001,
+    );
+    assert.ok(result[0].taxToPayPln >= 0);
   });
 
   void it('does not warn for US dividend with 15% withholding (matches treaty)', () => {
@@ -398,5 +412,12 @@ void describe('calculateDividends', () => {
       !result[0].warnings?.some((w) => w.kind === 'wht-lapse'),
       'Should not add wht-lapse warning for 19% fallback case',
     );
+    // Unknown country uses 0.19 fallback
+    assert.equal(result[0].creditCapRate, 0.19);
+    assert.ok(result[0].deductibleWithholdingPln >= 0);
+    assert.ok(
+      Math.abs(result[0].taxPlnGross - result[0].amountPln * 0.19) < 0.001,
+    );
+    assert.ok(result[0].taxToPayPln >= 0);
   });
 });

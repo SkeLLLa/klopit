@@ -5,6 +5,7 @@ import type {
   EnrichedWithholdingTax,
   TaxPeriod,
 } from '../types.js';
+import { TAX_RATE } from '../types.js';
 import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface CalculateDividendsArgs {
@@ -94,6 +95,14 @@ export function calculateDividends(
       }
     }
 
+    const creditCapRate = getDividendCreditCapRate({ country });
+    const deductibleWithholdingPln = Math.min(
+      withholdingTaxPln,
+      amountPln * creditCapRate,
+    );
+    const taxPlnGross = amountPln * TAX_RATE;
+    const taxToPayPln = Math.max(taxPlnGross - deductibleWithholdingPln, 0);
+
     results.push({
       symbol: div.symbol,
       currency: div.currency,
@@ -105,6 +114,10 @@ export function calculateDividends(
       exchangeRate: div.exchangeRate,
       rateUnavailable,
       country,
+      creditCapRate,
+      deductibleWithholdingPln,
+      taxPlnGross,
+      taxToPayPln,
       warnings: warnings.length > 0 ? warnings : undefined,
     });
   }

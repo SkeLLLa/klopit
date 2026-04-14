@@ -5,6 +5,7 @@ import type {
   TaxPeriod,
   TradeResult,
 } from '../types.js';
+import { TAX_RATE } from '../types.js';
 import {
   applyMerger,
   applyStockSplit,
@@ -186,6 +187,7 @@ function processAction(args: {
         proceedsPln,
         costPln,
         gainLossPln: proceedsPln - costPln,
+        taxPln: Math.max(proceedsPln - costPln, 0) * TAX_RATE,
         rateUnavailable: action.cashRateUnavailable,
         country: args.symbolCountryMap.get(action.symbol) ?? 'XX',
       });
@@ -231,6 +233,7 @@ function processTrade(args: {
         proceedsPln: 0,
         costPln: 0,
         gainLossPln: 0,
+        taxPln: 0,
         rateUnavailable: trade.rateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
       });
@@ -286,6 +289,7 @@ function processTrade(args: {
         proceedsPln: netProceedsPln,
         costPln: totalCostPln,
         gainLossPln: netProceedsPln - totalCostPln,
+        taxPln: Math.max(netProceedsPln - totalCostPln, 0) * TAX_RATE,
         rateUnavailable: trade.rateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
       });

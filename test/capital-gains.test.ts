@@ -74,6 +74,7 @@ void describe('calculateCapitalGains', () => {
     // Buy result
     assert.equal(result[0].type, 'buy');
     assert.equal(result[0].proceedsPln, 0);
+    assert.equal(result[0].taxPln, 0);
 
     // Sell result
     const sellResult = result[1];
@@ -91,6 +92,11 @@ void describe('calculateCapitalGains', () => {
     assert.ok(
       Math.abs(sellResult.gainLossPln - (65595.9 - 60004)) < 0.01,
       `gainLoss: ${String(sellResult.gainLossPln)}`,
+    );
+    // taxPln = gainLossPln * 0.19 (profitable sell)
+    assert.ok(
+      Math.abs(sellResult.taxPln - sellResult.gainLossPln * 0.19) < 0.001,
+      `taxPln: ${String(sellResult.taxPln)}`,
     );
   });
 
@@ -436,6 +442,36 @@ void describe('calculateCapitalGains', () => {
     assert.ok(sellResult, 'Should have a sell result for PAAS');
     // Cost basis was transferred from MAG
     assert.ok(sellResult.costPln > 0, 'Cost should be > 0 (transferred)');
+  });
+
+  void it('taxPln is zero for loss sell', () => {
+    const buy = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 100,
+      price: 200,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 10),
+      quantity: 100,
+      price: 100,
+      proceeds: 10000,
+      type: 'sell',
+      commission: 0,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    const sellResult = result.find((r) => r.type === 'sell');
+    assert.ok(sellResult, 'Expected a sell result');
+    assert.ok(sellResult.gainLossPln < 0, 'Should be a loss');
+    assert.equal(sellResult.taxPln, 0, 'taxPln should be 0 for a loss');
   });
 
   void it('treats bond trades same as stock trades', () => {
