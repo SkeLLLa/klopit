@@ -1,3 +1,13 @@
+## [1.6.0](https://github.com/SkeLLLa/klopit/compare/v1.5.0...v1.6.0) (2026-04-14)
+
+### 🛠 Fixes
+
+* lint ([364690a](https://github.com/SkeLLLa/klopit/commit/364690a459236897c038b8e968168bfb583d8883))
+
+### 🚀 Features
+
+* **dashboard:** add W-8BEN lapse & no country warns ([8c28ffd](https://github.com/SkeLLLa/klopit/commit/8c28ffd40396efb46a0ab0b112270e7e49813f2a))
+
 ## [1.5.0](https://github.com/SkeLLLa/klopit/compare/v1.4.2...v1.5.0) (2026-04-13)
 
 ### 🚀 Features
