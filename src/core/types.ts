@@ -146,6 +146,8 @@ export interface TradeResult {
   gainLossPln: number;
   rateUnavailable: boolean;
   country: string;
+  /** Pre-LCF per-trade tax: max(gainLossPln, 0) * 0.19. Display-only. */
+  taxPln: number;
 }
 
 /** Warning on a dividend result */
@@ -169,6 +171,14 @@ export interface DividendResult {
   exchangeRate: number;
   rateUnavailable: boolean;
   country: string;
+  /** Resolved treaty cap rate at calc time (e.g. 0.15 for US). */
+  creditCapRate: number;
+  /** Treaty-capped deductible withholding: min(withholdingTaxPln, amountPln * creditCapRate). */
+  deductibleWithholdingPln: number;
+  /** Gross PL tax on this dividend: amountPln * 0.19. */
+  taxPlnGross: number;
+  /** Net tax to pay: max(taxPlnGross - deductibleWithholdingPln, 0). */
+  taxToPayPln: number;
   warnings?: DividendWarning[];
 }
 
@@ -197,6 +207,10 @@ export interface TaxSummary {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  /** Capital gain after prior-year loss deduction: max(gain - lcfDeducted, 0). */
+  capitalGainAfterLcfPln: number;
+  /** Post-LCF capital gain tax (raw, unrounded): capitalGainAfterLcfPln * 0.19. */
+  capitalGainTaxPostLcfPln: number;
 }
 
 /**
