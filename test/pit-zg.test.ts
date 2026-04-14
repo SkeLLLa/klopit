@@ -20,6 +20,7 @@ function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
     gainLossPln: 11960,
     rateUnavailable: false,
     country: 'US',
+    taxPln: 2272.4,
     ...overrides,
   };
 }
@@ -38,6 +39,10 @@ function makeDivResult(
     exchangeRate: 4.0,
     rateUnavailable: false,
     country: 'US',
+    creditCapRate: 0.15,
+    deductibleWithholdingPln: 30,
+    taxPlnGross: 38,
+    taxToPayPln: 8,
     ...overrides,
   };
 }
@@ -91,13 +96,13 @@ void describe('buildPitZg', () => {
   void it('groups dividends by country with per-dividend treaty cap', () => {
     const dividends = [
       // US: 100 PLN, 30 PLN withheld → deductible = min(30, 100 * 0.15 = 15) = 15
-      makeDivResult({ country: 'US', amountPln: 100, withholdingTaxPln: 30 }),
+      makeDivResult({ country: 'US', amountPln: 100, withholdingTaxPln: 30, deductibleWithholdingPln: 15 }),
       // US: 200 PLN, 20 PLN withheld → deductible = min(20, 200 * 0.15 = 30) = 20
-      makeDivResult({ country: 'US', amountPln: 200, withholdingTaxPln: 20 }),
+      makeDivResult({ country: 'US', amountPln: 200, withholdingTaxPln: 20, deductibleWithholdingPln: 20 }),
       // DE: 50 PLN, 5 PLN withheld → deductible = min(5, 50 * 0.15 = 7.5) = 5
-      makeDivResult({ country: 'DE', amountPln: 50, withholdingTaxPln: 5 }),
+      makeDivResult({ country: 'DE', amountPln: 50, withholdingTaxPln: 5, deductibleWithholdingPln: 5 }),
       // ZZ (unknown): 100 PLN, 30 PLN withheld → deductible = min(30, 100 * 0.19 = 19) = 19
-      makeDivResult({ country: 'ZZ', amountPln: 100, withholdingTaxPln: 30 }),
+      makeDivResult({ country: 'ZZ', amountPln: 100, withholdingTaxPln: 30, deductibleWithholdingPln: 19 }),
     ];
 
     const result = buildPitZg({ trades: [], dividends });

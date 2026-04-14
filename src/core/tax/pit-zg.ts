@@ -1,5 +1,4 @@
 import type { DividendResult, PitZgFields, TradeResult } from '../types.js';
-import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface BuildPitZgArgs {
   trades: TradeResult[];
@@ -50,10 +49,7 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     const entry = getOrCreate(div.country);
     entry.dividendIncomePln += div.amountPln;
     entry.foreignTaxPaidPln += div.withholdingTaxPln;
-    entry.deductibleForeignTaxPln += Math.min(
-      div.withholdingTaxPln,
-      div.amountPln * getDividendCreditCapRate({ country: div.country }),
-    );
+    entry.deductibleForeignTaxPln += div.deductibleWithholdingPln;
   }
 
   // Sort by country code and return

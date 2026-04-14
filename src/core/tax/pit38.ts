@@ -1,13 +1,28 @@
 import {
-  TAX_RATE,
+  type DividendResult,
   type Pit38Fields,
   type PriorYearLoss,
   type TaxSummary,
+  type TradeResult,
 } from '../types.js';
+import {
+  capitalGainsTax,
+  roundedCapitalGainsBase,
+  roundedCapitalGainsTaxDue,
+  roundedDividendCredit,
+  roundedDividendDifference,
+  roundedDividendTax,
+  roundedTotalTaxToPay,
+  sumCost,
+  sumDeductibleWithholding,
+  sumDividendIncome,
+  sumProceeds,
+} from './aggregates.js';
 import { applyLossCarryForward } from './loss-carry-forward.js';
-import { roundToFullPln, roundToGroszUp } from './rounding.js';
 
 export interface BuildPit38Args {
+  trades: TradeResult[];
+  dividends: DividendResult[];
   summary: TaxSummary;
   /**
    * Prior-year capital losses available for carry-forward (art. 9 ust. 3
@@ -20,17 +35,24 @@ export interface BuildPit38Args {
 
 /** Map TaxSummary to PIT-38(18) form field values. Key = position on form. */
 export function buildPit38(args: BuildPit38Args): Pit38Fields {
-  const { summary, priorLosses } = args;
+  const { trades, dividends, summary, priorLosses } = args;
   const f = {} as Pit38Fields;
+
+  const totalProceedsPln = sumProceeds({ rows: trades });
+  const totalCostPln = sumCost({ rows: trades });
+  const totalDividendsPln = sumDividendIncome({ rows: dividends });
+  const totalDeductibleWithholdingPln = sumDeductibleWithholding({
+    rows: dividends,
+  });
 
   // Section C — Capital gains/losses
   f[20] = 0; // No PIT-8C for foreign broker
   f[21] = 0;
-  f[22] = summary.totalProceedsPln; // Other proceeds
+  f[22] = totalProceedsPln; // Other proceeds
   f[24] = 0; // No exemptions
   f[25] = 0;
   f[26] = f[20] + f[22] - f[24]; // Total proceeds
-  f[27] = f[21] + summary.totalCostPln - f[25]; // Total costs
+  f[27] = f[21] + totalCostPln - f[25]; // Total costs
   f[28] = Math.max(f[26] - f[27], 0); // Gain
   f[29] = Math.max(f[27] - f[26], 0); // Loss
 
@@ -42,10 +64,10 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
     currentYear: summary.year,
   });
   f[30] = lossDeduction.deductedPln;
-  f[31] = roundToFullPln({ amount: Math.max(f[28] - f[30], 0) });
-  f[33] = f[31] * TAX_RATE;
+  f[31] = roundedCapitalGainsBase({ gainPostLcfPln: Math.max(f[28] - f[30], 0) });
+  f[33] = capitalGainsTax({ base: f[31] });
   f[34] = 0; // No foreign tax on capital gains
-  f[35] = roundToFullPln({ amount: Math.max(f[33] - f[34], 0) });
+  f[35] = roundedCapitalGainsTaxDue({ tax: f[33], foreignCredit: f[34] });
 
   // Section E — Crypto (placeholders)
   f[36] = f[37] = f[38] = f[39] = f[40] = 0;
@@ -55,15 +77,16 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
 
   // Section G — Payment summary
   f[46] = 0; // No flat-rate tax
-  f[47] = roundToGroszUp({ amount: summary.totalDividendsPln * TAX_RATE });
-  f[48] =
-    Math.round(Math.min(summary.totalDeductibleWithholdingPln, f[47]) * 100) /
-    100;
-  f[49] = roundToGroszUp({ amount: Math.max(f[47] - f[48], 0) });
+  f[47] = roundedDividendTax({ totalIncomePln: totalDividendsPln });
+  f[48] = roundedDividendCredit({
+    deductiblePln: totalDeductibleWithholdingPln,
+    dividendTax: f[47],
+  });
+  f[49] = roundedDividendDifference({ dividendTax: f[47], credit: f[48] });
   f[50] = 0; // No advance payments
   const totalTax = f[35] + f[45] + f[46] + f[49];
-  f[51] = roundToFullPln({ amount: Math.max(totalTax - f[50], 0) });
-  f[52] = roundToFullPln({ amount: Math.max(f[50] - totalTax, 0) });
+  f[51] = roundedTotalTaxToPay({ totalRawPln: totalTax - f[50] });
+  f[52] = roundedTotalTaxToPay({ totalRawPln: f[50] - totalTax });
 
   // Section H — Monthly tax (placeholders)
   f[53] = f[54] = f[55] = f[56] = f[57] = f[58] = 0;

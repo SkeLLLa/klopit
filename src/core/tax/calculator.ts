@@ -13,6 +13,13 @@ import {
   type TaxSummary,
   type TradeResult,
 } from '../types.js';
+import {
+  sumCost,
+  sumDeductibleWithholding,
+  sumDividendIncome,
+  sumProceeds,
+  sumWithholding,
+} from './aggregates.js';
 import { calculateCapitalGains } from './capital-gains.js';
 import { calculateDividends } from './dividends.js';
 import {
@@ -21,7 +28,6 @@ import {
 } from './loss-carry-forward.js';
 import { buildPitZg } from './pit-zg.js';
 import { buildPit38 } from './pit38.js';
-import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
@@ -78,22 +84,29 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     symbolCountryMap: countryMap,
   });
 
-  const summary = buildSummary({
-    tradeResults,
-    dividendResults,
-    year: taxPeriod.year,
-  });
-
-  // Compute the loss-carry-forward breakdown once so the UI and PIT-38
-  // builder agree on the deduction amount.
-  const gainPln = Math.max(summary.totalProceedsPln - summary.totalCostPln, 0);
+  const gainPln = Math.max(
+    sumProceeds({ rows: tradeResults }) - sumCost({ rows: tradeResults }),
+    0,
+  );
   const lossDeduction = applyLossCarryForward({
     gainPln,
     priorLosses: priorLosses ?? [],
     currentYear: taxPeriod.year,
   });
 
-  const pit38 = buildPit38({ summary, priorLosses });
+  const summary = buildSummary({
+    tradeResults,
+    dividendResults,
+    year: taxPeriod.year,
+    lossDeduction,
+  });
+
+  const pit38 = buildPit38({
+    trades: tradeResults,
+    dividends: dividendResults,
+    summary,
+    priorLosses,
+  });
   const pitZg = buildPitZg({
     trades: tradeResults,
     dividends: dividendResults,
@@ -113,39 +126,28 @@ function buildSummary(args: {
   tradeResults: TradeResult[];
   dividendResults: DividendResult[];
   year: number;
+  lossDeduction: ApplyLossCarryForwardResult;
 }): TaxSummary {
-  const sells = args.tradeResults.filter((t) => t.type === 'sell');
-
-  const totalProceedsPln = sells.reduce((sum, t) => sum + t.proceedsPln, 0);
-  const totalCostPln = sells.reduce((sum, t) => sum + t.costPln, 0);
+  const totalProceedsPln = sumProceeds({ rows: args.tradeResults });
+  const totalCostPln = sumCost({ rows: args.tradeResults });
   const capitalGainPln = totalProceedsPln - totalCostPln;
   const capitalGainTaxPln = Math.max(capitalGainPln, 0) * TAX_RATE;
 
-  const totalDividendsPln = args.dividendResults.reduce(
-    (sum, d) => sum + d.amountPln,
-    0,
-  );
-  const totalWithholdingPln = args.dividendResults.reduce(
-    (sum, d) => sum + d.withholdingTaxPln,
-    0,
-  );
-  // Cap each dividend's deductible withholding at min(treaty rate, 19%) of its
-  // gross PLN amount. art. 30a ust. 2 (stosowanie UPO) + art. 30a ust. 9
-  // (krajowy cap 19%) ustawy o PIT. Excess foreign tax on one dividend cannot
-  // offset tax owed on another dividend.
-  const totalDeductibleWithholdingPln = args.dividendResults.reduce(
-    (sum, d) =>
-      sum +
-      Math.min(
-        d.withholdingTaxPln,
-        d.amountPln * getDividendCreditCapRate({ country: d.country }),
-      ),
-    0,
-  );
+  const totalDividendsPln = sumDividendIncome({ rows: args.dividendResults });
+  const totalWithholdingPln = sumWithholding({ rows: args.dividendResults });
+  const totalDeductibleWithholdingPln = sumDeductibleWithholding({
+    rows: args.dividendResults,
+  });
   const dividendTaxOwedPln = Math.max(
     totalDividendsPln * TAX_RATE - totalDeductibleWithholdingPln,
     0,
   );
+
+  const capitalGainAfterLcfPln = Math.max(
+    Math.max(capitalGainPln, 0) - args.lossDeduction.deductedPln,
+    0,
+  );
+  const capitalGainTaxPostLcfPln = capitalGainAfterLcfPln * TAX_RATE;
 
   return {
     year: args.year,
@@ -157,5 +159,7 @@ function buildSummary(args: {
     totalWithholdingPln,
     totalDeductibleWithholdingPln,
     dividendTaxOwedPln,
+    capitalGainAfterLcfPln,
+    capitalGainTaxPostLcfPln,
   };
 }

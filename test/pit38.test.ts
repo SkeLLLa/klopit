@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildPit38 } from '../src/core/tax/pit38.js';
-import type { PriorYearLoss, TaxSummary } from '../src/core/types.js';
+import type {
+  DividendResult,
+  PriorYearLoss,
+  TaxSummary,
+  TradeResult,
+} from '../src/core/types.js';
 
 function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
   return {
@@ -14,6 +19,50 @@ function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
     totalWithholdingPln: 0,
     totalDeductibleWithholdingPln: 0,
     dividendTaxOwedPln: 0,
+    capitalGainAfterLcfPln: 0,
+    capitalGainTaxPostLcfPln: 0,
+    ...overrides,
+  };
+}
+
+function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
+  return {
+    symbol: 'AAPL',
+    datetime: new Date(2024, 6, 15),
+    type: 'sell',
+    source: 'trade',
+    quantity: 100,
+    price: 180,
+    proceeds: 18000,
+    commission: 10,
+    currency: 'USD',
+    exchangeRate: 4.0,
+    proceedsPln: 0,
+    costPln: 0,
+    gainLossPln: 0,
+    rateUnavailable: false,
+    country: 'US',
+    taxPln: 0,
+    ...overrides,
+  };
+}
+
+function makeDivResult(overrides: Partial<DividendResult> = {}): DividendResult {
+  return {
+    symbol: 'AAPL',
+    currency: 'USD',
+    date: new Date(2024, 2, 15),
+    amountOriginal: 0,
+    withholdingTaxOriginal: 0,
+    amountPln: 0,
+    withholdingTaxPln: 0,
+    exchangeRate: 4.0,
+    rateUnavailable: false,
+    country: 'US',
+    creditCapRate: 0.15,
+    deductibleWithholdingPln: 0,
+    taxPlnGross: 0,
+    taxToPayPln: 0,
     ...overrides,
   };
 }
@@ -27,8 +76,14 @@ void describe('buildPit38', () => {
       totalWithholdingPln: 150,
       totalDeductibleWithholdingPln: 150, // 15% < 19%, fully deductible
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
+    const dividends = [
+      makeDivResult({ amountPln: 1000, withholdingTaxPln: 150, deductibleWithholdingPln: 150, taxPlnGross: 190, taxToPayPln: 40 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades, dividends, summary });
 
     // Section C
     assert.equal(result[20], 0);
@@ -61,8 +116,11 @@ void describe('buildPit38', () => {
       totalProceedsPln: 10000,
       totalCostPln: 15000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 10000, costPln: 15000, gainLossPln: -5000, taxPln: 0 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades, dividends: [], summary });
 
     assert.equal(result[28], 0);
     assert.equal(result[29], 5000);
@@ -78,12 +136,15 @@ void describe('buildPit38', () => {
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
     // 10 000 PLN loss → 50% cap = 5 000.
     const priorLosses: PriorYearLoss[] = [
       { year: 2023, totalLossPln: 10000, alreadyDeductedPln: 0 },
     ];
 
-    const result = buildPit38({ summary, priorLosses });
+    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
 
     assert.equal(result[28], 20000);
     assert.equal(result[30], 5000);
@@ -101,13 +162,16 @@ void describe('buildPit38', () => {
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
     // 50 000 PLN loss → 50% cap = 25 000 (still ≤ gain 20 000? No: 25k > 20k).
     // Cap min(50% × 50 000, gain) = min(25 000, 20 000) = 20 000.
     const priorLosses: PriorYearLoss[] = [
       { year: 2023, totalLossPln: 50000, alreadyDeductedPln: 0 },
     ];
 
-    const result = buildPit38({ summary, priorLosses });
+    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
 
     assert.equal(result[30], 20000);
     assert.equal(result[31], 0);
@@ -120,12 +184,15 @@ void describe('buildPit38', () => {
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
     // 2018 loss is 6 years old → expired.
     const priorLosses: PriorYearLoss[] = [
       { year: 2018, totalLossPln: 10000, alreadyDeductedPln: 0 },
     ];
 
-    const result = buildPit38({ summary, priorLosses });
+    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
 
     assert.equal(result[30], 0);
     assert.equal(result[31], 20000);
@@ -137,12 +204,15 @@ void describe('buildPit38', () => {
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
     // 10 000 loss already exhausted in prior years → 0 residual.
     const priorLosses: PriorYearLoss[] = [
       { year: 2022, totalLossPln: 10000, alreadyDeductedPln: 10000 },
     ];
 
-    const result = buildPit38({ summary, priorLosses });
+    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
 
     assert.equal(result[30], 0);
   });
@@ -153,8 +223,11 @@ void describe('buildPit38', () => {
       totalWithholdingPln: 50,
       totalDeductibleWithholdingPln: 19, // capped at 19% of 100
     });
+    const dividends = [
+      makeDivResult({ amountPln: 100, withholdingTaxPln: 50, deductibleWithholdingPln: 19, taxPlnGross: 19, taxToPayPln: 0 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades: [], dividends, summary });
 
     assert.equal(result[47], 19);
     assert.equal(result[48], 19);
@@ -163,7 +236,7 @@ void describe('buildPit38', () => {
 
   void it('returns all zeros for empty summary', () => {
     const summary = makeSummary();
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades: [], dividends: [], summary });
 
     assert.equal(result[22], 0);
     assert.equal(result[26], 0);
@@ -183,8 +256,11 @@ void describe('buildPit38', () => {
       totalProceedsPln: 2000.5,
       totalCostPln: 1000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 2000.5, costPln: 1000, gainLossPln: 1000.5, taxPln: 190.095 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades, dividends: [], summary });
 
     assert.equal(result[28], 1000.5);
     assert.equal(result[31], 1001);
@@ -203,8 +279,14 @@ void describe('buildPit38', () => {
       totalWithholdingPln: 750,
       totalDeductibleWithholdingPln: 750,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 100000, costPln: 50000, gainLossPln: 50000, taxPln: 9500 }),
+    ];
+    const dividends = [
+      makeDivResult({ amountPln: 5000, withholdingTaxPln: 750, deductibleWithholdingPln: 750, taxPlnGross: 950, taxToPayPln: 200 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades, dividends, summary });
 
     assert.equal(result[51], result[35] + result[49]);
   });
@@ -214,8 +296,11 @@ void describe('buildPit38', () => {
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades, dividends: [], summary });
 
     assert.equal(result[47], 0);
     assert.equal(result[48], 0);
@@ -229,8 +314,11 @@ void describe('buildPit38', () => {
       totalWithholdingPln: 150,
       totalDeductibleWithholdingPln: 150,
     });
+    const dividends = [
+      makeDivResult({ amountPln: 1000, withholdingTaxPln: 150, deductibleWithholdingPln: 150, taxPlnGross: 190, taxToPayPln: 40 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades: [], dividends, summary });
 
     assert.equal(result[22], 0);
     assert.equal(result[26], 0);
@@ -244,8 +332,11 @@ void describe('buildPit38', () => {
       totalProceedsPln: 50000,
       totalCostPln: 30000,
     });
+    const trades = [
+      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+    ];
 
-    const result = buildPit38({ summary });
+    const result = buildPit38({ trades, dividends: [], summary });
 
     // Section E
     assert.equal(result[36], 0);

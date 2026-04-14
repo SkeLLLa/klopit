@@ -117,6 +117,22 @@ void describe('calculateTaxes', () => {
     assert.ok(result.summary.totalCostPln > 0);
     assert.ok(result.summary.totalDividendsPln > 0);
 
+    // Post-LCF fields (no prior losses → same as pre-LCF)
+    const capitalGainPln = result.summary.capitalGainPln;
+    assert.equal(
+      result.summary.capitalGainAfterLcfPln,
+      Math.max(capitalGainPln, 0),
+    );
+    assert.ok(
+      Math.abs(result.summary.capitalGainTaxPostLcfPln - result.summary.capitalGainAfterLcfPln * 0.19) < 0.0001,
+    );
+
+    // Per-row fields exist
+    const sellResult = result.trades.find((t) => t.type === 'sell');
+    assert.ok(sellResult);
+    assert.ok(sellResult.taxPln >= 0);
+    assert.ok(result.dividends[0].creditCapRate > 0);
+
     // PIT-38 total tax > 0
     assert.ok(result.pit38[51] > 0);
     assert.equal(result.pit38[51], result.pit38[35] + result.pit38[49]);
@@ -151,6 +167,16 @@ void describe('calculateTaxes', () => {
     assert.equal(result.pit38[47], 0);
     assert.equal(result.pit38[49], 0);
     assert.equal(result.pit38[51], result.pit38[35]);
+
+    // Post-LCF fields (no prior losses)
+    const capitalGainPln = result.summary.capitalGainPln;
+    assert.equal(
+      result.summary.capitalGainAfterLcfPln,
+      Math.max(capitalGainPln, 0),
+    );
+    assert.ok(
+      Math.abs(result.summary.capitalGainTaxPostLcfPln - result.summary.capitalGainAfterLcfPln * 0.19) < 0.0001,
+    );
   });
 
   void it('handles dividends only (no trades)', () => {
@@ -477,5 +503,11 @@ void describe('calculateTaxes', () => {
       withoutLoss.summary.totalProceedsPln,
     );
     assert.ok(withLoss.pit38[35] < withoutLoss.pit38[35]);
+
+    // Post-LCF tax should be lower when prior losses are present
+    assert.ok(
+      withLoss.summary.capitalGainTaxPostLcfPln <
+        withoutLoss.summary.capitalGainTaxPostLcfPln,
+    );
   });
 });
