@@ -1,11 +1,11 @@
-import type {
-  CarryInPosition,
-  EnrichedCorporateAction,
-  EnrichedTrade,
-  TaxPeriod,
-  TradeResult,
+import {
+  TAX_RATE,
+  type CarryInPosition,
+  type EnrichedCorporateAction,
+  type EnrichedTrade,
+  type TaxPeriod,
+  type TradeResult,
 } from '../types.js';
-import { TAX_RATE } from '../types.js';
 import {
   applyMerger,
   applyStockSplit,

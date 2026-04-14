@@ -23,16 +23,12 @@ export function sumDeductibleWithholding(args: {
 }
 
 /** Sum gross dividend tax (PLN). */
-export function sumDividendTaxGross(args: {
-  rows: DividendResult[];
-}): number {
+export function sumDividendTaxGross(args: { rows: DividendResult[] }): number {
   return args.rows.reduce((s, d) => s + d.taxPlnGross, 0);
 }
 
 /** Sum net dividend tax to pay after withholding credit (PLN). */
-export function sumDividendTaxToPay(args: {
-  rows: DividendResult[];
-}): number {
+export function sumDividendTaxToPay(args: { rows: DividendResult[] }): number {
   return args.rows.reduce((s, d) => s + d.taxToPayPln, 0);
 }
 
@@ -89,20 +85,16 @@ export function groupByCountry<T extends { country: string }>(args: {
 // ---------------------------------------------------------------------------
 
 /** Round dividend tax (19% of gross income), grosze-up. PIT-38(18) poz 47. */
-export function roundedDividendTax(args: {
-  totalIncomePln: number;
-}): number {
+export function roundedDividendTax(args: { totalIncomePln: number }): number {
   return roundToGroszUp({ amount: args.totalIncomePln * TAX_RATE });
 }
 
-/** Capped foreign withholding credit (<=rounded dividend tax). PIT-38(18) poz 48. */
+/** Capped foreign withholding credit (\<=rounded dividend tax). PIT-38(18) poz 48. */
 export function roundedDividendCredit(args: {
   deductiblePln: number;
   dividendTax: number;
 }): number {
-  return (
-    Math.round(Math.min(args.deductiblePln, args.dividendTax) * 100) / 100
-  );
+  return Math.round(Math.min(args.deductiblePln, args.dividendTax) * 100) / 100;
 }
 
 /** Difference (tax minus credit), grosze-up. PIT-38(18) poz 49. */
@@ -138,8 +130,6 @@ export function roundedCapitalGainsTaxDue(args: {
 }
 
 /** Total tax to pay, rounded to full PLN. PIT-38(18) poz 51. */
-export function roundedTotalTaxToPay(args: {
-  totalRawPln: number;
-}): number {
+export function roundedTotalTaxToPay(args: { totalRawPln: number }): number {
   return roundToFullPln({ amount: Math.max(args.totalRawPln, 0) });
 }

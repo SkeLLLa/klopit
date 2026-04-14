@@ -1,23 +1,23 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  sumDividendIncome,
-  sumWithholding,
-  sumDeductibleWithholding,
-  sumDividendTaxGross,
-  sumDividendTaxToPay,
-  sumProceeds,
-  sumCost,
-  sumGainLoss,
-  sumTradeTaxPreLcf,
+  capitalGainsTax,
   groupByCountry,
-  roundedDividendTax,
+  roundedCapitalGainsBase,
+  roundedCapitalGainsTaxDue,
   roundedDividendCredit,
   roundedDividendDifference,
-  roundedCapitalGainsBase,
-  capitalGainsTax,
-  roundedCapitalGainsTaxDue,
+  roundedDividendTax,
   roundedTotalTaxToPay,
+  sumCost,
+  sumDeductibleWithholding,
+  sumDividendIncome,
+  sumDividendTaxGross,
+  sumDividendTaxToPay,
+  sumGainLoss,
+  sumProceeds,
+  sumTradeTaxPreLcf,
+  sumWithholding,
 } from '../src/core/tax/aggregates.js';
 import type { DividendResult, TradeResult } from '../src/core/types.js';
 
@@ -266,10 +266,7 @@ void describe('roundedDividendDifference', () => {
   });
 
   void it('returns 0 when credit >= tax', () => {
-    assert.equal(
-      roundedDividendDifference({ dividendTax: 19, credit: 19 }),
-      0,
-    );
+    assert.equal(roundedDividendDifference({ dividendTax: 19, credit: 19 }), 0);
   });
 });
 

@@ -124,7 +124,10 @@ void describe('calculateTaxes', () => {
       Math.max(capitalGainPln, 0),
     );
     assert.ok(
-      Math.abs(result.summary.capitalGainTaxPostLcfPln - result.summary.capitalGainAfterLcfPln * 0.19) < 0.0001,
+      Math.abs(
+        result.summary.capitalGainTaxPostLcfPln -
+          result.summary.capitalGainAfterLcfPln * 0.19,
+      ) < 0.0001,
     );
 
     // Per-row fields exist
@@ -175,7 +178,10 @@ void describe('calculateTaxes', () => {
       Math.max(capitalGainPln, 0),
     );
     assert.ok(
-      Math.abs(result.summary.capitalGainTaxPostLcfPln - result.summary.capitalGainAfterLcfPln * 0.19) < 0.0001,
+      Math.abs(
+        result.summary.capitalGainTaxPostLcfPln -
+          result.summary.capitalGainAfterLcfPln * 0.19,
+      ) < 0.0001,
     );
   });
 

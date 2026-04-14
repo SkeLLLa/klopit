@@ -64,7 +64,9 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
     currentYear: summary.year,
   });
   f[30] = lossDeduction.deductedPln;
-  f[31] = roundedCapitalGainsBase({ gainPostLcfPln: Math.max(f[28] - f[30], 0) });
+  f[31] = roundedCapitalGainsBase({
+    gainPostLcfPln: Math.max(f[28] - f[30], 0),
+  });
   f[33] = capitalGainsTax({ base: f[31] });
   f[34] = 0; // No foreign tax on capital gains
   f[35] = roundedCapitalGainsTaxDue({ tax: f[33], foreignCredit: f[34] });

@@ -47,7 +47,9 @@ function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
   };
 }
 
-function makeDivResult(overrides: Partial<DividendResult> = {}): DividendResult {
+function makeDivResult(
+  overrides: Partial<DividendResult> = {},
+): DividendResult {
   return {
     symbol: 'AAPL',
     currency: 'USD',
@@ -77,10 +79,21 @@ void describe('buildPit38', () => {
       totalDeductibleWithholdingPln: 150, // 15% < 19%, fully deductible
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
     const dividends = [
-      makeDivResult({ amountPln: 1000, withholdingTaxPln: 150, deductibleWithholdingPln: 150, taxPlnGross: 190, taxToPayPln: 40 }),
+      makeDivResult({
+        amountPln: 1000,
+        withholdingTaxPln: 150,
+        deductibleWithholdingPln: 150,
+        taxPlnGross: 190,
+        taxToPayPln: 40,
+      }),
     ];
 
     const result = buildPit38({ trades, dividends, summary });
@@ -117,7 +130,12 @@ void describe('buildPit38', () => {
       totalCostPln: 15000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 10000, costPln: 15000, gainLossPln: -5000, taxPln: 0 }),
+      makeSellResult({
+        proceedsPln: 10000,
+        costPln: 15000,
+        gainLossPln: -5000,
+        taxPln: 0,
+      }),
     ];
 
     const result = buildPit38({ trades, dividends: [], summary });
@@ -137,7 +155,12 @@ void describe('buildPit38', () => {
       totalCostPln: 30000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
     // 10 000 PLN loss → 50% cap = 5 000.
     const priorLosses: PriorYearLoss[] = [
@@ -163,7 +186,12 @@ void describe('buildPit38', () => {
       totalCostPln: 30000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
     // 50 000 PLN loss → 50% cap = 25 000 (still ≤ gain 20 000? No: 25k > 20k).
     // Cap min(50% × 50 000, gain) = min(25 000, 20 000) = 20 000.
@@ -185,7 +213,12 @@ void describe('buildPit38', () => {
       totalCostPln: 30000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
     // 2018 loss is 6 years old → expired.
     const priorLosses: PriorYearLoss[] = [
@@ -205,7 +238,12 @@ void describe('buildPit38', () => {
       totalCostPln: 30000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
     // 10 000 loss already exhausted in prior years → 0 residual.
     const priorLosses: PriorYearLoss[] = [
@@ -224,7 +262,13 @@ void describe('buildPit38', () => {
       totalDeductibleWithholdingPln: 19, // capped at 19% of 100
     });
     const dividends = [
-      makeDivResult({ amountPln: 100, withholdingTaxPln: 50, deductibleWithholdingPln: 19, taxPlnGross: 19, taxToPayPln: 0 }),
+      makeDivResult({
+        amountPln: 100,
+        withholdingTaxPln: 50,
+        deductibleWithholdingPln: 19,
+        taxPlnGross: 19,
+        taxToPayPln: 0,
+      }),
     ];
 
     const result = buildPit38({ trades: [], dividends, summary });
@@ -257,7 +301,12 @@ void describe('buildPit38', () => {
       totalCostPln: 1000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 2000.5, costPln: 1000, gainLossPln: 1000.5, taxPln: 190.095 }),
+      makeSellResult({
+        proceedsPln: 2000.5,
+        costPln: 1000,
+        gainLossPln: 1000.5,
+        taxPln: 190.095,
+      }),
     ];
 
     const result = buildPit38({ trades, dividends: [], summary });
@@ -280,10 +329,21 @@ void describe('buildPit38', () => {
       totalDeductibleWithholdingPln: 750,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 100000, costPln: 50000, gainLossPln: 50000, taxPln: 9500 }),
+      makeSellResult({
+        proceedsPln: 100000,
+        costPln: 50000,
+        gainLossPln: 50000,
+        taxPln: 9500,
+      }),
     ];
     const dividends = [
-      makeDivResult({ amountPln: 5000, withholdingTaxPln: 750, deductibleWithholdingPln: 750, taxPlnGross: 950, taxToPayPln: 200 }),
+      makeDivResult({
+        amountPln: 5000,
+        withholdingTaxPln: 750,
+        deductibleWithholdingPln: 750,
+        taxPlnGross: 950,
+        taxToPayPln: 200,
+      }),
     ];
 
     const result = buildPit38({ trades, dividends, summary });
@@ -297,7 +357,12 @@ void describe('buildPit38', () => {
       totalCostPln: 30000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
 
     const result = buildPit38({ trades, dividends: [], summary });
@@ -315,7 +380,13 @@ void describe('buildPit38', () => {
       totalDeductibleWithholdingPln: 150,
     });
     const dividends = [
-      makeDivResult({ amountPln: 1000, withholdingTaxPln: 150, deductibleWithholdingPln: 150, taxPlnGross: 190, taxToPayPln: 40 }),
+      makeDivResult({
+        amountPln: 1000,
+        withholdingTaxPln: 150,
+        deductibleWithholdingPln: 150,
+        taxPlnGross: 190,
+        taxToPayPln: 40,
+      }),
     ];
 
     const result = buildPit38({ trades: [], dividends, summary });
@@ -333,7 +404,12 @@ void describe('buildPit38', () => {
       totalCostPln: 30000,
     });
     const trades = [
-      makeSellResult({ proceedsPln: 50000, costPln: 30000, gainLossPln: 20000, taxPln: 3800 }),
+      makeSellResult({
+        proceedsPln: 50000,
+        costPln: 30000,
+        gainLossPln: 20000,
+        taxPln: 3800,
+      }),
     ];
 
     const result = buildPit38({ trades, dividends: [], summary });

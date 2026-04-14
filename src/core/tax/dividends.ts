@@ -1,11 +1,11 @@
-import type {
-  DividendResult,
-  DividendWarning,
-  EnrichedRawDividend,
-  EnrichedWithholdingTax,
-  TaxPeriod,
+import {
+  TAX_RATE,
+  type DividendResult,
+  type DividendWarning,
+  type EnrichedRawDividend,
+  type EnrichedWithholdingTax,
+  type TaxPeriod,
 } from '../types.js';
-import { TAX_RATE } from '../types.js';
 import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface CalculateDividendsArgs {

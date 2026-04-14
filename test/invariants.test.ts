@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  sumDividendIncome,
-  sumWithholding,
-  sumDeductibleWithholding,
-  sumDividendTaxToPay,
-  sumProceeds,
-  sumCost,
-  sumGainLoss,
-  roundedDividendTax,
-  roundedDividendCredit,
-  roundedCapitalGainsBase,
   capitalGainsTax,
+  roundedCapitalGainsBase,
+  roundedDividendCredit,
+  roundedDividendTax,
+  sumCost,
+  sumDeductibleWithholding,
+  sumDividendIncome,
+  sumDividendTaxToPay,
+  sumGainLoss,
+  sumProceeds,
+  sumWithholding,
 } from '../src/core/tax/aggregates.js';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
 import type {
@@ -148,8 +148,7 @@ void describe('summary <-> per-row invariants', () => {
     const { trades, summary } = result;
 
     assert.ok(
-      Math.abs(sumProceeds({ rows: trades }) - summary.totalProceedsPln) <
-        0.01,
+      Math.abs(sumProceeds({ rows: trades }) - summary.totalProceedsPln) < 0.01,
       'sumProceeds === summary.totalProceedsPln',
     );
     assert.ok(
@@ -241,9 +240,7 @@ void describe('summary <-> per-row invariants', () => {
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
-      priorLosses: [
-        { year: 2023, totalLossPln: 10000, alreadyDeductedPln: 0 },
-      ],
+      priorLosses: [{ year: 2023, totalLossPln: 10000, alreadyDeductedPln: 0 }],
       taxPeriod: taxPeriod2024,
     });
 
