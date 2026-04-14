@@ -1,9 +1,7 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
   import { formatPln } from '$lib/utils/format-pln.js';
-  import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
-  import { TAX_RATE } from '../../core/types.js';
-  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
+  import type { TaxSummaryRecord } from '$lib/db.js';
   import { TrendingUp, TrendingDown, Minus } from 'lucide-svelte';
 
   interface Props {
@@ -11,8 +9,6 @@
     prevYearSummary?: TaxSummaryRecord;
     sellTradeCount: number;
     dividendCount: number;
-    dividendResults: DividendResultRecord[];
-    prevDividendResults?: DividendResultRecord[];
   }
 
   let {
@@ -20,43 +16,31 @@
     prevYearSummary,
     sellTradeCount,
     dividendCount,
-    dividendResults,
-    prevDividendResults,
   }: Props = $props();
 
   const capitalGain = $derived(
     taxSummary.totalProceedsPln - taxSummary.totalCostPln,
   );
 
-  /** Compute dividend tax to pay per-dividend (matching table logic) */
-  function computeDividendTaxToPay(divs: DividendResultRecord[]): number {
-    const total = divs.reduce((s, d) => s + d.amountPln, 0);
-    const taxPl = total * TAX_RATE;
-    const deductible = divs.reduce(
-      (s, d) =>
-        s +
-        Math.min(
-          d.withholdingTaxPln,
-          d.amountPln * getDividendCreditCapRate({ country: d.country }),
-        ),
-      0,
-    );
-    return Math.max(taxPl - deductible, 0);
-  }
-
-  const dividendTaxToPay = $derived(computeDividendTaxToPay(dividendResults));
   const taxOwed = $derived(
-    taxSummary.capitalGainTaxPln + dividendTaxToPay,
+    taxSummary.capitalGainTaxPostLcfPln + taxSummary.dividendTaxOwedPln,
   );
 
-  const prevDividendTaxToPay = $derived(
-    prevDividendResults ? computeDividendTaxToPay(prevDividendResults) : 0,
-  );
   const prevTaxOwed = $derived(
     prevYearSummary
-      ? prevYearSummary.capitalGainTaxPln + prevDividendTaxToPay
+      ? prevYearSummary.capitalGainTaxPostLcfPln +
+          prevYearSummary.dividendTaxOwedPln
       : undefined,
   );
+
+  const pit38TaxToPay = $derived(taxSummary.pit38[51]);
+  const taxOwedSubtitle = $derived.by(() => {
+    const diff = Math.abs(pit38TaxToPay - taxOwed);
+    if (diff >= 0.01) {
+      return `PIT-38: ${formatPln(pit38TaxToPay)}`;
+    }
+    return '';
+  });
 
   interface CardData {
     label: string;
@@ -71,7 +55,7 @@
     {
       label: m.dash_tax_owed(),
       value: taxOwed,
-      subtitle: '',
+      subtitle: taxOwedSubtitle,
       color: 'blue',
       prevValue: prevTaxOwed,
       lowerIsBetter: true,

@@ -3,7 +3,10 @@
   import { formatPln } from '$lib/utils/format-pln.js';
   import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
   import { TAX_RATE } from '../../core/types.js';
-  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
+  import {
+    sumDeductibleWithholding,
+    sumDividendTaxToPay,
+  } from '../../core/tax/aggregates.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
@@ -23,7 +26,7 @@
     const gain = taxSummary.capitalGainPln;
     if (gain <= 0) return [];
 
-    const tax = taxSummary.capitalGainTaxPln;
+    const tax = taxSummary.capitalGainTaxPostLcfPln;
     const net = gain - tax;
 
     return [
@@ -43,16 +46,8 @@
 
     const taxPl = total * TAX_RATE;
     const net = total - taxPl;
-    const deductible = dividendResults.reduce(
-      (s, d) =>
-        s +
-        Math.min(
-          d.withholdingTaxPln,
-          d.amountPln * getDividendCreditCapRate({ country: d.country }),
-        ),
-      0,
-    );
-    const toPay = Math.max(taxPl - deductible, 0);
+    const deductible = sumDeductibleWithholding({ rows: dividendResults });
+    const toPay = sumDividendTaxToPay({ rows: dividendResults });
 
     return [
       { label: m.dash_net_profit(), value: net, color: '#10b981' },

@@ -77,11 +77,8 @@
       .toArray();
     const calculated = prevSessions.find((s) => s.status === 'calculated');
     if (!calculated) return undefined;
-    const [summary, divResults] = await Promise.all([
-      db.taxSummaries.get(calculated.id),
-      db.dividendResults.where('sessionId').equals(calculated.id).toArray(),
-    ]);
-    return { summary, dividendResults: divResults };
+    const summary = await db.taxSummaries.get(calculated.id);
+    return { summary };
   });
 
   // --- Rate unavailability warning ---
@@ -213,8 +210,6 @@
       prevYearSummary={prevYearData.current?.summary}
       {sellTradeCount}
       dividendCount={dividendResults.length}
-      {dividendResults}
-      prevDividendResults={prevYearData.current?.dividendResults}
     />
 
     <!-- Donut charts -->

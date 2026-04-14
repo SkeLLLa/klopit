@@ -5,7 +5,12 @@
   import { formatDatetime, formatDate } from '$lib/utils/format-date.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { TAX_RATE } from '../../core/types.js';
-  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
+  import {
+    sumTradeTaxPreLcf,
+    sumDividendTaxGross,
+    sumDeductibleWithholding,
+    sumDividendTaxToPay,
+  } from '../../core/tax/aggregates.js';
 
   let {
     tradeResults,
@@ -45,7 +50,7 @@
   const tradeTotalGainLoss = $derived(
     sellTrades.reduce((s, t) => s + t.gainLossPln, 0),
   );
-  const tradeTotalTax = $derived(Math.max(tradeTotalGainLoss, 0) * TAX_RATE);
+  const tradeTotalTax = $derived(sumTradeTaxPreLcf({ rows: sellTrades }));
 
   // Corporate action totals
   const caTotalProceeds = $derived(
@@ -57,36 +62,24 @@
   const caTotalGainLoss = $derived(
     corporateActionTrades.reduce((s, t) => s + t.gainLossPln, 0),
   );
-  const caTotalTax = $derived(Math.max(caTotalGainLoss, 0) * TAX_RATE);
+  const caTotalTax = $derived(sumTradeTaxPreLcf({ rows: corporateActionTrades }));
 
   // Dividend totals — cap deductible withholding per-dividend (art. 30a ust. 9)
   const divTotalAmount = $derived(
     dividendResults.reduce((s, d) => s + d.amountPln, 0),
   );
-  const divTotalTaxPl = $derived(divTotalAmount * TAX_RATE);
+  const divTotalTaxPl = $derived(sumDividendTaxGross({ rows: dividendResults }));
   const divTotalWithholding = $derived(
     dividendResults.reduce((s, d) => s + d.withholdingTaxPln, 0),
   );
-  const divTotalDeductible = $derived(
-    dividendResults.reduce(
-      (s, d) =>
-        s +
-        Math.min(
-          d.withholdingTaxPln,
-          d.amountPln * getDividendCreditCapRate({ country: d.country }),
-        ),
-      0,
-    ),
-  );
+  const divTotalDeductible = $derived(sumDeductibleWithholding({ rows: dividendResults }));
   const divTotalWithholdingPct = $derived(
     divTotalAmount > 0 ? (divTotalWithholding / divTotalAmount) * 100 : 0,
   );
   const divTotalDeductiblePct = $derived(
     divTotalAmount > 0 ? (divTotalDeductible / divTotalAmount) * 100 : 0,
   );
-  const divTotalToPay = $derived(
-    Math.max(divTotalTaxPl - divTotalDeductible, 0),
-  );
+  const divTotalToPay = $derived(sumDividendTaxToPay({ rows: dividendResults }));
   const divTotalToPayPct = $derived(
     divTotalAmount > 0 ? (divTotalToPay / divTotalAmount) * 100 : 0,
   );
@@ -130,7 +123,7 @@
         </thead>
         <tbody>
           {#each sellTrades as trade (trade.symbol + trade.datetime)}
-            {@const taxOnTrade = Math.max(trade.gainLossPln, 0) * TAX_RATE}
+            {@const taxOnTrade = trade.taxPln}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
             >
@@ -226,7 +219,7 @@
         </thead>
         <tbody>
           {#each corporateActionTrades as trade (trade.symbol + trade.datetime)}
-            {@const taxOnTrade = Math.max(trade.gainLossPln, 0) * TAX_RATE}
+            {@const taxOnTrade = trade.taxPln}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
             >
@@ -319,14 +312,11 @@
         </thead>
         <tbody>
           {#each dividendResults as div (div.symbol + div.date)}
-            {@const taxPl = div.amountPln * TAX_RATE}
-            {@const creditCap = div.amountPln * getDividendCreditCapRate({ country: div.country })}
-            {@const deductible = Math.min(div.withholdingTaxPln, creditCap)}
+            {@const taxPl = div.taxPlnGross}
+            {@const deductible = div.deductibleWithholdingPln}
+            {@const taxToPay = div.taxToPayPln}
             {@const hasWhtLapse =
-              div.warnings?.some((w) => w.kind === 'wht-lapse') ??
-              (div.amountPln > 0 &&
-                div.withholdingTaxPln / div.amountPln >
-                  getDividendCreditCapRate({ country: div.country }) + 0.005)}
+              div.warnings?.some((w) => w.kind === 'wht-lapse') ?? false}
             {@const hasUnknownCountry =
               div.warnings?.some((w) => w.kind === 'unknown-country') ??
               div.country === 'XX'}
@@ -337,7 +327,6 @@
                 : undefined}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
-            {@const taxToPay = Math.max(taxPl - deductible, 0)}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"

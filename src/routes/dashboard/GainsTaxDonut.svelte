@@ -5,7 +5,10 @@
   import { formatPln } from '$lib/utils/format-pln.js';
   import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
   import { TAX_RATE } from '../../core/types.js';
-  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
+  import {
+    sumDeductibleWithholding,
+    sumDividendTaxToPay,
+  } from '../../core/tax/aggregates.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
@@ -27,21 +30,12 @@
   const segments: DonutSegment[] = $derived.by(() => {
     if (totalIncome <= 0) return [];
 
-    // Compute dividend tax per-dividend (matching table logic)
-    const divTotal = dividendResults.reduce((s, d) => s + d.amountPln, 0);
-    const divPlTax = divTotal * TAX_RATE;
-    const divDeductible = dividendResults.reduce(
-      (s, d) =>
-        s +
-        Math.min(
-          d.withholdingTaxPln,
-          d.amountPln * getDividendCreditCapRate({ country: d.country }),
-        ),
-      0,
-    );
-    const divTaxToPay = Math.max(divPlTax - divDeductible, 0);
+    const divDeductible = sumDeductibleWithholding({ rows: dividendResults });
+    const divPlTax = taxSummary.totalDividendsPln * TAX_RATE;
+    const divTaxToPay = sumDividendTaxToPay({ rows: dividendResults });
 
-    const netProfit = totalIncome - taxSummary.capitalGainTaxPln - divPlTax;
+    const netProfit =
+      totalIncome - taxSummary.capitalGainTaxPostLcfPln - divPlTax;
 
     return [
       {
@@ -51,7 +45,7 @@
       },
       {
         label: m.dash_capital_gains_tax(),
-        value: taxSummary.capitalGainTaxPln,
+        value: taxSummary.capitalGainTaxPostLcfPln,
         color: '#ef4444',
       },
       {
