@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/SkeLLLa/klopit/compare/v1.8.0...v1.8.1) (2026-04-15)
+
+### 🛠 Fixes
+
+* **parser:** capture headers per section ([25a483e](https://github.com/SkeLLLa/klopit/commit/25a483e635cfd160fbd9bcaa982ce5f0d0502d4d))
+
 ## [1.8.0](https://github.com/SkeLLLa/klopit/compare/v1.7.0...v1.8.0) (2026-04-15)
 
 ### 🚀 Features
