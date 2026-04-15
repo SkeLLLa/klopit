@@ -1,0 +1,5 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,bad-date,10,175.50,175.50,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,MSFT,"2024-03-15, 10:30:00",oops,420.80,420.80,0,-1.25,0,0,0,O

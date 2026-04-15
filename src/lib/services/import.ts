@@ -1,5 +1,5 @@
 import { getParserDefinition } from '../../core/parsers/registry.js';
-import type { BrokerId } from '../../core/types.js';
+import type { BrokerId, ImportWarning, SkippedRow } from '../../core/types.js';
 import {
   db,
   type CarryInPositionRecord,
@@ -8,7 +8,7 @@ import {
   type TradeRecord,
   type WithholdingTaxRecord,
 } from '../db.js';
-import { addImportedFile } from './session.js';
+import { addImportedFile, appendImportWarnings } from './session.js';
 
 export interface ImportFileArgs {
   sessionId: string;
@@ -24,6 +24,8 @@ export async function importFile(args: ImportFileArgs): Promise<{
   year: number;
   tradeCount: number;
   dividendCount: number;
+  warnings: ImportWarning[];
+  skippedRows: SkippedRow[];
 }> {
   const definition = getParserDefinition({ brokerId: args.brokerId });
   const parser = definition.createParser();
@@ -35,6 +37,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
   }
 
   const result = parser.finish();
+  const warnings = deriveImportWarnings({ skippedRows: result.skippedRows });
 
   // Store parsed trades
   const trades: TradeRecord[] = result.trades.map((t) => ({
@@ -102,10 +105,97 @@ export async function importFile(args: ImportFileArgs): Promise<{
     },
   });
 
+  await appendImportWarnings({ sessionId: args.sessionId, warnings });
+
   return {
     broker: definition.brokerName,
     year: result.year,
     tradeCount: result.trades.length,
     dividendCount: result.dividends.length,
+    warnings,
+    skippedRows: result.skippedRows,
   };
+}
+
+export function deriveImportWarnings(args: {
+  skippedRows: SkippedRow[];
+}): ImportWarning[] {
+  return buildImportWarnings(
+    args.skippedRows.map((row) => ({
+      section: row.section,
+      kind: row.kind,
+      rowCount: 1,
+    })),
+  );
+}
+
+/**
+ * Merge a list of ImportWarnings, collapsing duplicate (section, kind) entries
+ * by summing rowCount and regenerating the message. Used when appending new
+ * warnings onto an existing session record so a second file import that
+ * produces the same section/kind doesn't create a duplicate entry (which would
+ * crash Svelte's keyed each block in the warning banner).
+ */
+export function mergeImportWarnings(args: {
+  warnings: readonly ImportWarning[];
+}): ImportWarning[] {
+  return buildImportWarnings(
+    args.warnings.map((warning) => ({
+      section: warning.section,
+      kind: warning.kind,
+      rowCount: warning.rowCount,
+    })),
+  );
+}
+
+function buildImportWarnings(
+  entries: Iterable<{
+    section: string;
+    kind: SkippedRow['kind'];
+    rowCount: number;
+  }>,
+): ImportWarning[] {
+  const groups = new Map<
+    string,
+    { section: string; kind: SkippedRow['kind']; rowCount: number }
+  >();
+
+  for (const entry of entries) {
+    const key = `${entry.section}::${entry.kind}`;
+    const current = groups.get(key);
+    if (current) {
+      current.rowCount += entry.rowCount;
+    } else {
+      groups.set(key, { ...entry });
+    }
+  }
+
+  return [...groups.values()]
+    .sort((a, b) =>
+      a.section === b.section
+        ? a.kind.localeCompare(b.kind)
+        : a.section.localeCompare(b.section),
+    )
+    .map((group) => ({
+      section: group.section,
+      kind: group.kind,
+      rowCount: group.rowCount,
+      message: formatImportWarningMessage(group),
+    }));
+}
+
+function formatImportWarningMessage(args: {
+  section: string;
+  kind: SkippedRow['kind'];
+  rowCount: number;
+}): string {
+  const count = String(args.rowCount);
+  switch (args.kind) {
+    case 'known-unsupported':
+      return `${args.section}: ${count} rows skipped (known unsupported section)`;
+    case 'unknown':
+      return `Unknown section '${args.section}': ${count} rows skipped`;
+    case 'parse-failure':
+      return `${args.section}: ${count} rows failed to parse`;
+  }
 }

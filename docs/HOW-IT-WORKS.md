@@ -24,14 +24,14 @@ kloPIT is a **Polish tax calculator for brokerage income** — specifically for 
 ```
 Step 1: Import             Step 2: Organize          Step 3: Calculate         Step 4: Review
 Broker CSV file    →       Parse data into           Fetch exchange rates,     View dashboard,
-(trades, dividends)        categories                apply FIFO method,        tax form,
+(trades, dividends)        categories + warnings     apply FIFO method,        tax form,
                            Store in database         compute taxes             export results
 ```
 
 ### Example: You sell 100 Apple shares
 
-1. **Import phase:** The system reads your Interactive Brokers CSV and finds the trade record
-2. **Organize phase:** Data is stored with metadata (dates, amounts, currencies)
+1. **Import phase:** The system reads your Interactive Brokers CSV, classifies every section, imports supported rows, and flags rows it skipped
+2. **Organize phase:** Parsed data is stored with metadata (dates, amounts, currencies), while import warning summaries are attached to the tax-year session
 3. **Calculate phase:**
    - Converts USD amounts to PLN using NBP exchange rates
    - Applies FIFO: matches your sale with your oldest purchase
@@ -52,6 +52,8 @@ Broker CSV file    →       Parse data into           Fetch exchange rates,    
 - Click "Import Data" to upload your broker statement CSV files
 - Select your broker (currently: Interactive Brokers)
 - See all parsed trades, dividends, withholding taxes, and corporate actions in tables
+- Review an amber warning banner if some CSV rows were skipped
+- Open the **Skipped** tab to inspect skipped rows during the current import session
 - Edit or delete individual entries if needed
 - Manage multiple tax years (each creates a separate "session")
 
@@ -59,6 +61,7 @@ Broker CSV file    →       Parse data into           Fetch exchange rates,    
 
 - Import your 2025 Interactive Brokers activity statement
 - View 47 trades and 8 dividends organized in tables
+- See that `Options` rows were skipped because that section is not supported yet
 - Notice a trade with suspicious dates? Delete it and re-import correctly.
 
 ---
@@ -597,6 +600,40 @@ When you download your Activity Statement from Interactive Brokers and import it
 5. **Carry-In Positions**
    - Shares you owned before importing (from prior years)
    - Needed for accurate FIFO calculations
+
+### How import warnings work
+
+IBKR Activity Statements contain many section types. kloPIT now classifies every section header into four buckets:
+
+- **Supported** — parsed into app data (`Trades`, `Dividends`, `Withholding Tax`, `Corporate Actions`, carry-in positions, statement year, symbol-to-ISIN mapping)
+- **Ignorable** — safely skipped because they are statement metadata or redundant summaries
+- **Known unsupported** — not parsed yet, but shown to you explicitly
+- **Unknown** — unrecognized section names, also shown explicitly
+
+This means the app no longer silently drops entire unsupported sections such as `Options`, `Futures`, `Forex P/L`, `Interest`, or `Fees`.
+
+### What counts as a warning
+
+Warnings appear in two situations:
+
+1. A whole section is present but not supported yet
+2. A row inside a supported section fails to parse cleanly
+
+Rows skipped **by design** do not trigger warnings. For example:
+
+- IBKR `Header`, `SubTotal`, and `Total` rows
+- Per-section summary rows like `Total in EUR`
+- Non-stock rows inside stock-only import paths
+- Carry-in rows with zero quantity
+
+### Where skipped data is shown
+
+After import, kloPIT shows warnings in two layers:
+
+- **Persistent session summary** — the `/data` page stores grouped warning summaries on the tax-year session, so the amber banner survives reload
+- **Detailed skipped rows** — the `Skipped` tab shows section, kind, line number, and raw CSV line, but only during the current in-browser import session
+
+If you reload the page later, the summary warnings remain, but raw skipped-row detail is no longer available until you re-import the file.
 
 ---
 

@@ -1,0 +1,14 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Account Information,Header,Field Name,Field Value
+Account Information,Data,Account,U0000000
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,"2024-03-15, 10:30:00",10,175.50,175.50,0,-1.00,0,0,0,O
+Trades,Data,Order,CFD,USD,SPY,"2024-03-15, 10:31:00",1,500.00,500.00,0,-1.00,0,0,0,O
+Trades,Data,Order,Stocks,USD,MSFT,bad-date,5,420.80,420.80,0,-1.25,0,0,0,O
+Options,Header,Asset Category,Currency,Symbol,Date/Time,Description,Quantity,Price,Proceeds
+Options,Data,Equity and Index Options,USD,AAPL  240621C00190000,2024-06-21,"AAPL Jun21'24 190 Call",-1,1.25,125.00
+Interest,Header,Currency,Date,Description,Amount
+Interest,Data,USD,2024-06-30,"Credit Interest",12.50
+Foobar,Header,Asset Category,Currency,Symbol,Date/Time,Description,Amount
+Foobar,Data,Stocks,USD,XYZ,2024-08-01,"Mystery event",12.34

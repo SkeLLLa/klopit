@@ -2,8 +2,9 @@
   import { ChevronDown, ChevronUp } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { importFile } from '$lib/services/import.js';
+  import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
-  import type { BrokerId } from '../../core/types.js';
+  import type { BrokerId, ImportWarning } from '../../core/types.js';
 
   let {
     sessionId,
@@ -18,7 +19,12 @@
   let selectedBroker: BrokerId = $state(brokers[0]?.id ?? ('interactive-brokers' as BrokerId));
   let files: FileList | null = $state(null);
   let importing = $state(false);
-  let results: { fileName: string; success: boolean; message: string }[] = $state([]);
+  let results: {
+    fileName: string;
+    success: boolean;
+    message: string;
+    warnings: ImportWarning[];
+  }[] = $state([]);
 
   function toggle() {
     open = !open;
@@ -37,13 +43,19 @@
     for (const file of files) {
       try {
         const text = await file.text();
-        const result = await importFile({
+        const result = (await importFile({
           sessionId,
           brokerId: selectedBroker,
           fileName: file.name,
           fileSize: file.size,
           text,
-        });
+        }));
+        if (result.skippedRows.length > 0) {
+          skippedRowsStore.addSkippedRows({
+            sessionId,
+            rows: result.skippedRows,
+          });
+        }
         results = [
           ...results,
           {
@@ -54,6 +66,7 @@
               dividendCount: String(result.dividendCount),
               fileName: file.name,
             }),
+            warnings: result.warnings,
           },
         ];
       } catch (err) {
@@ -66,6 +79,7 @@
               fileName: file.name,
               error: err instanceof Error ? err.message : String(err),
             }),
+            warnings: [],
           },
         ];
       }
@@ -166,6 +180,32 @@
                 : 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300'}"
             >
               {result.message}
+              {#if result.success && result.warnings.length > 0}
+                <div
+                  class="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  {#each result.warnings as warning (warning.section + '::' + warning.kind)}
+                    <div>
+                      {#if warning.kind === 'known-unsupported'}
+                        {m.parse_warning_known_unsupported({
+                          section: warning.section,
+                          count: String(warning.rowCount),
+                        })}
+                      {:else if warning.kind === 'unknown'}
+                        {m.parse_warning_unknown({
+                          section: warning.section,
+                          count: String(warning.rowCount),
+                        })}
+                      {:else}
+                        {m.parse_warning_parse_failure({
+                          section: warning.section,
+                          count: String(warning.rowCount),
+                        })}
+                      {/if}
+                    </div>
+                  {/each}
+                </div>
+              {/if}
             </div>
           {/each}
         </div>

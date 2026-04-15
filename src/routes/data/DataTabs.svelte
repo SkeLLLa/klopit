@@ -2,7 +2,13 @@
   import { m } from '$lib/paraglide/messages.js';
   import type { Snippet } from 'svelte';
 
-  type TabId = 'trades' | 'dividends' | 'withholding' | 'corporateActions' | 'carryIn';
+  type TabId =
+    | 'trades'
+    | 'dividends'
+    | 'withholding'
+    | 'corporateActions'
+    | 'carryIn'
+    | 'skipped';
 
   let {
     activeTab = $bindable('trades'),
@@ -14,12 +20,21 @@
     children: Snippet<[TabId]>;
   } = $props();
 
+  const messages = m as unknown as Record<
+    string,
+    (inputs?: Record<string, string>) => string
+  >;
+  function t(key: string, fallback: string): string {
+    return messages[key]?.() ?? fallback;
+  }
+
   const tabs: { id: TabId; label: () => string }[] = [
     { id: 'trades', label: () => m.data_tab_trades() },
     { id: 'dividends', label: () => m.data_tab_dividends() },
     { id: 'withholding', label: () => m.data_tab_withholding() },
     { id: 'corporateActions', label: () => m.data_tab_corporate_actions() },
     { id: 'carryIn', label: () => m.data_tab_carry_in() },
+    { id: 'skipped', label: () => t('data_tab_skipped', 'Skipped') },
   ];
 </script>
 

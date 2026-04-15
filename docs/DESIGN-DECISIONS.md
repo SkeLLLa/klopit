@@ -104,10 +104,13 @@ Auto-detecting the broker from the file is tempting but leads to:
 
 **Explicit broker selection**: User picks "Interactive Brokers" before importing.
 
+That explicit choice is paired with **fail-loud section classification** inside the parser. Once the user says "this is an IBKR statement", the app treats every IBKR section intentionally: supported sections are parsed, clearly tax-irrelevant sections are ignored, and unsupported or unknown sections are surfaced back to the user as warnings instead of being dropped silently.
+
 **Why this is better:**
 
 - User confirms intent ("yes, I'm uploading IB data")
 - Error messages are clear ("Interactive Brokers parser failed on line 42")
+- Unsupported data is visible ("Options section skipped") instead of disappearing silently
 - Easy to add new brokers (just register a new parser)
 - User can upload multiple file types to one session
 
@@ -353,7 +356,7 @@ $effect(() => { /* runs when deps change */ });
 ### Pipeline
 
 ```
-Raw CSV File → Parser → ParsedStatement Object → IndexedDB Records
+Raw CSV File → Parser → ParsedStatement + SkippedRow[] → IndexedDB Records + Session ImportWarnings
 ```
 
 ### Why Not Store Raw CSV?
@@ -365,38 +368,61 @@ Raw CSV File → Parser → ParsedStatement Object → IndexedDB Records
 
 ### Why Parse Immediately?
 
-1. **Feedback**: User sees parse warnings immediately ("Line 42: unknown section")
-2. **Data quality**: Invalid rows don't silently get ignored
+1. **Feedback**: User sees import warnings immediately, including unsupported or unknown IBKR sections
+2. **Data quality**: Invalid rows and unsupported sections don't silently get ignored
 3. **Efficiency**: Subsequent calculations don't re-parse
+4. **Auditability**: The session keeps a persistent warning summary even after reload
 
 ---
 
-## Design Decision: Warning Collection During Parse
+## Design Decision: Fail-Loud Import Warnings
 
-### The Idea
+### The Problem
 
-When parsing a CSV, don't fail on the first error. Instead:
+Broker statements mix useful rows with metadata, summaries, and sections kloPIT does not support yet. A parser that simply ignores what it does not understand is dangerous here: the user may think their entire statement was imported even when options, interest, or malformed rows were skipped.
 
-1. Collect warnings (line number, section, message)
-2. Parse the rest of the file
-3. Show user all warnings at once
+### The Solution
+
+The import pipeline uses a two-layer warning model:
+
+1. The parser emits detailed `SkippedRow` entries for unsupported, unknown, or malformed rows
+2. The import service groups those rows into `ImportWarning` summaries by `(section, kind)`
+3. The session stores those summaries in IndexedDB so the warning banner survives reload
+4. The UI keeps full skipped-row detail only in memory for the current import session
+
+This preserves two important properties at once:
+
+- **Persistence where it matters**: users can still see that data was skipped after a reload
+- **Low storage overhead**: IndexedDB does not keep raw CSV lines for every skipped row forever
 
 ### Example
 
 ```
 Interactive Brokers import warnings:
-- Line 42 (Trades): Unknown trade type "LIMIT ORDER"
-- Line 58 (Dividends): Missing currency
-- Line 120 (Dividends): Negative amount (invalid)
+- Options: 42 rows skipped (known unsupported section)
+- Unknown section 'Foobar': 3 rows skipped
+- Trades: 1 row failed to parse
 
-✓ Warnings: 3 issues found but 47 trades imported successfully
+Detailed row inspection is available immediately after import in the Skipped tab.
 ```
 
 **Benefits:**
 
-1. User doesn't need to re-import for each issue (batch fixing)
-2. Doesn't lose valid data (parse failure ≠ lose everything)
-3. Transparency (user knows what was skipped or guessed)
+1. User doesn't need to re-import for each issue; valid rows still import
+2. Unsupported tax-relevant sections fail loud instead of disappearing silently
+3. The warning banner is durable because summaries live on the session record
+4. Detailed inspection stays available without bloating long-term storage
+
+### Intentional Non-Warnings
+
+Not every skipped IBKR row is a warning. Some rows are intentionally filtered because they are redundant or outside scope:
+
+- `Header`, `SubTotal`, and `Total` row types
+- Per-section summary rows like `Total in EUR`
+- Statement metadata sections such as account information and legal notes
+- Non-stock rows inside stock-only import paths
+
+Warnings are reserved for rows the user may reasonably expect to matter for tax reporting.
 
 ---
 

@@ -1,0 +1,12 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Interest,Header,Currency,Date,Description,Amount
+Interest,Data,USD,2024-06-30,"Credit Interest",12.50
+Interest,Data,EUR,2024-09-30,"Credit Interest",8.00
+Interest,Data,Total,,,20.50
+Interest,Data,Total in EUR,,,18.75
+Interest,Data,Total Interest in EUR,,,18.75
+Foobar,Header,Asset Category,Currency,Symbol,Date/Time,Description,Amount
+Foobar,Data,Stocks,USD,XYZ,2024-08-01,"Mystery event",12.34
+Foobar,Data,Total,,,99.99
+Foobar,Data,Total (All Assets),,,99.99

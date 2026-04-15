@@ -1,10 +1,22 @@
 import type { BrokerId } from '../types.js';
 import { CsvStatementParser } from './csv-parser.js';
 import { cleanField, parseDateTime, parseDecimal } from './csv-utils.js';
+import { classifySection } from './interactive-brokers/sections.js';
 import type { ParserDefinition, StatementParser } from './types.js';
 
 /** Regex to extract symbol and ISIN from dividend/tax descriptions: "AAPL(US0378331005) ..." */
 const SYMBOL_ISIN_RE = /^\s*(\S+)\s*\(([^)]+)\)/;
+
+/**
+ * IBKR marks per-section summary rows with column 2 starting with "Total"
+ * (e.g. "Total", "Total in EUR", "Total Dividends in EUR",
+ * "Total (All Assets)"). These rows are aggregates of surrounding Data rows
+ * and are always redundant for a per-row tax calculation.
+ */
+function isSummaryRow(fields: string[]): boolean {
+  const discriminator = fields[2]?.trim() ?? '';
+  return discriminator === 'Total' || discriminator.startsWith('Total ');
+}
 
 /** Regex to match split descriptions: "NVDA(...) Split 10 for 1" or "TSLA(...) Reverse Split 1 for 3" */
 const SPLIT_RE =
@@ -23,32 +35,60 @@ class InteractiveBrokersParser extends CsvStatementParser {
     return 'interactive-brokers';
   }
 
-  protected processRow(args: { section: string; fields: string[] }): void {
-    const { section, fields } = args;
+  protected processRow(args: {
+    section: string;
+    fields: string[];
+    rawLine: string;
+  }): void {
+    const { section, fields, rawLine } = args;
 
-    switch (section) {
-      case 'Statement':
-        this.parseStatement(fields);
+    // IBKR convention: within a Data row, column 2 labeled "Total" or
+    // "Total <…>" (e.g. "Total in EUR", "Total (All Assets)") is a
+    // per-section summary row, not a transaction. We calculate per-row, so
+    // these are always redundant — drop them before section dispatch so
+    // known-unsupported and unknown sections don't inflate their skipped
+    // counts.
+    if (isSummaryRow(fields)) return;
+
+    const classification = classifySection({ section });
+
+    switch (classification) {
+      case 'supported':
+        switch (section) {
+          case 'Statement':
+            this.parseStatement(fields);
+            break;
+          case 'Financial Instrument Information':
+            this.parseFinancialInstrument(fields);
+            break;
+          case 'Trades':
+            this.parseTrade({ fields, rawLine });
+            break;
+          case 'Dividends':
+            this.parseDividend({ fields, rawLine });
+            break;
+          case 'Withholding Tax':
+            this.parseWithholdingTax({ fields, rawLine });
+            break;
+          case 'Corporate Actions':
+            this.parseCorporateAction({ fields, rawLine });
+            break;
+          case 'Mark-to-Market Performance Summary':
+            this.parseCarryInPosition({ fields, rawLine });
+            break;
+        }
         break;
-      case 'Financial Instrument Information':
-        this.parseFinancialInstrument(fields);
+      case 'ignorable':
+        return;
+      case 'known-unsupported':
+      case 'unknown':
+        this.addSkippedRow({
+          section,
+          kind: classification,
+          rawLine,
+          ...this.extractBestEffortSkippedFields(fields),
+        });
         break;
-      case 'Trades':
-        this.parseTrade(fields);
-        break;
-      case 'Dividends':
-        this.parseDividend(fields);
-        break;
-      case 'Withholding Tax':
-        this.parseWithholdingTax(fields);
-        break;
-      case 'Corporate Actions':
-        this.parseCorporateAction(fields);
-        break;
-      case 'Mark-to-Market Performance Summary':
-        this.parseCarryInPosition(fields);
-        break;
-      // Unknown sections are silently ignored
     }
   }
 
@@ -75,9 +115,10 @@ class InteractiveBrokersParser extends CsvStatementParser {
     }
   }
 
-  private parseTrade(fields: string[]): void {
+  private parseTrade(args: { fields: string[]; rawLine: string }): void {
+    const { fields, rawLine } = args;
     const discriminator = cleanField({ value: fields[2] ?? '' });
-    // Only process Order and Trade rows — skip SubTotal, Total
+    // Only process Order and Trade rows (Total rows are filtered upstream in processRow).
     if (discriminator !== 'Order' && discriminator !== 'Trade') return;
 
     const assetCategory = cleanField({ value: fields[3] ?? '' });
@@ -95,9 +136,15 @@ class InteractiveBrokersParser extends CsvStatementParser {
       const rawCommission = parseDecimal({ value: fields[11] ?? '' });
 
       if (!datetime || rawQuantity === undefined || price === undefined) {
-        this.addWarning({
+        this.reportParseFailure({
           section: 'Trades',
+          rawLine,
           message: `Could not parse trade row for ${symbol}: missing datetime, quantity, or price`,
+          assetCategory,
+          currency: currency || undefined,
+          symbol: symbol || undefined,
+          datetime: cleanField({ value: fields[6] ?? '' }) || undefined,
+          description: this.joinTail(fields, 7),
         });
         return;
       }
@@ -120,18 +167,22 @@ class InteractiveBrokersParser extends CsvStatementParser {
         type,
       });
     } catch {
-      this.addWarning({
+      this.reportParseFailure({
         section: 'Trades',
-        message: `Failed to parse trade row: ${fields.join(',')}`,
+        rawLine,
+        message: `Failed to parse trade row: ${rawLine}`,
+        assetCategory: cleanField({ value: fields[3] ?? '' }) || undefined,
+        currency: cleanField({ value: fields[4] ?? '' }) || undefined,
+        symbol: cleanField({ value: fields[5] ?? '' }) || undefined,
+        datetime: cleanField({ value: fields[6] ?? '' }) || undefined,
+        description: this.joinTail(fields, 7),
       });
     }
   }
 
-  private parseDividend(fields: string[]): void {
+  private parseDividend(args: { fields: string[]; rawLine: string }): void {
+    const { fields, rawLine } = args;
     const currency = cleanField({ value: fields[2] ?? '' });
-
-    // Skip Total/SubTotal rows
-    if (currency.startsWith('Total')) return;
 
     try {
       const date = parseDateTime({
@@ -141,9 +192,16 @@ class InteractiveBrokersParser extends CsvStatementParser {
       const amount = parseDecimal({ value: fields[5] ?? '' });
 
       if (!date || amount === undefined) {
-        this.addWarning({
+        const description = cleanField({ value: fields[4] ?? '' });
+        const match = SYMBOL_ISIN_RE.exec(description);
+        this.reportParseFailure({
           section: 'Dividends',
+          rawLine,
           message: `Could not parse dividend row: missing date or amount`,
+          currency: currency || undefined,
+          symbol: match?.[1] ?? undefined,
+          datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+          description: description || undefined,
         });
         return;
       }
@@ -154,18 +212,26 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
       this.dividends.push({ symbol, isin, currency, date, amount });
     } catch {
-      this.addWarning({
+      const description = cleanField({ value: fields[4] ?? '' });
+      const match = SYMBOL_ISIN_RE.exec(description);
+      this.reportParseFailure({
         section: 'Dividends',
-        message: `Failed to parse dividend row: ${fields.join(',')}`,
+        rawLine,
+        message: `Failed to parse dividend row: ${rawLine}`,
+        currency: currency || undefined,
+        symbol: match?.[1] ?? undefined,
+        datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+        description: description || undefined,
       });
     }
   }
 
-  private parseWithholdingTax(fields: string[]): void {
+  private parseWithholdingTax(args: {
+    fields: string[];
+    rawLine: string;
+  }): void {
+    const { fields, rawLine } = args;
     const currency = cleanField({ value: fields[2] ?? '' });
-
-    // Skip Total/SubTotal rows
-    if (currency.startsWith('Total')) return;
 
     try {
       const date = parseDateTime({
@@ -175,9 +241,16 @@ class InteractiveBrokersParser extends CsvStatementParser {
       const amount = parseDecimal({ value: fields[5] ?? '' });
 
       if (!date || amount === undefined) {
-        this.addWarning({
+        const description = cleanField({ value: fields[4] ?? '' });
+        const match = SYMBOL_ISIN_RE.exec(description);
+        this.reportParseFailure({
           section: 'Withholding Tax',
+          rawLine,
           message: `Could not parse withholding tax row: missing date or amount`,
+          currency: currency || undefined,
+          symbol: match?.[1] ?? undefined,
+          datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+          description: description || undefined,
         });
         return;
       }
@@ -189,29 +262,43 @@ class InteractiveBrokersParser extends CsvStatementParser {
       // Amount is negative in the CSV — keep as-is
       this.withholdingTaxes.push({ symbol, isin, currency, date, amount });
     } catch {
-      this.addWarning({
+      const description = cleanField({ value: fields[4] ?? '' });
+      const match = SYMBOL_ISIN_RE.exec(description);
+      this.reportParseFailure({
         section: 'Withholding Tax',
-        message: `Failed to parse withholding tax row: ${fields.join(',')}`,
+        rawLine,
+        message: `Failed to parse withholding tax row: ${rawLine}`,
+        currency: currency || undefined,
+        symbol: match?.[1] ?? undefined,
+        datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+        description: description || undefined,
       });
     }
   }
 
-  private parseCorporateAction(fields: string[]): void {
+  private parseCorporateAction(args: {
+    fields: string[];
+    rawLine: string;
+  }): void {
+    const { fields, rawLine } = args;
     const assetCategory = cleanField({ value: fields[2] ?? '' });
-
-    // Skip Total rows
-    if (assetCategory.startsWith('Total')) return;
+    let description = '';
 
     try {
       const datetime = parseDateTime({
         value: cleanField({ value: fields[5] ?? '' }),
       });
-      const description = cleanField({ value: fields[6] ?? '' });
+      description = cleanField({ value: fields[6] ?? '' });
 
       if (!datetime) {
-        this.addWarning({
+        this.reportParseFailure({
           section: 'Corporate Actions',
+          rawLine,
           message: `Could not parse corporate action: missing datetime`,
+          assetCategory: assetCategory || undefined,
+          currency: cleanField({ value: fields[3] ?? '' }) || undefined,
+          datetime: cleanField({ value: fields[5] ?? '' }) || undefined,
+          description: description || undefined,
         });
         return;
       }
@@ -289,22 +376,37 @@ class InteractiveBrokersParser extends CsvStatementParser {
       }
 
       // Unsupported corporate action type — warn but don't fail
-      this.addWarning({
+      this.reportParseFailure({
         section: 'Corporate Actions',
+        rawLine,
         message: `Unsupported corporate action: ${description}`,
+        assetCategory: assetCategory || undefined,
+        currency: cleanField({ value: fields[3] ?? '' }) || undefined,
+        datetime: cleanField({ value: fields[5] ?? '' }) || undefined,
+        description: description || undefined,
       });
     } catch {
-      this.addWarning({
+      this.reportParseFailure({
         section: 'Corporate Actions',
-        message: `Failed to parse corporate action row: ${fields.join(',')}`,
+        rawLine,
+        message: `Failed to parse corporate action row: ${rawLine}`,
+        assetCategory: assetCategory || undefined,
+        currency: cleanField({ value: fields[3] ?? '' }) || undefined,
+        symbol: this.extractSymbolFromDescription(description),
+        datetime: cleanField({ value: fields[5] ?? '' }) || undefined,
+        description: description || undefined,
       });
     }
   }
 
-  private parseCarryInPosition(fields: string[]): void {
+  private parseCarryInPosition(args: {
+    fields: string[];
+    rawLine: string;
+  }): void {
+    const { fields, rawLine } = args;
     const assetCategory = cleanField({ value: fields[2] ?? '' });
 
-    // Skip Total rows and non-stock categories
+    // Only process Stocks (Total rows are filtered upstream in processRow).
     if (assetCategory !== 'Stocks') return;
 
     try {
@@ -319,11 +421,80 @@ class InteractiveBrokersParser extends CsvStatementParser {
         year: this.year > 0 ? this.year - 1 : 0,
       });
     } catch {
-      this.addWarning({
+      this.reportParseFailure({
         section: 'Mark-to-Market Performance Summary',
-        message: `Failed to parse carry-in position: ${fields.join(',')}`,
+        rawLine,
+        message: `Failed to parse carry-in position: ${rawLine}`,
+        assetCategory,
+        symbol: cleanField({ value: fields[3] ?? '' }) || undefined,
+        description: this.joinTail(fields, 4),
       });
     }
+  }
+
+  private reportParseFailure(args: {
+    section: string;
+    rawLine: string;
+    message: string;
+    assetCategory?: string;
+    currency?: string;
+    symbol?: string;
+    datetime?: string;
+    description?: string;
+  }): void {
+    this.addWarning({ section: args.section, message: args.message });
+    this.addSkippedRow({
+      section: args.section,
+      kind: 'parse-failure',
+      rawLine: args.rawLine,
+      assetCategory: args.assetCategory,
+      currency: args.currency,
+      symbol: args.symbol,
+      datetime: args.datetime,
+      description: args.description,
+    });
+  }
+
+  private extractBestEffortSkippedFields(fields: string[]): {
+    assetCategory?: string;
+    currency?: string;
+    symbol?: string;
+    datetime?: string;
+    description?: string;
+  } {
+    const assetCategory = cleanField({ value: fields[2] ?? '' }) || undefined;
+    const currency =
+      cleanField({ value: fields[3] ?? '' }) ||
+      cleanField({ value: fields[4] ?? '' }) ||
+      undefined;
+    const symbol =
+      cleanField({ value: fields[4] ?? '' }) ||
+      cleanField({ value: fields[5] ?? '' }) ||
+      undefined;
+    const datetime =
+      cleanField({ value: fields[5] ?? '' }) ||
+      cleanField({ value: fields[6] ?? '' }) ||
+      undefined;
+    const description = this.joinTail(fields, 6);
+
+    return { assetCategory, currency, symbol, datetime, description };
+  }
+
+  private extractSymbolFromDescription(
+    description: string,
+  ): string | undefined {
+    const match = SYMBOL_ISIN_RE.exec(description);
+    return match?.[1];
+  }
+
+  private joinTail(fields: string[], startIndex: number): string | undefined {
+    if (fields.length <= startIndex) return undefined;
+    const value = fields
+      .slice(startIndex)
+      .map((field) => cleanField({ value: field }))
+      .filter((field) => field !== '')
+      .join(',');
+    return value || undefined;
   }
 }
 

@@ -111,6 +111,36 @@ export interface ParseWarning {
   message: string;
 }
 
+/** Classification of a CSV row that the parser intentionally skipped. */
+export type SkippedRowKind = 'known-unsupported' | 'unknown' | 'parse-failure';
+
+/**
+ * A single CSV row that was skipped by the parser, retained for post-import
+ * inspection. In-memory only (lost on page reload).
+ */
+export interface SkippedRow {
+  section: string;
+  kind: SkippedRowKind;
+  /** 1-based line number in the CSV as fed to the parser. */
+  line: number;
+  assetCategory?: string;
+  currency?: string;
+  symbol?: string;
+  /** Raw datetime string as it appeared in the CSV. */
+  datetime?: string;
+  description?: string;
+  /** Exact raw CSV line, verbatim. */
+  rawLine: string;
+}
+
+/** Persistent summary of skipped rows grouped by section and kind. */
+export interface ImportWarning {
+  section: string;
+  kind: SkippedRowKind;
+  rowCount: number;
+  message: string;
+}
+
 /** Result of parsing a single broker CSV file */
 export interface ParsedStatement {
   broker: string;
@@ -123,6 +153,7 @@ export interface ParsedStatement {
   transactionFees: TransactionFee[];
   symbolToIsin: Map<string, string>;
   warnings: ParseWarning[];
+  skippedRows: SkippedRow[];
 }
 
 // ---------------------------------------------------------------------------

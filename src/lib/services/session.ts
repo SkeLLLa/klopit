@@ -1,5 +1,7 @@
 import { typeid } from 'typeid-js';
+import type { ImportWarning } from '../../core/types.js';
 import { db, type ImportedFileRecord, type SessionRecord } from '../db.js';
+import { mergeImportWarnings } from './import.js';
 
 /** Create a new tax calculation session */
 export async function createSession(args: {
@@ -60,6 +62,22 @@ export async function addImportedFile(args: {
   if (!session) throw new Error(`Session not found: ${args.sessionId}`);
   await db.sessions.update(args.sessionId, {
     files: [...session.files, args.file],
+    updatedAt: new Date(),
+  });
+}
+
+/** Append import warnings to a session. */
+export async function appendImportWarnings(args: {
+  sessionId: string;
+  warnings: ImportWarning[];
+}): Promise<void> {
+  if (args.warnings.length === 0) return;
+  const session = await db.sessions.get(args.sessionId);
+  if (!session) throw new Error(`Session not found: ${args.sessionId}`);
+  await db.sessions.update(args.sessionId, {
+    importWarnings: mergeImportWarnings({
+      warnings: [...(session.importWarnings ?? []), ...args.warnings],
+    }),
     updatedAt: new Date(),
   });
 }

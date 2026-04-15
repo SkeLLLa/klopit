@@ -244,6 +244,7 @@ void describe('InteractiveBrokersParser', () => {
     void it('collects warnings for malformed rows', () => {
       const result = parseFixture('malformed-rows.csv');
       assert.ok(result.warnings.length > 0);
+      assert.ok(result.skippedRows.length > 0);
       assert.ok(result.trades.length >= 1);
     });
 
@@ -252,6 +253,12 @@ void describe('InteractiveBrokersParser', () => {
       assert.equal(
         result.warnings.filter((w) => w.section === 'Account Information')
           .length,
+        0,
+      );
+      assert.equal(
+        result.skippedRows.filter(
+          (row) => row.section === 'Account Information',
+        ).length,
         0,
       );
     });
@@ -268,6 +275,7 @@ void describe('InteractiveBrokersParser', () => {
       assert.equal(result.corporateActions.length, 1);
       assert.equal(result.symbolToIsin.size, 3);
       assert.ok(result.carryInPositions.length >= 1);
+      assert.equal(result.skippedRows.length, 0);
     });
   });
 

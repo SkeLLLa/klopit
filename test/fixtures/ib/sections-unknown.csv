@@ -1,0 +1,4 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Foobar,Header,Asset Category,Currency,Symbol,Date/Time,Description,Amount
+Foobar,Data,Stocks,USD,XYZ,2024-08-01,"Mystery event",12.34

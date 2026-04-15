@@ -5,6 +5,7 @@ import type {
   ParseWarning,
   RawDividend,
   RawWithholdingTax,
+  SkippedRowKind,
   Trade,
   TransactionFee,
 } from '../types.js';
@@ -26,6 +27,7 @@ export abstract class CsvStatementParser implements StatementParser {
   protected transactionFees: TransactionFee[] = [];
   protected symbolToIsin = new Map<string, string>();
   protected warnings: ParseWarning[] = [];
+  protected skippedRows: ParsedStatement['skippedRows'] = [];
   private lineNumber = 0;
 
   /** Returns the broker identifier string */
@@ -38,17 +40,18 @@ export abstract class CsvStatementParser implements StatementParser {
   protected abstract processRow(args: {
     section: string;
     fields: string[];
+    rawLine: string;
   }): void;
 
   /** Feed a single CSV line to the parser */
   feed(args: { line: string }): void {
     this.lineNumber++;
-    const { line } = args;
+    const rawLine = args.line;
 
     // Skip empty lines
-    if (line.trim() === '') return;
+    if (rawLine.trim() === '') return;
 
-    const fields = parseCsvLine({ line });
+    const fields = parseCsvLine({ line: rawLine });
     if (fields.length < 2) return;
 
     const section = fields[0];
@@ -57,7 +60,7 @@ export abstract class CsvStatementParser implements StatementParser {
     // Only process Data rows — skip Header, SubTotal, Total rows
     if (rowType !== 'Data') return;
 
-    this.processRow({ section, fields });
+    this.processRow({ section, fields, rawLine });
   }
 
   /** Assemble the final ParsedStatement from accumulated state */
@@ -103,6 +106,7 @@ export abstract class CsvStatementParser implements StatementParser {
       transactionFees: this.transactionFees,
       symbolToIsin: this.symbolToIsin,
       warnings: this.warnings,
+      skippedRows: this.skippedRows,
     };
   }
 
@@ -112,6 +116,30 @@ export abstract class CsvStatementParser implements StatementParser {
       line: this.lineNumber,
       section: args.section,
       message: args.message,
+    });
+  }
+
+  /** Add a skipped row for post-import inspection. */
+  protected addSkippedRow(args: {
+    section: string;
+    kind: SkippedRowKind;
+    rawLine: string;
+    assetCategory?: string;
+    currency?: string;
+    symbol?: string;
+    datetime?: string;
+    description?: string;
+  }): void {
+    this.skippedRows.push({
+      line: this.lineNumber,
+      section: args.section,
+      kind: args.kind,
+      rawLine: args.rawLine,
+      assetCategory: args.assetCategory,
+      currency: args.currency,
+      symbol: args.symbol,
+      datetime: args.datetime,
+      description: args.description,
     });
   }
 }

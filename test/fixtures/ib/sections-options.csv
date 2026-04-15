@@ -1,0 +1,4 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,Period,"January 1, 2024 - December 31, 2024"
+Options,Header,Asset Category,Currency,Symbol,Date/Time,Description,Quantity,Price,Proceeds
+Options,Data,Equity and Index Options,USD,AAPL  240621C00190000,2024-06-21,"AAPL Jun21'24 190 Call",-1,1.25,125.00

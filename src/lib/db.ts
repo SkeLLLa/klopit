@@ -4,6 +4,7 @@ import type {
   CarryInPosition,
   CorporateAction,
   DividendResult,
+  ImportWarning,
   Pit38Fields,
   PitZgFields,
   PriorYearLoss,
@@ -34,6 +35,7 @@ export interface SessionRecord {
   oppKrs?: string;
   oppDetails?: string;
   oppConsent?: boolean;
+  importWarnings?: ImportWarning[];
   /** Bumped by Dexie hooks whenever source data tables change. */
   dataUpdatedAt?: Date;
   /** Set by calculateSessionTaxes on successful completion. */
