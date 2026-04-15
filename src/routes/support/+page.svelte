@@ -10,8 +10,6 @@
   const mbankAffiliateCode = 'bemyfellowm1n1on';
   const mbankAffiliateUrl =
     'https://www.mbank.pl/mgm/konta.html?numer=bemyfellowm1n1on';
-  const millenniumAffiliateCode = '36890804';
-  const millenniumWebsiteUrl = 'https://www.bankmillennium.pl';
 
   const locale = $derived(getLocale());
 
@@ -168,37 +166,6 @@
         </div>
       </article>
 
-      <article
-        class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-      >
-        <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
-          {m.support_affiliate_millennium_title()}
-        </h4>
-
-        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          {m.support_affiliate_millennium_intro()}
-        </p>
-
-        <div class="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-700">
-          <div class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">
-            {m.support_affiliate_code_label()}
-          </div>
-          <div class="mt-1 break-all font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
-            {millenniumAffiliateCode}
-          </div>
-        </div>
-
-        <div class="mt-4 flex flex-wrap gap-2">
-          <a
-            href={millenniumWebsiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700"
-          >
-            {m.support_website_cta()}
-          </a>
-        </div>
-      </article>
     </div>
   </section>
 </div>
