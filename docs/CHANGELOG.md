@@ -1,3 +1,9 @@
+## [1.8.2](https://github.com/SkeLLLa/klopit/compare/v1.8.1...v1.8.2) (2026-04-15)
+
+### 🛠 Fixes
+
+* rm millennium ([ca11aa5](https://github.com/SkeLLLa/klopit/commit/ca11aa593bbbd7b9278b69951b539122ba427626))
+
 ## [1.8.1](https://github.com/SkeLLLa/klopit/compare/v1.8.0...v1.8.1) (2026-04-15)
 
 ### 🛠 Fixes
