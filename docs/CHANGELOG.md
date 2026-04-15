@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/SkeLLLa/klopit/compare/v1.7.0...v1.8.0) (2026-04-15)
+
+### 🚀 Features
+
+* show skipped rows ([f03bb28](https://github.com/SkeLLLa/klopit/commit/f03bb289774ba7f79c70d0a7398278123bf7575c))
+
 ## [1.7.0](https://github.com/SkeLLLa/klopit/compare/v1.6.0...v1.7.0) (2026-04-14)
 
 ### 🛠 Fixes
