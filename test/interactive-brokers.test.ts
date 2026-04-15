@@ -248,6 +248,51 @@ void describe('InteractiveBrokersParser', () => {
       assert.ok(result.trades.length >= 1);
     });
 
+    void it('extracts skipped row fields by header column name (Trades-like layout)', () => {
+      const parser = interactiveBrokersDefinition.createParser();
+      for (const line of [
+        'Statement,Header,Field Name,Field Value',
+        'Statement,Data,Period,"January 1, 2025 - December 31, 2025"',
+        'Transaction Fees,Header,Asset Category,Currency,Date/Time,Symbol,Description,Quantity,Trade Price,Amount,Code',
+        'Transaction Fees,Data,Stocks,EUR,"2025-06-05, 20:20:00",ALO,French Daily Trade Charge Tax,40,19.29,-3.09,',
+      ]) {
+        parser.feed({ line });
+      }
+      const result = parser.finish();
+      const row = result.skippedRows.find(
+        (r) => r.section === 'Transaction Fees',
+      );
+      assert.ok(row, 'expected a Transaction Fees skipped row');
+      assert.equal(row.assetCategory, 'Stocks');
+      assert.equal(row.currency, 'EUR');
+      assert.equal(row.symbol, 'ALO');
+      assert.equal(row.datetime, '2025-06-05, 20:20:00');
+      assert.equal(row.description, 'French Daily Trade Charge Tax');
+    });
+
+    void it('extracts skipped row fields by header column name (Interest layout)', () => {
+      const parser = interactiveBrokersDefinition.createParser();
+      for (const line of [
+        'Statement,Header,Field Name,Field Value',
+        'Statement,Data,Period,"January 1, 2025 - December 31, 2025"',
+        'Interest,Header,Currency,Date,Description,Amount',
+        'Interest,Data,EUR,2025-05-21,Purchase Accrued Interest ROMANI 3 3/8 01/28/50,-42.53',
+      ]) {
+        parser.feed({ line });
+      }
+      const result = parser.finish();
+      const row = result.skippedRows.find((r) => r.section === 'Interest');
+      assert.ok(row, 'expected an Interest skipped row');
+      assert.equal(row.assetCategory, undefined);
+      assert.equal(row.symbol, undefined);
+      assert.equal(row.currency, 'EUR');
+      assert.equal(row.datetime, '2025-05-21');
+      assert.equal(
+        row.description,
+        'Purchase Accrued Interest ROMANI 3 3/8 01/28/50',
+      );
+    });
+
     void it('ignores unknown sections silently', () => {
       const result = parseFixture('full-statement.csv');
       assert.equal(

@@ -86,7 +86,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
           section,
           kind: classification,
           rawLine,
-          ...this.extractBestEffortSkippedFields(fields),
+          ...this.extractBestEffortSkippedFields({ section, fields }),
         });
         break;
     }
@@ -455,27 +455,72 @@ class InteractiveBrokersParser extends CsvStatementParser {
     });
   }
 
-  private extractBestEffortSkippedFields(fields: string[]): {
+  /**
+   * Best-effort extraction of structured fields from a skipped Data row.
+   * Uses the section's captured Header row to map columns by name, since IBKR
+   * sections vary in column order (e.g. Trades has DataDiscriminator at col 2,
+   * Transaction Fees has Asset Category at col 2, Interest has Currency at
+   * col 2). Falls back to a tail join when no header was captured.
+   */
+  private extractBestEffortSkippedFields(args: {
+    section: string;
+    fields: string[];
+  }): {
     assetCategory?: string;
     currency?: string;
     symbol?: string;
     datetime?: string;
     description?: string;
   } {
-    const assetCategory = cleanField({ value: fields[2] ?? '' }) || undefined;
-    const currency =
-      cleanField({ value: fields[3] ?? '' }) ||
-      cleanField({ value: fields[4] ?? '' }) ||
-      undefined;
-    const symbol =
-      cleanField({ value: fields[4] ?? '' }) ||
-      cleanField({ value: fields[5] ?? '' }) ||
-      undefined;
+    const { section, fields } = args;
+    const header = this.getSectionHeader(section);
+
+    if (!header) {
+      return { description: this.joinTail(fields, 2) };
+    }
+
+    const get = (columnName: string): string | undefined => {
+      const index = header.indexOf(columnName);
+      if (index < 0) return undefined;
+      return cleanField({ value: fields[index] ?? '' }) || undefined;
+    };
+
+    const assetCategory = get('Asset Category');
+    const currency = get('Currency');
+    const symbol = get('Symbol');
     const datetime =
-      cleanField({ value: fields[5] ?? '' }) ||
-      cleanField({ value: fields[6] ?? '' }) ||
-      undefined;
-    const description = this.joinTail(fields, 6);
+      get('Date/Time') ??
+      get('Date') ??
+      get('Settle Date') ??
+      get('Report Date');
+
+    let description = get('Description');
+    if (description === undefined) {
+      // No Description column — join everything after the recognised columns
+      // so the user still sees something meaningful in the table.
+      const recognisedIndices = new Set(
+        [
+          'Asset Category',
+          'Currency',
+          'Symbol',
+          'Date/Time',
+          'Date',
+          'Settle Date',
+          'Report Date',
+        ]
+          .map((name) => header.indexOf(name))
+          .filter((index) => index >= 0),
+      );
+      const tail = fields
+        .map((value, index) =>
+          index < 2 || recognisedIndices.has(index)
+            ? ''
+            : cleanField({ value }),
+        )
+        .filter((value) => value !== '')
+        .join(', ');
+      description = tail || undefined;
+    }
 
     return { assetCategory, currency, symbol, datetime, description };
   }

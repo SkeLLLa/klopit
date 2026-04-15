@@ -29,6 +29,13 @@ export abstract class CsvStatementParser implements StatementParser {
   protected warnings: ParseWarning[] = [];
   protected skippedRows: ParsedStatement['skippedRows'] = [];
   private lineNumber = 0;
+  /**
+   * Most recent Header row seen per section. Captured so subclasses can map
+   * Data row columns by name (sections vary in column order — e.g. Trades has
+   * `DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,...` while
+   * Interest has `Currency,Date,Description,Amount`).
+   */
+  private sectionHeaders = new Map<string, string[]>();
 
   /** Returns the broker identifier string */
   protected abstract getBrokerId(): string;
@@ -57,10 +64,21 @@ export abstract class CsvStatementParser implements StatementParser {
     const section = fields[0];
     const rowType = fields[1];
 
-    // Only process Data rows — skip Header, SubTotal, Total rows
+    // Capture headers per section so subclasses can do name-based column lookup.
+    if (rowType === 'Header') {
+      this.sectionHeaders.set(section, fields);
+      return;
+    }
+
+    // Only process Data rows — skip SubTotal, Total rows
     if (rowType !== 'Data') return;
 
     this.processRow({ section, fields, rawLine });
+  }
+
+  /** Returns the most recent Header row recorded for a section, if any. */
+  protected getSectionHeader(section: string): string[] | undefined {
+    return this.sectionHeaders.get(section);
   }
 
   /** Assemble the final ParsedStatement from accumulated state */
