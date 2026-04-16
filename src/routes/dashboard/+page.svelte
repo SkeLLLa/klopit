@@ -3,6 +3,8 @@
   import MetricCards from './MetricCards.svelte';
   import GainsTaxDonut from './GainsTaxDonut.svelte';
   import PortfolioDonut from './PortfolioDonut.svelte';
+  import CountryExposureBar from './CountryExposureBar.svelte';
+  import CurrencyExposureBar from './CurrencyExposureBar.svelte';
   import TaxBreakdownBars from './TaxBreakdownBars.svelte';
   import InvestedAreaChart from './InvestedAreaChart.svelte';
   import TaxTransactionsTable from './TaxTransactionsTable.svelte';
@@ -229,6 +231,12 @@
 
     <!-- Invested over time -->
     <InvestedAreaChart {tradeResults} {dividendResults} {creditInterestResults} year={session?.year ?? 0} />
+
+    <!-- Diversification bars -->
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <CountryExposureBar {tradeResults} />
+      <CurrencyExposureBar {tradeResults} />
+    </div>
 
     <!-- Tax breakdown bars -->
     <TaxBreakdownBars {taxSummary} {dividendResults} />

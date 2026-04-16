@@ -111,7 +111,7 @@
   }
 </script>
 
-<div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+<div class="invested-area-chart rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
   <h3 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
     {m.dash_invested_over_time()}
   </h3>
@@ -187,3 +187,13 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .invested-area-chart {
+    --vis-axis-grid-line-dasharray: 4 4;
+  }
+
+  :global(.dark) .invested-area-chart {
+    --vis-dark-axis-grid-color: #1e293b;
+  }
+</style>
