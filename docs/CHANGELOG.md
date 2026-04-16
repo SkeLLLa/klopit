@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/SkeLLLa/klopit/compare/v1.8.2...v1.9.0) (2026-04-16)
+
+### 🚀 Features
+
+* **tax:** add support for interest rates ([2497065](https://github.com/SkeLLLa/klopit/commit/2497065d6ab1131583d8ed18dbd74de44c20dc5b))
+
 ## [1.8.2](https://github.com/SkeLLLa/klopit/compare/v1.8.1...v1.8.2) (2026-04-15)
 
 ### 🛠 Fixes
