@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/SkeLLLa/klopit/compare/v1.9.0...v1.10.0) (2026-04-16)
+
+### 🚀 Features
+
+* country and curency exposure graphs ([abea759](https://github.com/SkeLLLa/klopit/commit/abea7595c491697ea391c7c8e8b9a00874724777))
+
 ## [1.9.0](https://github.com/SkeLLLa/klopit/compare/v1.8.2...v1.9.0) (2026-04-16)
 
 ### 🚀 Features
