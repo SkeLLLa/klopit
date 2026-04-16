@@ -10,7 +10,7 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { sessionState } from '$lib/state/session.svelte.js';
   import { db } from '$lib/db.js';
-  import type { TradeResultRecord, DividendResultRecord } from '$lib/db.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { isSessionStale } from '$lib/utils/stale.js';
   import {
@@ -67,6 +67,13 @@
   );
   const dividendResults = $derived(dividendResultsQuery.current ?? []);
 
+  const creditInterestResultsQuery = useLiveQuery(async () =>
+    sessionId
+      ? db.creditInterestResults.where('sessionId').equals(sessionId).toArray()
+      : [],
+  );
+  const creditInterestResults = $derived(creditInterestResultsQuery.current ?? []);
+
   // --- Previous year data for YoY ---
   const prevYearData = useLiveQuery(async () => {
     if (!session) return undefined;
@@ -84,7 +91,8 @@
   // --- Rate unavailability warning ---
   const hasRateWarning = $derived(
     tradeResults.some((t: TradeResultRecord) => t.rateUnavailable) ||
-    dividendResults.some((d: DividendResultRecord) => d.rateUnavailable),
+    dividendResults.some((d: DividendResultRecord) => d.rateUnavailable) ||
+    creditInterestResults.some((r: CreditInterestResultRecord) => r.rateUnavailable),
   );
 
   // --- Sell trades count ---
@@ -210,6 +218,7 @@
       prevYearSummary={prevYearData.current?.summary}
       {sellTradeCount}
       dividendCount={dividendResults.length}
+      creditInterestCount={creditInterestResults.length}
     />
 
     <!-- Donut charts -->
@@ -219,12 +228,12 @@
     </div>
 
     <!-- Invested over time -->
-    <InvestedAreaChart {tradeResults} {dividendResults} year={session?.year ?? 0} />
+    <InvestedAreaChart {tradeResults} {dividendResults} {creditInterestResults} year={session?.year ?? 0} />
 
     <!-- Tax breakdown bars -->
     <TaxBreakdownBars {taxSummary} {dividendResults} />
 
     <!-- Tax transactions detail table -->
-    <TaxTransactionsTable {tradeResults} {dividendResults} />
+    <TaxTransactionsTable {tradeResults} {dividendResults} {creditInterestResults} />
   </div>
 {/if}

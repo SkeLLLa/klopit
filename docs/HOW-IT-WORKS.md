@@ -144,14 +144,15 @@ This section documents the **exact algorithms** implemented in `src/core/tax/`. 
 
 ### Pipeline Overview
 
-The tax calculator (`calculator.ts`) orchestrates five steps:
+The tax calculator (`calculator.ts`) orchestrates six steps:
 
 ```
 1. calculateCapitalGains()  →  TradeResult[]         (FIFO matching, PLN conversion)
 2. calculateDividends()     →  DividendResult[]       (withholding matching, PLN conversion)
-3. buildSummary()           →  TaxSummary             (aggregate totals for dashboard)
-4. buildPit38()             →  Pit38Fields            (PIT-38 form field values with rounding)
-5. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG attachment)
+3. calculateCreditInterest()→  CreditInterestResult[] (PLN conversion, 19% flat rate)
+4. buildSummary()           →  TaxSummary             (aggregate totals for dashboard)
+5. buildPit38()             →  Pit38Fields            (PIT-38 form field values with rounding)
+6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG attachment)
 ```
 
 All inputs arrive **pre-enriched** with NBP exchange rates resolved by the service layer before reaching the calculator.
@@ -435,7 +436,35 @@ The per-dividend cap ensures that excess foreign tax on one dividend **cannot** 
 
 ---
 
-### 6. Rounding Rules
+### 6. Credit Interest Tax (19%)
+
+**Legal basis:** [Art. 30a ust. 1 pkt 3 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — interest on cash deposited with a broker is taxed at a flat 19% rate (zryczałtowany podatek dochodowy).
+
+**Implementation:** `credit-interest.ts`
+
+Credit interest is broker-paid interest on uninvested cash balances (e.g., "USD Credit Interest for Dec-2024"). It is **not** bond coupon interest and **not** Purchase Accrued Interest.
+
+**Parser rules:**
+
+- Only rows with `Credit Interest for` in the description and positive amounts are captured
+- `Purchase Accrued Interest` rows are excluded per [art. 30a ust. 6](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) (no cost deduction allowed for flat-rate income)
+- Debit interest and other interest types are recorded as skipped rows
+
+**Per-row calculation:**
+
+```
+amountPln       = amount × exchangeRate (NBP rate from last business day before payment date)
+taxPlnGross     = amountPln × 0.19
+foreignTaxPln   = 0 (IBKR LLC — US portfolio interest exemption)
+```
+
+**IBKR entity detection:** The parser reads `Statement,Data,BrokerName` from the CSV to determine the IBKR entity (e.g., "Interactive Brokers LLC" → US). This maps to the broker's country for future withholding tax support (IBIE Ireland clients may have WHT).
+
+**PIT-38 treatment:** Credit interest goes to Section G alongside dividends. The 19% tax is combined with dividend tax in poz. 47, and any foreign tax credit would be included in poz. 48.
+
+---
+
+### 7. Rounding Rules
 
 **Implementation:** `rounding.ts`
 
@@ -450,7 +479,7 @@ Two distinct rounding functions are used, matching separate legal provisions:
 
 ---
 
-### 7. PIT-38 Form Mapping (PIT-38(18))
+### 8. PIT-38 Form Mapping (PIT-38(18))
 
 **Implementation:** `pit38.ts`
 
@@ -480,18 +509,18 @@ poz34 = 0                                    // Foreign tax on capital gains (no
 poz35 = roundToFullPln(max(poz33 − poz34, 0))  // Tax due (podatek należny)
 ```
 
-`applyLossCarryForward` enforces the 5-year window and 50%-per-year cap per loss entry — see Section 9.
+`applyLossCarryForward` enforces the 5-year window and 50%-per-year cap per loss entry — see Section 10.
 
 #### Sections E & F — Crypto (placeholders, all zeros)
 
 Not yet implemented. Fields poz36–poz45 are set to 0.
 
-#### Section G — Payment Summary
+#### Section G — Payment Summary (Dividends + Credit Interest)
 
 ```
 poz46 = 0                                                        // Other flat-rate tax (not applicable)
-poz47 = roundToGroszUp(totalDividendsPln × 0.19)                 // Foreign dividend tax (19%)
-poz48 = round_to_groszy(min(totalDeductibleWithholdingPln, poz47))  // Deductible foreign tax
+poz47 = roundToGroszUp((totalDividendsPln + totalCreditInterestPln) × 0.19)  // Foreign flat-rate tax (19%)
+poz48 = round_to_groszy(min(totalDeductibleWithholdingPln + totalCreditInterestForeignTaxPln, poz47))  // Deductible foreign tax
 poz49 = roundToGroszUp(max(poz47 − poz48, 0))                   // Dividend tax difference (art. 63 § 1a)
 poz50 = 0                                                        // Advance payments by payers
 poz51 = roundToFullPln(max(poz35 + poz45 + poz46 + poz49 − poz50, 0))  // TAX TO PAY (art. 63 § 1)
@@ -506,7 +535,7 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 
 ---
 
-### 8. PIT/ZG Attachment (Per-Country)
+### 9. PIT/ZG Attachment (Per-Country)
 
 **Implementation:** `pit-zg.ts`
 
@@ -537,7 +566,7 @@ Results are sorted alphabetically by country code.
 
 ---
 
-### 9. Prior Year Losses (Carry-Over)
+### 10. Prior Year Losses (Carry-Over)
 
 **Implementation:** `src/core/tax/loss-carry-forward.ts`
 
@@ -601,6 +630,11 @@ When you download your Activity Statement from Interactive Brokers and import it
    - Shares you owned before importing (from prior years)
    - Needed for accurate FIFO calculations
 
+6. **Credit Interest**
+   - Interest earned on uninvested cash balances
+   - Currency and payment date
+   - Only credit interest (positive amounts) — debit interest and purchase accrued interest are excluded
+
 ### How import warnings work
 
 IBKR Activity Statements contain many section types. kloPIT now classifies every section header into four buckets:
@@ -625,6 +659,7 @@ Rows skipped **by design** do not trigger warnings. For example:
 - Per-section summary rows like `Total in EUR`
 - Non-stock rows inside stock-only import paths
 - Carry-in rows with zero quantity
+- Interest rows that are not credit interest (e.g., Debit Interest) — recorded as known-unsupported skipped rows
 
 ### Where skipped data is shown
 
@@ -661,6 +696,7 @@ Each session contains:
 - **Withholding table:** Tax withheld abroad
 - **Corporate actions table:** Stock splits and similar events
 - **Carry-in positions table:** Prior year shares
+- **Credit interest table:** Interest earned on uninvested cash
 - **Results table:** Calculated gains, losses, tax amounts
 - **Tax summary:** Final PIT-38 form fields ready for reporting
 
@@ -719,19 +755,25 @@ The app supports **three languages:**
 4. **Dividends** (`calculateDividends`):
    - Match each dividend with its withholding tax entries by (date, ISIN/symbol) key
    - Convert amounts and withholding to PLN using their respective exchange rates
-5. **Summary** (`buildSummary`):
+5. **Credit interest** (`calculateCreditInterest`):
+   - Filter interest rows to the tax period
+   - Convert each payment to PLN using NBP rate
+   - Calculate 19% flat tax per row
+   - Foreign tax is 0 for IBKR LLC (US portfolio interest exemption)
+6. **Summary** (`buildSummary`):
    - Aggregate proceeds, costs, and capital gain from all sell trades
    - Aggregate dividend amounts and apply per-dividend withholding cap ([art. 30a ust. 9](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/))
+   - Aggregate credit interest amounts and their 19% flat tax
    - Compute raw (unrounded) tax amounts for dashboard display
-6. **PIT-38** (`buildPit38`):
+7. **PIT-38** (`buildPit38`):
    - Map summary values to form fields with proper rounding
    - Apply prior-year loss deduction via `applyLossCarryForward` (5-year window, 50%-per-year cap, FIFO across loss years)
    - Round tax base and tax due to full PLN ([art. 63 § 1](https://lexlege.pl/ordynacja-podatkowa/art-63/))
-   - Round dividend tax to full groszy up ([art. 63 § 1a](https://lexlege.pl/ordynacja-podatkowa/art-63/))
-7. **PIT/ZG** (`buildPitZg`):
+   - Round dividend and credit interest tax to full groszy up ([art. 63 § 1a](https://lexlege.pl/ordynacja-podatkowa/art-63/))
+8. **PIT/ZG** (`buildPitZg`):
    - Group trades and dividends by country (from ISIN prefix)
    - Compute per-country proceeds, costs, gain/loss, dividend income, and foreign tax
-8. **Store & display** — Save all results to IndexedDB, update dashboard charts and form fields
+9. **Store & display** — Save all results to IndexedDB, update dashboard charts and form fields
 
 **Time:** Usually < 1 second (depends on number of trades, mostly waiting for NBP rate API responses during the enrichment step).
 
@@ -768,6 +810,7 @@ The app supports **three languages:**
 - ✅ Corporate actions (stock splits)
 - ✅ Multi-currency support (USD, EUR)
 - ✅ PIT-38 form fields sections C, D, G
+- ✅ Credit interest (broker cash interest, art. 30a)
 - ⏳ Cryptocurrency (framework in place, not yet implemented)
 - ⏳ Other brokers (planned)
 
@@ -854,6 +897,7 @@ Key Polish tax law provisions used in kloPIT calculations:
 | PIT-38 form obligation           | Art. 45 ust. 1a pkt 1 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)  |
 | Capital gains tax 19%            | Art. 30b ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) |
 | Dividend tax 19%                 | Art. 30a ust. 1 pkt 4 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
+| Credit interest tax 19%          | Art. 30a ust. 1 pkt 3 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
 | Foreign tax deduction cap        | Art. 30a ust. 9 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
 | FIFO method                      | Art. 24 ust. 10 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)  |
 | Exchange rate conversion         | Art. 11a ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) |
@@ -877,6 +921,7 @@ Key Polish tax law provisions used in kloPIT calculations:
 
 | Term                 | Meaning                                                                        |
 | -------------------- | ------------------------------------------------------------------------------ |
+| **Credit Interest** | Interest earned on uninvested cash held at a broker                    |
 | **FIFO**             | First In, First Out — method to match sales with purchases                     |
 | **NBP**              | Narodowy Bank Polski (Polish National Bank) — provides official exchange rates |
 | **PIT-38**           | Polish tax form for capital gains and dividends                                |

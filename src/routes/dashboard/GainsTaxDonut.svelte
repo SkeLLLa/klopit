@@ -24,7 +24,7 @@
   }
 
   const totalIncome = $derived(
-    Math.max(taxSummary.capitalGainPln, 0) + taxSummary.totalDividendsPln,
+    Math.max(taxSummary.capitalGainPln, 0) + taxSummary.totalDividendsPln + taxSummary.totalCreditInterestPln,
   );
 
   const segments: DonutSegment[] = $derived.by(() => {
@@ -34,8 +34,10 @@
     const divPlTax = taxSummary.totalDividendsPln * TAX_RATE;
     const divTaxToPay = sumDividendTaxToPay({ rows: dividendResults });
 
+    const ciTax = taxSummary.totalCreditInterestPln * TAX_RATE;
+
     const netProfit =
-      totalIncome - taxSummary.capitalGainTaxPostLcfPln - divPlTax;
+      totalIncome - taxSummary.capitalGainTaxPostLcfPln - divPlTax - ciTax;
 
     return [
       {
@@ -57,6 +59,11 @@
         label: m.dash_withholding_tax(),
         value: divDeductible,
         color: '#f59e0b',
+      },
+      {
+        label: m.dash_credit_interest_tax(),
+        value: ciTax,
+        color: '#06b6d4',
       },
     ].filter((s) => s.value > 0);
   });

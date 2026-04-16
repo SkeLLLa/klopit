@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildPit38 } from '../src/core/tax/pit38.js';
 import type {
+  CreditInterestResult,
   DividendResult,
   PriorYearLoss,
   TaxSummary,
@@ -19,6 +20,8 @@ function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
     totalWithholdingPln: 0,
     totalDeductibleWithholdingPln: 0,
     dividendTaxOwedPln: 0,
+    totalCreditInterestPln: 0,
+    totalCreditInterestForeignTaxPln: 0,
     capitalGainAfterLcfPln: 0,
     capitalGainTaxPostLcfPln: 0,
     ...overrides,
@@ -69,6 +72,26 @@ function makeDivResult(
   };
 }
 
+function makeCreditInterestResult(
+  overrides: Partial<CreditInterestResult> = {},
+): CreditInterestResult {
+  return {
+    currency: 'USD',
+    date: new Date(2024, 3, 5),
+    description: 'USD Credit Interest for Mar-2024',
+    amountOriginal: 10,
+    amountPln: 42,
+    exchangeRate: 4.2,
+    fxDate: '2024-04-04',
+    rateUnavailable: false,
+    taxPlnGross: 7.98,
+    foreignTaxOriginal: 0,
+    foreignTaxPln: 0,
+    foreignTaxExchangeRate: 0,
+    ...overrides,
+  };
+}
+
 void describe('buildPit38', () => {
   void it('calculates profitable year with dividends', () => {
     const summary = makeSummary({
@@ -96,7 +119,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades, dividends, summary });
+    const result = buildPit38({
+      trades,
+      dividends,
+      creditInterests: [],
+      summary,
+    });
 
     // Section C
     assert.equal(result[20], 0);
@@ -138,7 +166,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[28], 0);
     assert.equal(result[29], 5000);
@@ -167,7 +200,13 @@ void describe('buildPit38', () => {
       { year: 2023, totalLossPln: 10000, alreadyDeductedPln: 0 },
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+      priorLosses,
+    });
 
     assert.equal(result[28], 20000);
     assert.equal(result[30], 5000);
@@ -199,7 +238,13 @@ void describe('buildPit38', () => {
       { year: 2023, totalLossPln: 50000, alreadyDeductedPln: 0 },
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+      priorLosses,
+    });
 
     assert.equal(result[30], 20000);
     assert.equal(result[31], 0);
@@ -225,7 +270,13 @@ void describe('buildPit38', () => {
       { year: 2018, totalLossPln: 10000, alreadyDeductedPln: 0 },
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+      priorLosses,
+    });
 
     assert.equal(result[30], 0);
     assert.equal(result[31], 20000);
@@ -250,7 +301,13 @@ void describe('buildPit38', () => {
       { year: 2022, totalLossPln: 10000, alreadyDeductedPln: 10000 },
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary, priorLosses });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+      priorLosses,
+    });
 
     assert.equal(result[30], 0);
   });
@@ -271,16 +328,58 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades: [], dividends, summary });
+    const result = buildPit38({
+      trades: [],
+      dividends,
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[47], 19);
     assert.equal(result[48], 19);
     assert.equal(result[49], 0);
   });
 
+  void it('combines dividends and credit interest in section G', () => {
+    const summary = makeSummary({
+      totalDividendsPln: 100,
+      totalWithholdingPln: 15,
+      totalDeductibleWithholdingPln: 15,
+      totalCreditInterestPln: 42,
+      totalCreditInterestForeignTaxPln: 0,
+    });
+    const dividends = [
+      makeDivResult({
+        amountPln: 100,
+        withholdingTaxPln: 15,
+        deductibleWithholdingPln: 15,
+        taxPlnGross: 19,
+        taxToPayPln: 4,
+      }),
+    ];
+    const creditInterests = [makeCreditInterestResult()];
+
+    const result = buildPit38({
+      trades: [],
+      dividends,
+      creditInterests,
+      summary,
+    });
+
+    assert.equal(result[47], 26.98);
+    assert.equal(result[48], 15);
+    assert.equal(result[49], 11.98);
+    assert.equal(result[51], 12);
+  });
+
   void it('returns all zeros for empty summary', () => {
     const summary = makeSummary();
-    const result = buildPit38({ trades: [], dividends: [], summary });
+    const result = buildPit38({
+      trades: [],
+      dividends: [],
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[22], 0);
     assert.equal(result[26], 0);
@@ -309,7 +408,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[28], 1000.5);
     assert.equal(result[31], 1001);
@@ -346,7 +450,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades, dividends, summary });
+    const result = buildPit38({
+      trades,
+      dividends,
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[51], result[35] + result[49]);
   });
@@ -365,7 +474,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[47], 0);
     assert.equal(result[48], 0);
@@ -389,7 +503,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades: [], dividends, summary });
+    const result = buildPit38({
+      trades: [],
+      dividends,
+      creditInterests: [],
+      summary,
+    });
 
     assert.equal(result[22], 0);
     assert.equal(result[26], 0);
@@ -412,7 +531,12 @@ void describe('buildPit38', () => {
       }),
     ];
 
-    const result = buildPit38({ trades, dividends: [], summary });
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+    });
 
     // Section E
     assert.equal(result[36], 0);

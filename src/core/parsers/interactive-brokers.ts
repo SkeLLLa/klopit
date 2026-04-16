@@ -1,6 +1,7 @@
 import type { BrokerId } from '../types.js';
 import { CsvStatementParser } from './csv-parser.js';
 import { cleanField, parseDateTime, parseDecimal } from './csv-utils.js';
+import { ibkrEntityToCountry } from './interactive-brokers/entity-country.js';
 import { classifySection } from './interactive-brokers/sections.js';
 import type { ParserDefinition, StatementParser } from './types.js';
 
@@ -76,6 +77,9 @@ class InteractiveBrokersParser extends CsvStatementParser {
           case 'Mark-to-Market Performance Summary':
             this.parseCarryInPosition({ fields, rawLine });
             break;
+          case 'Interest':
+            this.parseInterest({ fields, rawLine });
+            break;
         }
         break;
       case 'ignorable':
@@ -94,6 +98,22 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
   private parseStatement(fields: string[]): void {
     const fieldName = cleanField({ value: fields[2] ?? '' });
+    if (fieldName === 'BrokerName') {
+      const brokerName = cleanField({ value: fields[3] ?? '' });
+      if (brokerName !== '') {
+        const country = ibkrEntityToCountry({ brokerName });
+        if (country !== undefined) {
+          this.brokerCountry = country;
+        } else {
+          this.addWarning({
+            section: 'Statement',
+            message: `Unrecognised IBKR entity: "${brokerName}" — broker country not set`,
+          });
+        }
+      }
+      return;
+    }
+
     if (fieldName !== 'Period') return;
 
     const periodValue = cleanField({ value: fields[3] ?? '' });
@@ -428,6 +448,71 @@ class InteractiveBrokersParser extends CsvStatementParser {
         assetCategory,
         symbol: cleanField({ value: fields[3] ?? '' }) || undefined,
         description: this.joinTail(fields, 4),
+      });
+    }
+  }
+
+  private parseInterest(args: { fields: string[]; rawLine: string }): void {
+    const { fields, rawLine } = args;
+    const currency = cleanField({ value: fields[2] ?? '' });
+    const rawDate = cleanField({ value: fields[3] ?? '' });
+    const description = cleanField({ value: fields[4] ?? '' });
+
+    // Check description-based skips before attempting date/amount parse
+    if (description.startsWith('Purchase Accrued Interest')) {
+      this.addSkippedRow({
+        section: 'Interest',
+        kind: 'known-unsupported',
+        rawLine,
+        currency: currency || undefined,
+        datetime: rawDate || undefined,
+        description: description || undefined,
+      });
+      return;
+    }
+
+    try {
+      const date = parseDateTime({ value: rawDate });
+      const amount = parseDecimal({ value: fields[5] ?? '' });
+
+      if (!date || amount === undefined) {
+        this.reportParseFailure({
+          section: 'Interest',
+          rawLine,
+          message: 'Could not parse interest row: missing date or amount',
+          currency: currency || undefined,
+          datetime: rawDate || undefined,
+          description: description || undefined,
+        });
+        return;
+      }
+
+      if (amount <= 0 || !description.includes('Credit Interest for')) {
+        this.addSkippedRow({
+          section: 'Interest',
+          kind: 'known-unsupported',
+          rawLine,
+          currency: currency || undefined,
+          datetime: rawDate || undefined,
+          description: description || undefined,
+        });
+        return;
+      }
+
+      this.creditInterests.push({
+        currency,
+        date,
+        amount,
+        description,
+      });
+    } catch {
+      this.reportParseFailure({
+        section: 'Interest',
+        rawLine,
+        message: `Failed to parse interest row: ${rawLine}`,
+        currency: currency || undefined,
+        datetime: rawDate || undefined,
+        description: description || undefined,
       });
     }
   }

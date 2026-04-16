@@ -278,11 +278,13 @@ export async function getFixingRate(args: {
 export async function fetchRatesForSession(args: {
   sessionId: string;
 }): Promise<void> {
-  const [trades, dividends, corporateActions] = await Promise.all([
-    db.trades.where('sessionId').equals(args.sessionId).toArray(),
-    db.dividends.where('sessionId').equals(args.sessionId).toArray(),
-    db.corporateActions.where('sessionId').equals(args.sessionId).toArray(),
-  ]);
+  const [trades, dividends, creditInterests, corporateActions] =
+    await Promise.all([
+      db.trades.where('sessionId').equals(args.sessionId).toArray(),
+      db.dividends.where('sessionId').equals(args.sessionId).toArray(),
+      db.creditInterests.where('sessionId').equals(args.sessionId).toArray(),
+      db.corporateActions.where('sessionId').equals(args.sessionId).toArray(),
+    ]);
 
   // Collect unique currencies (excluding PLN)
   const currencies = new Set<string>();
@@ -294,6 +296,10 @@ export async function fetchRatesForSession(args: {
   }
   for (const d of dividends) {
     const cur = d.currency.toUpperCase();
+    if (cur !== 'PLN') currencies.add(cur);
+  }
+  for (const interest of creditInterests) {
+    const cur = interest.currency.toUpperCase();
     if (cur !== 'PLN') currencies.add(cur);
   }
   for (const ca of corporateActions) {
@@ -309,6 +315,7 @@ export async function fetchRatesForSession(args: {
   const allDates: Date[] = [];
   for (const t of trades) allDates.push(t.datetime);
   for (const d of dividends) allDates.push(d.date);
+  for (const interest of creditInterests) allDates.push(interest.date);
   for (const ca of corporateActions) allDates.push(ca.datetime);
 
   if (allDates.length === 0) return;

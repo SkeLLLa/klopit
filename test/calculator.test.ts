@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
 import type {
   EnrichedCorporateAction,
+  EnrichedCreditInterest,
   EnrichedRawDividend,
   EnrichedTrade,
   EnrichedWithholdingTax,
@@ -45,6 +46,20 @@ function makeDiv(overrides: Partial<EnrichedRawDividend>): EnrichedRawDividend {
   };
 }
 
+function makeCreditInterest(
+  overrides: Partial<EnrichedCreditInterest>,
+): EnrichedCreditInterest {
+  return {
+    currency: 'USD',
+    date: new Date(2024, 3, 5),
+    amount: 12,
+    description: 'USD Credit Interest for Mar-2024',
+    exchangeRate: 4.0,
+    rateUnavailable: false,
+    ...overrides,
+  };
+}
+
 function makeTax(
   overrides: Partial<EnrichedWithholdingTax>,
 ): EnrichedWithholdingTax {
@@ -64,6 +79,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
@@ -72,9 +88,11 @@ void describe('calculateTaxes', () => {
 
     assert.deepEqual(result.trades, []);
     assert.deepEqual(result.dividends, []);
+    assert.deepEqual(result.creditInterests, []);
     assert.equal(result.summary.totalProceedsPln, 0);
     assert.equal(result.summary.totalCostPln, 0);
     assert.equal(result.summary.totalDividendsPln, 0);
+    assert.equal(result.summary.totalCreditInterestPln, 0);
     assert.equal(result.pit38[51], 0);
   });
 
@@ -98,6 +116,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [buy, sell],
       dividends: [div],
+      creditInterests: [],
       withholdingTaxes: [tax],
       corporateActions: [],
       carryInPositions: [],
@@ -159,6 +178,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [buy, sell],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
@@ -192,6 +212,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [],
       dividends: [div],
+      creditInterests: [],
       withholdingTaxes: [tax],
       corporateActions: [],
       carryInPositions: [],
@@ -216,6 +237,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [buy],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
@@ -251,6 +273,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [],
       dividends: [div1, div2],
+      creditInterests: [],
       withholdingTaxes: [tax1],
       corporateActions: [],
       carryInPositions: [],
@@ -299,6 +322,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [],
       dividends: [div],
+      creditInterests: [],
       withholdingTaxes: [tax],
       corporateActions: [],
       carryInPositions: [],
@@ -355,6 +379,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [buy],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [merger],
       carryInPositions: [],
@@ -416,6 +441,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [buy, sell],
       dividends: [div],
+      creditInterests: [],
       withholdingTaxes: [tax],
       corporateActions: [],
       carryInPositions: [],
@@ -456,6 +482,7 @@ void describe('calculateTaxes', () => {
     const result = calculateTaxes({
       trades: [buy, sell],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
@@ -487,6 +514,7 @@ void describe('calculateTaxes', () => {
     const withLoss = calculateTaxes({
       trades: [buy, sell],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
@@ -497,6 +525,7 @@ void describe('calculateTaxes', () => {
     const withoutLoss = calculateTaxes({
       trades: [buy, sell],
       dividends: [],
+      creditInterests: [],
       withholdingTaxes: [],
       corporateActions: [],
       carryInPositions: [],
@@ -515,5 +544,28 @@ void describe('calculateTaxes', () => {
       withLoss.summary.capitalGainTaxPostLcfPln <
         withoutLoss.summary.capitalGainTaxPostLcfPln,
     );
+  });
+
+  void it('adds credit interest into summary and PIT-38 section G', () => {
+    const interest = makeCreditInterest({ amount: 10, exchangeRate: 4.2 });
+
+    const result = calculateTaxes({
+      trades: [],
+      dividends: [],
+      creditInterests: [interest],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    assert.equal(result.creditInterests.length, 1);
+    assert.equal(result.summary.totalDividendsPln, 0);
+    assert.equal(result.summary.totalCreditInterestPln, 42);
+    assert.equal(result.summary.totalCreditInterestForeignTaxPln, 0);
+    assert.equal(result.pit38[47], 7.98);
+    assert.equal(result.pit38[48], 0);
+    assert.equal(result.pit38[49], 7.98);
+    assert.equal(result.pit38[51], 8);
   });
 });

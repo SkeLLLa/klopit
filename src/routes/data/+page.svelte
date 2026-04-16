@@ -20,6 +20,7 @@
   import WithholdingTable from './WithholdingTable.svelte';
   import CorporateActionsTable from './CorporateActionsTable.svelte';
   import CarryInTable from './CarryInTable.svelte';
+  import CreditInterestTable from './CreditInterestTable.svelte';
   import CountryMappingTable from './CountryMappingTable.svelte';
   import DeleteConfirm from './DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -88,6 +89,11 @@
       ? db.corporateActions.where('sessionId').equals(activeSessionId).count()
       : Promise.resolve(0),
   );
+  const creditInterestCount = useLiveQuery(() =>
+    activeSessionId
+      ? db.creditInterests.where('sessionId').equals(activeSessionId).count()
+      : Promise.resolve(0),
+  );
   const carryInCount = useLiveQuery(() =>
     activeSessionId
       ? db.carryInPositions.where('sessionId').equals(activeSessionId).count()
@@ -117,6 +123,7 @@
   const counts = $derived({
     trades: tradeCount.current ?? 0,
     dividends: dividendCount.current ?? 0,
+    interest: creditInterestCount.current ?? 0,
     withholding: withholdingCount.current ?? 0,
     corporateActions: corporateActionCount.current ?? 0,
     carryIn: carryInCount.current ?? 0,
@@ -199,6 +206,8 @@
             <TradesTable sessionId={activeSession.id} sessionYear={activeSession.year} />
           {:else if tab === 'dividends'}
             <DividendsTable sessionId={activeSession.id} />
+          {:else if tab === 'interest'}
+            <CreditInterestTable sessionId={activeSession.id} />
           {:else if tab === 'withholding'}
             <WithholdingTable sessionId={activeSession.id} />
           {:else if tab === 'corporateActions'}

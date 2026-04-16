@@ -1,8 +1,10 @@
 import {
   TAX_RATE,
   type CarryInPosition,
+  type CreditInterestResult,
   type DividendResult,
   type EnrichedCorporateAction,
+  type EnrichedCreditInterest,
   type EnrichedRawDividend,
   type EnrichedTrade,
   type EnrichedWithholdingTax,
@@ -15,12 +17,15 @@ import {
 } from '../types.js';
 import {
   sumCost,
+  sumCreditInterestForeignTax,
+  sumCreditInterestIncome,
   sumDeductibleWithholding,
   sumDividendIncome,
   sumProceeds,
   sumWithholding,
 } from './aggregates.js';
 import { calculateCapitalGains } from './capital-gains.js';
+import { calculateCreditInterest } from './credit-interest.js';
 import { calculateDividends } from './dividends.js';
 import {
   applyLossCarryForward,
@@ -32,6 +37,7 @@ import { buildPit38 } from './pit38.js';
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
   dividends: EnrichedRawDividend[];
+  creditInterests?: EnrichedCreditInterest[];
   withholdingTaxes: EnrichedWithholdingTax[];
   corporateActions: EnrichedCorporateAction[];
   carryInPositions: CarryInPosition[];
@@ -48,6 +54,7 @@ export interface CalculateTaxesArgs {
 export interface TaxCalculationResult {
   trades: TradeResult[];
   dividends: DividendResult[];
+  creditInterests: CreditInterestResult[];
   summary: TaxSummary;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
@@ -60,6 +67,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   const {
     trades,
     dividends,
+    creditInterests = [],
     withholdingTaxes,
     corporateActions,
     carryInPositions,
@@ -83,6 +91,10 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     taxPeriod,
     symbolCountryMap: countryMap,
   });
+  const creditInterestResults = calculateCreditInterest({
+    creditInterests,
+    taxPeriod,
+  });
 
   const gainPln = Math.max(
     sumProceeds({ rows: tradeResults }) - sumCost({ rows: tradeResults }),
@@ -97,6 +109,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   const summary = buildSummary({
     tradeResults,
     dividendResults,
+    creditInterestResults,
     year: taxPeriod.year,
     lossDeduction,
   });
@@ -104,6 +117,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   const pit38 = buildPit38({
     trades: tradeResults,
     dividends: dividendResults,
+    creditInterests: creditInterestResults,
     summary,
     priorLosses,
   });
@@ -115,6 +129,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   return {
     trades: tradeResults,
     dividends: dividendResults,
+    creditInterests: creditInterestResults,
     summary,
     pit38,
     pitZg,
@@ -125,6 +140,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
 function buildSummary(args: {
   tradeResults: TradeResult[];
   dividendResults: DividendResult[];
+  creditInterestResults: CreditInterestResult[];
   year: number;
   lossDeduction: ApplyLossCarryForwardResult;
 }): TaxSummary {
@@ -137,6 +153,12 @@ function buildSummary(args: {
   const totalWithholdingPln = sumWithholding({ rows: args.dividendResults });
   const totalDeductibleWithholdingPln = sumDeductibleWithholding({
     rows: args.dividendResults,
+  });
+  const totalCreditInterestPln = sumCreditInterestIncome({
+    rows: args.creditInterestResults,
+  });
+  const totalCreditInterestForeignTaxPln = sumCreditInterestForeignTax({
+    rows: args.creditInterestResults,
   });
   const dividendTaxOwedPln = Math.max(
     totalDividendsPln * TAX_RATE - totalDeductibleWithholdingPln,
@@ -159,6 +181,8 @@ function buildSummary(args: {
     totalWithholdingPln,
     totalDeductibleWithholdingPln,
     dividendTaxOwedPln,
+    totalCreditInterestPln,
+    totalCreditInterestForeignTaxPln,
     capitalGainAfterLcfPln,
     capitalGainTaxPostLcfPln,
   };

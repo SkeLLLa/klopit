@@ -31,7 +31,7 @@ function scheduleStaleBump(db: KlopitDB, sessionId: string | undefined): void {
 /**
  * Register table-level hooks on every "source" table so any create / update /
  * delete bumps the owning session's `dataUpdatedAt`. Derived tables
- * (`tradeResults`, `dividendResults`, `taxSummaries`) are NOT hooked —
+ * (`tradeResults`, `dividendResults`, `creditInterestResults`, `taxSummaries`) are NOT hooked —
  * writing them is part of recalculation and must not mark the session as
  * stale.
  */
@@ -39,6 +39,7 @@ export function installStaleHooks(db: KlopitDB): void {
   const sourceTables = [
     db.trades,
     db.dividends,
+    db.creditInterests,
     db.withholdingTaxes,
     db.carryInPositions,
     db.corporateActions,

@@ -3,11 +3,13 @@ import type { ApplyLossCarryForwardResult } from '../core/tax/loss-carry-forward
 import type {
   CarryInPosition,
   CorporateAction,
+  CreditInterestResult,
   DividendResult,
   ImportWarning,
   Pit38Fields,
   PitZgFields,
   PriorYearLoss,
+  RawCreditInterest,
   RawDividend,
   RawWithholdingTax,
   Trade,
@@ -36,6 +38,7 @@ export interface SessionRecord {
   oppDetails?: string;
   oppConsent?: boolean;
   importWarnings?: ImportWarning[];
+  brokerCountry?: string;
   /** Bumped by Dexie hooks whenever source data tables change. */
   dataUpdatedAt?: Date;
   /** Set by calculateSessionTaxes on successful completion. */
@@ -75,6 +78,11 @@ export interface TransactionFeeRecord extends TransactionFee {
   sessionId: string;
 }
 
+export interface CreditInterestRecord extends RawCreditInterest {
+  id?: number;
+  sessionId: string;
+}
+
 export interface CorporateActionRecord extends CorporateAction {
   id?: number;
   sessionId: string;
@@ -102,6 +110,11 @@ export interface DividendResultRecord extends DividendResult {
   sessionId: string;
 }
 
+export interface CreditInterestResultRecord extends CreditInterestResult {
+  id?: number;
+  sessionId: string;
+}
+
 export interface TaxSummaryRecord {
   sessionId: string;
   year: number;
@@ -113,6 +126,8 @@ export interface TaxSummaryRecord {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  totalCreditInterestPln: number;
+  totalCreditInterestForeignTaxPln: number;
   capitalGainAfterLcfPln: number;
   capitalGainTaxPostLcfPln: number;
   pit38: Pit38Fields;
@@ -143,10 +158,12 @@ export class KlopitDB extends Dexie {
   withholdingTaxes!: EntityTable<WithholdingTaxRecord, 'id'>;
   carryInPositions!: EntityTable<CarryInPositionRecord, 'id'>;
   transactionFees!: EntityTable<TransactionFeeRecord, 'id'>;
+  creditInterests!: EntityTable<CreditInterestRecord, 'id'>;
   corporateActions!: EntityTable<CorporateActionRecord, 'id'>;
   priorLosses!: EntityTable<PriorYearLossRecord, 'id'>;
   tradeResults!: EntityTable<TradeResultRecord, 'id'>;
   dividendResults!: EntityTable<DividendResultRecord, 'id'>;
+  creditInterestResults!: EntityTable<CreditInterestResultRecord, 'id'>;
   taxSummaries!: EntityTable<TaxSummaryRecord, 'sessionId'>;
   nbpRates!: EntityTable<NbpRateRecord, 'id'>;
   symbolCountryOverrides!: EntityTable<SymbolCountryOverrideRecord, 'id'>;
@@ -209,6 +226,10 @@ export class KlopitDB extends Dexie {
       for (const name of tableNames) {
         await tx.table(name).clear();
       }
+    });
+    this.version(8).stores({
+      creditInterests: '++id, sessionId, date',
+      creditInterestResults: '++id, sessionId, date',
     });
   }
 }

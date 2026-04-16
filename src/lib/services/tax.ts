@@ -5,6 +5,7 @@ import {
 import { isinToCountry } from '../../core/tax/country.js';
 import type {
   EnrichedCorporateAction,
+  EnrichedCreditInterest,
   EnrichedRawDividend,
   EnrichedTrade,
   EnrichedWithholdingTax,
@@ -36,12 +37,14 @@ export async function calculateSessionTaxes(args: {
   const [
     trades,
     dividends,
+    creditInterests,
     withholdingTaxes,
     corporateActions,
     carryInPositions,
   ] = await Promise.all([
     db.trades.where('sessionId').equals(args.sessionId).toArray(),
     db.dividends.where('sessionId').equals(args.sessionId).toArray(),
+    db.creditInterests.where('sessionId').equals(args.sessionId).toArray(),
     db.withholdingTaxes.where('sessionId').equals(args.sessionId).toArray(),
     db.corporateActions.where('sessionId').equals(args.sessionId).toArray(),
     db.carryInPositions.where('sessionId').equals(args.sessionId).toArray(),
@@ -135,7 +138,32 @@ export async function calculateSessionTaxes(args: {
     }),
   );
 
-  // 7. Enrich withholding taxes with fixing rates
+  // 7. Enrich credit interest with fixing rates
+  const enrichedCreditInterests: (EnrichedCreditInterest & {
+    fxDate: string;
+  })[] = await Promise.all(
+    creditInterests.map(async (interest) => {
+      const dateStr = toDateString(interest.date);
+      let exchangeRate = 0;
+      let fxDate = '';
+      let rateUnavailable = false;
+
+      try {
+        const rate = await getFixingRate({
+          currency: interest.currency,
+          date: dateStr,
+        });
+        exchangeRate = rate.rate;
+        fxDate = rate.date;
+      } catch {
+        rateUnavailable = true;
+      }
+
+      return { ...interest, exchangeRate, fxDate, rateUnavailable };
+    }),
+  );
+
+  // 8. Enrich withholding taxes with fixing rates
   const enrichedWithholding: EnrichedWithholdingTax[] = await Promise.all(
     withholdingTaxes.map(async (tax) => {
       const dateStr = toDateString(tax.date);
@@ -156,7 +184,7 @@ export async function calculateSessionTaxes(args: {
     }),
   );
 
-  // 8. Enrich corporate actions with fixing rates for cash component
+  // 9. Enrich corporate actions with fixing rates for cash component
   const enrichedCorporateActions: EnrichedCorporateAction[] = await Promise.all(
     corporateActions.map(async (ca) => {
       let cashExchangeRate = 0;
@@ -179,7 +207,7 @@ export async function calculateSessionTaxes(args: {
     }),
   );
 
-  // 9. Build tax period
+  // 10. Build tax period
   const taxPeriod: TaxPeriod = {
     year: session.year,
     from: new Date(session.year, 0, 1),
@@ -193,10 +221,11 @@ export async function calculateSessionTaxes(args: {
     .equals(args.sessionId)
     .toArray();
 
-  // 10. Calculate taxes
+  // 11. Calculate taxes
   const result = calculateTaxes({
     trades: enrichedTrades,
     dividends: enrichedDividends,
+    creditInterests: enrichedCreditInterests,
     withholdingTaxes: enrichedWithholding,
     corporateActions: enrichedCorporateActions,
     carryInPositions,
@@ -209,15 +238,25 @@ export async function calculateSessionTaxes(args: {
     symbolCountryMap,
   });
 
-  // 11. Persist results
+  // 12. Persist results
   await db.transaction(
     'rw',
-    [db.tradeResults, db.dividendResults, db.taxSummaries, db.sessions],
+    [
+      db.tradeResults,
+      db.dividendResults,
+      db.creditInterestResults,
+      db.taxSummaries,
+      db.sessions,
+    ],
     async () => {
       // Clear previous results
       await Promise.all([
         db.tradeResults.where('sessionId').equals(args.sessionId).delete(),
         db.dividendResults.where('sessionId').equals(args.sessionId).delete(),
+        db.creditInterestResults
+          .where('sessionId')
+          .equals(args.sessionId)
+          .delete(),
         db.taxSummaries.delete(args.sessionId),
       ]);
 
@@ -228,6 +267,12 @@ export async function calculateSessionTaxes(args: {
       await db.dividendResults.bulkAdd(
         result.dividends.map((d) => ({ ...d, sessionId: args.sessionId })),
       );
+      await db.creditInterestResults.bulkAdd(
+        result.creditInterests.map((row) => ({
+          ...row,
+          sessionId: args.sessionId,
+        })),
+      );
       await db.taxSummaries.put({
         sessionId: args.sessionId,
         ...result.summary,
@@ -236,7 +281,7 @@ export async function calculateSessionTaxes(args: {
         lossDeduction: result.lossDeduction,
       });
 
-      // 12. Update session status
+      // 13. Update session status
       await updateSession({
         id: args.sessionId,
         changes: {
@@ -256,11 +301,21 @@ export async function clearSessionResults(args: {
 }): Promise<void> {
   await db.transaction(
     'rw',
-    [db.tradeResults, db.dividendResults, db.taxSummaries, db.sessions],
+    [
+      db.tradeResults,
+      db.dividendResults,
+      db.creditInterestResults,
+      db.taxSummaries,
+      db.sessions,
+    ],
     async () => {
       await Promise.all([
         db.tradeResults.where('sessionId').equals(args.sessionId).delete(),
         db.dividendResults.where('sessionId').equals(args.sessionId).delete(),
+        db.creditInterestResults
+          .where('sessionId')
+          .equals(args.sessionId)
+          .delete(),
         db.taxSummaries.delete(args.sessionId),
       ]);
       await updateSession({

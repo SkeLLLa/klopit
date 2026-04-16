@@ -10,15 +10,16 @@
   import { m } from '$lib/paraglide/messages.js';
   import { formatPln } from '$lib/utils/format-pln.js';
   import { formatDate } from '$lib/utils/format-date.js';
-  import type { TradeResultRecord, DividendResultRecord } from '$lib/db.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
 
   interface Props {
     tradeResults: TradeResultRecord[];
     dividendResults: DividendResultRecord[];
+    creditInterestResults: CreditInterestResultRecord[];
     year: number;
   }
 
-  let { tradeResults, dividendResults, year }: Props = $props();
+  let { tradeResults, dividendResults, creditInterestResults, year }: Props = $props();
 
   interface DataPoint {
     date: Date;
@@ -58,6 +59,14 @@
         date: new Date(div.date),
         investedDelta: 0,
         gainsDelta: div.amountPln - div.withholdingTaxPln,
+      });
+    }
+
+    for (const interest of creditInterestResults) {
+      events.push({
+        date: new Date(interest.date),
+        investedDelta: 0,
+        gainsDelta: interest.amountPln,
       });
     }
 

@@ -148,6 +148,51 @@ void describe('InteractiveBrokersParser', () => {
     });
   });
 
+  void describe('Interest', () => {
+    void it('parses only positive credit-interest rows', () => {
+      const result = parseFixture('interest.csv');
+      assert.equal(result.creditInterests.length, 3);
+      assert.deepEqual(
+        result.creditInterests.map((row) => row.description),
+        [
+          'USD Credit Interest for Dec-2024',
+          'USD Credit Interest for Jan-2025',
+          'EUR Credit Interest for Apr-2025',
+        ],
+      );
+      assert.ok(result.creditInterests.every((row) => row.amount > 0));
+    });
+
+    void it('captures broker country from BrokerName', () => {
+      const result = parseFixture('interest.csv');
+      assert.equal(result.brokerCountry, 'US');
+    });
+
+    void it('skips Purchase Accrued Interest as known unsupported', () => {
+      const result = parseFixture('interest.csv');
+      const skipped = result.skippedRows.find(
+        (row) =>
+          row.section === 'Interest' &&
+          row.description === 'Purchase Accrued Interest ROMANI 3 3/8 01/28/50',
+      );
+      assert.ok(skipped);
+      assert.equal(skipped.kind, 'known-unsupported');
+      assert.equal(skipped.currency, 'EUR');
+      assert.equal(skipped.datetime, '2025-05-21');
+    });
+
+    void it('records Debit Interest as known-unsupported skipped row', () => {
+      const result = parseFixture('interest.csv');
+      const debitRow = result.skippedRows.find(
+        (row) =>
+          row.section === 'Interest' &&
+          row.description?.includes('Debit Interest'),
+      );
+      assert.ok(debitRow, 'Debit Interest row should appear in skippedRows');
+      assert.equal(debitRow.kind, 'known-unsupported');
+    });
+  });
+
   void describe('Corporate Actions', () => {
     void it('parses forward split', () => {
       const result = parseFixture('corporate-actions.csv');
@@ -238,6 +283,7 @@ void describe('InteractiveBrokersParser', () => {
       const result = parseFixture('empty-sections.csv');
       assert.equal(result.trades.length, 0);
       assert.equal(result.dividends.length, 0);
+      assert.equal(result.creditInterests.length, 0);
       assert.equal(result.year, 2024);
     });
 
@@ -317,6 +363,7 @@ void describe('InteractiveBrokersParser', () => {
       assert.equal(result.trades.length, 5);
       assert.equal(result.dividends.length, 3);
       assert.equal(result.withholdingTaxes.length, 3);
+      assert.equal(result.creditInterests.length, 0);
       assert.equal(result.corporateActions.length, 1);
       assert.equal(result.symbolToIsin.size, 3);
       assert.ok(result.carryInPositions.length >= 1);

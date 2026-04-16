@@ -71,7 +71,7 @@ void describe('classifySection', () => {
       classifySection({ section: 'Forex P/L' }),
       'known-unsupported',
     );
-    assert.equal(classifySection({ section: 'Interest' }), 'known-unsupported');
+    assert.equal(classifySection({ section: 'Interest' }), 'supported');
     assert.equal(classifySection({ section: 'Fees' }), 'known-unsupported');
   });
 

@@ -3,18 +3,21 @@ export type {
   Trade,
   RawDividend,
   RawWithholdingTax,
+  RawCreditInterest,
   CorporateAction,
   CarryInPosition,
   TransactionFee,
   ParsedStatement,
   TradeResult,
   DividendResult,
+  CreditInterestResult,
   TaxSummary,
   Pit38Fields,
   TaxPeriod,
   EnrichedTrade,
   EnrichedRawDividend,
   EnrichedWithholdingTax,
+  EnrichedCreditInterest,
 } from './types.js';
 export { TAX_RATE } from './types.js';
 

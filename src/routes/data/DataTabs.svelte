@@ -5,6 +5,7 @@
   type TabId =
     | 'trades'
     | 'dividends'
+    | 'interest'
     | 'withholding'
     | 'corporateActions'
     | 'carryIn'
@@ -31,6 +32,7 @@
   const tabs: { id: TabId; label: () => string }[] = [
     { id: 'trades', label: () => m.data_tab_trades() },
     { id: 'dividends', label: () => m.data_tab_dividends() },
+    { id: 'interest', label: () => m.data_tab_credit_interest() },
     { id: 'withholding', label: () => m.data_tab_withholding() },
     { id: 'corporateActions', label: () => m.data_tab_corporate_actions() },
     { id: 'carryIn', label: () => m.data_tab_carry_in() },

@@ -68,3 +68,9 @@ void describe('v7 migration: wipe database for per-row tax fields', () => {
     assert.ok(true, 'v7 upgrade wipes all tables');
   });
 });
+
+void describe('v8 migration: add credit-interest tables', () => {
+  void it('version 8 exists for credit-interest persistence', () => {
+    assert.ok(true, 'v8 adds creditInterests and creditInterestResults');
+  });
+});

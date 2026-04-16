@@ -3,12 +3,14 @@
   import { formatPln } from '$lib/utils/format-pln.js';
   import type { TaxSummaryRecord } from '$lib/db.js';
   import { TrendingUp, TrendingDown, Minus } from 'lucide-svelte';
+  import { TAX_RATE } from '../../core/types.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
     prevYearSummary?: TaxSummaryRecord;
     sellTradeCount: number;
     dividendCount: number;
+    creditInterestCount: number;
   }
 
   let {
@@ -16,20 +18,27 @@
     prevYearSummary,
     sellTradeCount,
     dividendCount,
+    creditInterestCount,
   }: Props = $props();
 
   const capitalGain = $derived(
     taxSummary.totalProceedsPln - taxSummary.totalCostPln,
   );
 
+  const creditInterestTax = $derived(taxSummary.totalCreditInterestPln * TAX_RATE);
+
   const taxOwed = $derived(
-    taxSummary.capitalGainTaxPostLcfPln + taxSummary.dividendTaxOwedPln,
+    taxSummary.capitalGainTaxPostLcfPln + taxSummary.dividendTaxOwedPln + creditInterestTax,
+  );
+
+  const prevCreditInterestTax = $derived(
+    prevYearSummary ? (prevYearSummary.totalCreditInterestPln ?? 0) * TAX_RATE : 0,
   );
 
   const prevTaxOwed = $derived(
     prevYearSummary
       ? prevYearSummary.capitalGainTaxPostLcfPln +
-          prevYearSummary.dividendTaxOwedPln
+          prevYearSummary.dividendTaxOwedPln + prevCreditInterestTax
       : undefined,
   );
 
@@ -86,6 +95,14 @@
       prevValue: prevYearSummary?.totalWithholdingPln,
       lowerIsBetter: true,
     },
+    {
+      label: m.dash_credit_interest_income(),
+      value: taxSummary.totalCreditInterestPln,
+      subtitle: m.dash_from_interest({ count: String(creditInterestCount) }),
+      color: 'green',
+      prevValue: prevYearSummary?.totalCreditInterestPln,
+      lowerIsBetter: false,
+    },
   ]);
 
   const colorClasses: Record<string, string> = {
@@ -103,7 +120,7 @@
   };
 </script>
 
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
   {#each cards as card (card.label)}
     <div
       class="rounded-lg border bg-white p-4 dark:bg-slate-900 {colorClasses[card.color]}"

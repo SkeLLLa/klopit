@@ -1,4 +1,5 @@
 import {
+  type CreditInterestResult,
   type DividendResult,
   type Pit38Fields,
   type PriorYearLoss,
@@ -14,6 +15,8 @@ import {
   roundedDividendTax,
   roundedTotalTaxToPay,
   sumCost,
+  sumCreditInterestForeignTax,
+  sumCreditInterestIncome,
   sumDeductibleWithholding,
   sumDividendIncome,
   sumProceeds,
@@ -23,6 +26,7 @@ import { applyLossCarryForward } from './loss-carry-forward.js';
 export interface BuildPit38Args {
   trades: TradeResult[];
   dividends: DividendResult[];
+  creditInterests?: CreditInterestResult[];
   summary: TaxSummary;
   /**
    * Prior-year capital losses available for carry-forward (art. 9 ust. 3
@@ -35,14 +39,26 @@ export interface BuildPit38Args {
 
 /** Map TaxSummary to PIT-38(18) form field values. Key = position on form. */
 export function buildPit38(args: BuildPit38Args): Pit38Fields {
-  const { trades, dividends, summary, priorLosses } = args;
+  const {
+    trades,
+    dividends,
+    creditInterests = [],
+    summary,
+    priorLosses,
+  } = args;
   const f = {} as Pit38Fields;
 
   const totalProceedsPln = sumProceeds({ rows: trades });
   const totalCostPln = sumCost({ rows: trades });
   const totalDividendsPln = sumDividendIncome({ rows: dividends });
+  const totalCreditInterestPln = sumCreditInterestIncome({
+    rows: creditInterests,
+  });
   const totalDeductibleWithholdingPln = sumDeductibleWithholding({
     rows: dividends,
+  });
+  const totalCreditInterestForeignTaxPln = sumCreditInterestForeignTax({
+    rows: creditInterests,
   });
 
   // Section C — Capital gains/losses
@@ -79,9 +95,12 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
 
   // Section G — Payment summary
   f[46] = 0; // No flat-rate tax
-  f[47] = roundedDividendTax({ totalIncomePln: totalDividendsPln });
+  f[47] = roundedDividendTax({
+    totalIncomePln: totalDividendsPln + totalCreditInterestPln,
+  });
   f[48] = roundedDividendCredit({
-    deductiblePln: totalDeductibleWithholdingPln,
+    deductiblePln:
+      totalDeductibleWithholdingPln + totalCreditInterestForeignTaxPln,
     dividendTax: f[47],
   });
   f[49] = roundedDividendDifference({ dividendTax: f[47], credit: f[48] });

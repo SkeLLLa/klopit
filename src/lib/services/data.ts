@@ -2,6 +2,7 @@ import type {
   CarryInPosition,
   CorporateAction,
   PriorYearLoss,
+  RawCreditInterest,
   RawDividend,
   RawWithholdingTax,
   Trade,
@@ -86,6 +87,21 @@ export async function deleteCarryInPosition(args: {
   id: number;
 }): Promise<void> {
   await db.carryInPositions.delete(args.id);
+}
+
+// --- Credit Interest (edit/delete) ---
+
+export async function updateCreditInterest(args: {
+  id: number;
+  changes: Partial<RawCreditInterest>;
+}): Promise<void> {
+  await db.creditInterests.update(args.id, args.changes);
+}
+
+export async function deleteCreditInterest(args: {
+  id: number;
+}): Promise<void> {
+  await db.creditInterests.delete(args.id);
 }
 
 // --- Prior-Year Losses (full CRUD) ---

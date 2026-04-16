@@ -10,6 +10,8 @@ import {
   roundedDividendTax,
   roundedTotalTaxToPay,
   sumCost,
+  sumCreditInterestForeignTax,
+  sumCreditInterestIncome,
   sumDeductibleWithholding,
   sumDividendIncome,
   sumDividendTaxGross,
@@ -19,7 +21,11 @@ import {
   sumTradeTaxPreLcf,
   sumWithholding,
 } from '../src/core/tax/aggregates.js';
-import type { DividendResult, TradeResult } from '../src/core/types.js';
+import type {
+  CreditInterestResult,
+  DividendResult,
+  TradeResult,
+} from '../src/core/types.js';
 
 function makeDivResult(
   overrides: Partial<DividendResult> = {},
@@ -61,6 +67,26 @@ function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
     rateUnavailable: false,
     country: 'US',
     taxPln: 2272.4,
+    ...overrides,
+  };
+}
+
+function makeCreditInterestResult(
+  overrides: Partial<CreditInterestResult> = {},
+): CreditInterestResult {
+  return {
+    currency: 'USD',
+    date: new Date(2024, 3, 5),
+    description: 'USD Credit Interest for Mar-2024',
+    amountOriginal: 10,
+    amountPln: 40,
+    exchangeRate: 4.0,
+    fxDate: '2024-04-04',
+    rateUnavailable: false,
+    taxPlnGross: 7.6,
+    foreignTaxOriginal: 0,
+    foreignTaxPln: 0,
+    foreignTaxExchangeRate: 0,
     ...overrides,
   };
 }
@@ -120,6 +146,34 @@ void describe('sumDividendTaxGross', () => {
       makeDivResult({ taxPlnGross: 38 }),
     ];
     assert.equal(sumDividendTaxGross({ rows }), 57);
+  });
+});
+
+void describe('sumCreditInterestIncome', () => {
+  void it('returns 0 for empty array', () => {
+    assert.equal(sumCreditInterestIncome({ rows: [] }), 0);
+  });
+
+  void it('sums amountPln across rows', () => {
+    const rows = [
+      makeCreditInterestResult({ amountPln: 40 }),
+      makeCreditInterestResult({ amountPln: 12.5 }),
+    ];
+    assert.equal(sumCreditInterestIncome({ rows }), 52.5);
+  });
+});
+
+void describe('sumCreditInterestForeignTax', () => {
+  void it('returns 0 for empty array', () => {
+    assert.equal(sumCreditInterestForeignTax({ rows: [] }), 0);
+  });
+
+  void it('sums foreignTaxPln across rows', () => {
+    const rows = [
+      makeCreditInterestResult({ foreignTaxPln: 0 }),
+      makeCreditInterestResult({ foreignTaxPln: 3.25 }),
+    ];
+    assert.equal(sumCreditInterestForeignTax({ rows }), 3.25);
   });
 });
 

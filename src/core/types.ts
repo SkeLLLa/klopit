@@ -104,6 +104,14 @@ export interface TransactionFee {
   description: string;
 }
 
+/** Raw credit interest from broker statement (art. 30a ust. 1 pkt 3) */
+export interface RawCreditInterest {
+  currency: string;
+  date: Date;
+  amount: number;
+  description: string;
+}
+
 /** Warning collected during parsing (non-fatal) */
 export interface ParseWarning {
   line: number;
@@ -144,6 +152,7 @@ export interface ImportWarning {
 /** Result of parsing a single broker CSV file */
 export interface ParsedStatement {
   broker: string;
+  brokerCountry?: string;
   year: number;
   trades: Trade[];
   dividends: RawDividend[];
@@ -151,6 +160,7 @@ export interface ParsedStatement {
   corporateActions: CorporateAction[];
   carryInPositions: CarryInPosition[];
   transactionFees: TransactionFee[];
+  creditInterests: RawCreditInterest[];
   symbolToIsin: Map<string, string>;
   warnings: ParseWarning[];
   skippedRows: SkippedRow[];
@@ -213,6 +223,22 @@ export interface DividendResult {
   warnings?: DividendWarning[];
 }
 
+/** Credit interest result after tax calculation (art. 30a ust. 1 pkt 3) */
+export interface CreditInterestResult {
+  currency: string;
+  date: Date;
+  description: string;
+  amountOriginal: number;
+  amountPln: number;
+  exchangeRate: number;
+  fxDate: string;
+  rateUnavailable: boolean;
+  taxPlnGross: number;
+  foreignTaxOriginal: number;
+  foreignTaxPln: number;
+  foreignTaxExchangeRate: number;
+}
+
 /** Per-country PIT/ZG attachment fields */
 export interface PitZgFields {
   country: string;
@@ -238,6 +264,8 @@ export interface TaxSummary {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  totalCreditInterestPln: number;
+  totalCreditInterestForeignTaxPln: number;
   /** Capital gain after prior-year loss deduction: max(gain - lcfDeducted, 0). */
   capitalGainAfterLcfPln: number;
   /** Post-LCF capital gain tax (raw, unrounded): capitalGainAfterLcfPln * 0.19. */
@@ -340,4 +368,10 @@ export interface EnrichedWithholdingTax extends RawWithholdingTax {
 export interface EnrichedCorporateAction extends CorporateAction {
   cashExchangeRate: number;
   cashRateUnavailable: boolean;
+}
+
+/** Credit interest with pre-resolved exchange rate */
+export interface EnrichedCreditInterest extends RawCreditInterest {
+  exchangeRate: number;
+  rateUnavailable: boolean;
 }

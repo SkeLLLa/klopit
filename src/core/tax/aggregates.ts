@@ -1,4 +1,9 @@
-import { TAX_RATE, type DividendResult, type TradeResult } from '../types.js';
+import {
+  TAX_RATE,
+  type CreditInterestResult,
+  type DividendResult,
+  type TradeResult,
+} from '../types.js';
 import { roundToFullPln, roundToGroszUp } from './rounding.js';
 
 // ---------------------------------------------------------------------------
@@ -25,6 +30,20 @@ export function sumDeductibleWithholding(args: {
 /** Sum gross dividend tax (PLN). */
 export function sumDividendTaxGross(args: { rows: DividendResult[] }): number {
   return args.rows.reduce((s, d) => s + d.taxPlnGross, 0);
+}
+
+/** Sum gross credit-interest income (PLN). */
+export function sumCreditInterestIncome(args: {
+  rows: CreditInterestResult[];
+}): number {
+  return args.rows.reduce((s, row) => s + row.amountPln, 0);
+}
+
+/** Sum foreign tax paid on credit interest (PLN). */
+export function sumCreditInterestForeignTax(args: {
+  rows: CreditInterestResult[];
+}): number {
+  return args.rows.reduce((s, row) => s + row.foreignTaxPln, 0);
 }
 
 /** Sum net dividend tax to pay after withholding credit (PLN). */

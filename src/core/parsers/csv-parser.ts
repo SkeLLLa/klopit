@@ -3,6 +3,7 @@ import type {
   CorporateAction,
   ParsedStatement,
   ParseWarning,
+  RawCreditInterest,
   RawDividend,
   RawWithholdingTax,
   SkippedRowKind,
@@ -25,6 +26,8 @@ export abstract class CsvStatementParser implements StatementParser {
   protected corporateActions: CorporateAction[] = [];
   protected carryInPositions: CarryInPosition[] = [];
   protected transactionFees: TransactionFee[] = [];
+  protected creditInterests: RawCreditInterest[] = [];
+  protected brokerCountry: string | undefined;
   protected symbolToIsin = new Map<string, string>();
   protected warnings: ParseWarning[] = [];
   protected skippedRows: ParsedStatement['skippedRows'] = [];
@@ -115,6 +118,7 @@ export abstract class CsvStatementParser implements StatementParser {
 
     return {
       broker: this.getBrokerId(),
+      brokerCountry: this.brokerCountry,
       year: this.year,
       trades: this.trades,
       dividends: this.dividends,
@@ -122,6 +126,7 @@ export abstract class CsvStatementParser implements StatementParser {
       corporateActions: this.corporateActions,
       carryInPositions: this.carryInPositions,
       transactionFees: this.transactionFees,
+      creditInterests: this.creditInterests,
       symbolToIsin: this.symbolToIsin,
       warnings: this.warnings,
       skippedRows: this.skippedRows,

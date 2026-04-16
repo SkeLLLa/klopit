@@ -14,6 +14,7 @@ export const SUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
   'Withholding Tax',
   'Corporate Actions',
   'Mark-to-Market Performance Summary',
+  'Interest',
 ]);
 
 export const IGNORABLE_SECTIONS: ReadonlySet<string> = new Set([
@@ -50,7 +51,6 @@ export const KNOWN_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
   'Options',
   'Futures',
   'Forex P/L',
-  'Interest',
   'Fees',
   'Bond Interest Received',
   'Transaction Fees',

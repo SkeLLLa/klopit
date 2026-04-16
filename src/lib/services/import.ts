@@ -4,6 +4,7 @@ import {
   db,
   type CarryInPositionRecord,
   type CorporateActionRecord,
+  type CreditInterestRecord,
   type DividendRecord,
   type TradeRecord,
   type WithholdingTaxRecord,
@@ -24,6 +25,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
   year: number;
   tradeCount: number;
   dividendCount: number;
+  creditInterestCount: number;
   warnings: ImportWarning[];
   skippedRows: SkippedRow[];
 }> {
@@ -60,6 +62,13 @@ export async function importFile(args: ImportFileArgs): Promise<{
     }),
   );
 
+  const creditInterests: CreditInterestRecord[] = result.creditInterests.map(
+    (interest) => ({
+      ...interest,
+      sessionId: args.sessionId,
+    }),
+  );
+
   // Store corporate actions
   const corporateActions: CorporateActionRecord[] = result.corporateActions.map(
     (ca) => ({
@@ -81,6 +90,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
     [
       db.trades,
       db.dividends,
+      db.creditInterests,
       db.withholdingTaxes,
       db.corporateActions,
       db.carryInPositions,
@@ -88,6 +98,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
     async () => {
       await db.trades.bulkAdd(trades);
       await db.dividends.bulkAdd(dividends);
+      await db.creditInterests.bulkAdd(creditInterests);
       await db.withholdingTaxes.bulkAdd(withholdingTaxes);
       await db.corporateActions.bulkAdd(corporateActions);
       await db.carryInPositions.bulkAdd(carryInPositions);
@@ -105,6 +116,13 @@ export async function importFile(args: ImportFileArgs): Promise<{
     },
   });
 
+  if (result.brokerCountry) {
+    await db.sessions.update(args.sessionId, {
+      brokerCountry: result.brokerCountry,
+      updatedAt: new Date(),
+    });
+  }
+
   await appendImportWarnings({ sessionId: args.sessionId, warnings });
 
   return {
@@ -112,6 +130,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
     year: result.year,
     tradeCount: result.trades.length,
     dividendCount: result.dividends.length,
+    creditInterestCount: result.creditInterests.length,
     warnings,
     skippedRows: result.skippedRows,
   };

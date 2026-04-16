@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AlertTriangle } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
-  import type { TradeResultRecord, DividendResultRecord } from '$lib/db.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
   import { formatDatetime, formatDate } from '$lib/utils/format-date.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { TAX_RATE } from '../../core/types.js';
@@ -15,9 +15,11 @@
   let {
     tradeResults,
     dividendResults,
+    creditInterestResults,
   }: {
     tradeResults: TradeResultRecord[];
     dividendResults: DividendResultRecord[];
+    creditInterestResults: CreditInterestResultRecord[];
   } = $props();
 
   const TAX_PCT = TAX_RATE * 100;
@@ -82,6 +84,14 @@
   const divTotalToPay = $derived(sumDividendTaxToPay({ rows: dividendResults }));
   const divTotalToPayPct = $derived(
     divTotalAmount > 0 ? (divTotalToPay / divTotalAmount) * 100 : 0,
+  );
+
+  // Credit interest totals
+  const ciTotalAmount = $derived(
+    creditInterestResults.reduce((s, r) => s + r.amountPln, 0),
+  );
+  const ciTotalTax = $derived(
+    creditInterestResults.reduce((s, r) => s + r.taxPlnGross, 0),
   );
 
   function formatPct(value: number): string {
@@ -433,7 +443,81 @@
     </div>
   {/if}
 
-  {#if sellTrades.length === 0 && corporateActionTrades.length === 0 && dividendResults.length === 0}
+  <!-- Credit Interest -->
+  {#if creditInterestResults.length > 0}
+    <h4
+      class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400"
+    >
+      {m.dash_credit_interest()}
+    </h4>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr
+            class="border-b border-slate-200 text-xs font-medium uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:text-slate-400"
+          >
+            <th class="px-3 py-2">{m.data_date()}</th>
+            <th class="px-3 py-2">{m.data_currency()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_description()}</th>
+            <th class="px-3 py-2 text-right">{m.dash_tx_amount()} (PLN)</th>
+            <th class="px-3 py-2 text-right">{m.dash_tx_tax_pl()} ({formatPct(TAX_PCT)})</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each creditInterestResults as row (row.id ?? row.description + row.date)}
+            <tr
+              class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+            >
+              <td class="px-3 py-2 text-slate-600 dark:text-slate-300"
+                >{formatDate(row.date)}</td
+              >
+              <td class="px-3 py-2 text-slate-700 dark:text-slate-300"
+                >{row.currency}</td
+              >
+              <td class="px-3 py-2 text-slate-700 dark:text-slate-300"
+                >{row.description}</td
+              >
+              <td
+                class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
+                >{formatPlnValue(row.amountPln)}</td
+              >
+              <td
+                class="px-3 py-2 text-right tabular-nums font-medium text-slate-900 dark:text-slate-100"
+                >{formatPlnValue(row.taxPlnGross)}</td
+              >
+              <td class="px-3 py-2">
+                {#if row.rateUnavailable}
+                  <AlertTriangle size={14} class="text-amber-500" />
+                {/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+        <tfoot>
+          <tr
+            class="border-t-2 border-slate-300 font-semibold dark:border-slate-600"
+          >
+            <td
+              class="px-3 py-2 text-slate-900 dark:text-slate-100"
+              colspan="3">{m.dash_tx_total()}</td
+            >
+            <td
+              class="px-3 py-2 text-right tabular-nums text-slate-900 dark:text-slate-100"
+              >{formatPlnValue(ciTotalAmount)}</td
+            >
+            <td
+              class="px-3 py-2 text-right tabular-nums text-slate-900 dark:text-slate-100"
+              >{formatPlnValue(ciTotalTax)}</td
+            >
+            <td class="px-3 py-2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  {/if}
+
+  {#if sellTrades.length === 0 && corporateActionTrades.length === 0 && dividendResults.length === 0 && creditInterestResults.length === 0}
     <p class="text-sm text-slate-500 dark:text-slate-400">
       {m.dash_no_income()}
     </p>
