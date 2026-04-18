@@ -1,9 +1,13 @@
-import type { BrokerId } from '../types.js';
-import { CsvStatementParser } from './csv-parser.js';
-import { cleanField, parseDateTime, parseDecimal } from './csv-utils.js';
-import { ibkrEntityToCountry } from './interactive-brokers/entity-country.js';
-import { classifySection } from './interactive-brokers/sections.js';
-import type { ParserDefinition, StatementParser } from './types.js';
+import type { BrokerId } from '../../types.js';
+import { CsvStatementParser } from '../shared/csv-parser.js';
+import {
+  cleanField,
+  parseDateTime,
+  parseDecimal,
+} from '../shared/csv-utils.js';
+import type { CsvParserDefinition, StatementParser } from '../types.js';
+import { ibkrEntityToCountry } from './entity-country.js';
+import { classifySection } from './sections.js';
 
 /** Regex to extract symbol and ISIN from dividend/tax descriptions: "AAPL(US0378331005) ..." */
 const SYMBOL_ISIN_RE = /^\s*(\S+)\s*\(([^)]+)\)/;
@@ -33,7 +37,7 @@ const MERGER_RE =
 
 class InteractiveBrokersParser extends CsvStatementParser {
   protected getBrokerId(): string {
-    return 'interactive-brokers';
+    return 'ibkr';
   }
 
   protected processRow(args: {
@@ -629,9 +633,11 @@ class InteractiveBrokersParser extends CsvStatementParser {
 }
 
 /** Parser definition for Interactive Brokers — the only public export */
-export const interactiveBrokersDefinition: ParserDefinition = {
-  brokerId: 'interactive-brokers' as BrokerId,
+export const ibkrDefinition: CsvParserDefinition = {
+  kind: 'csv',
+  brokerId: 'ibkr' as BrokerId,
   brokerName: 'Interactive Brokers',
+  fileExtensions: ['.csv'],
   createParser(): StatementParser {
     return new InteractiveBrokersParser();
   },

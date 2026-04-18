@@ -17,8 +17,11 @@
   const brokers = supportedBrokers();
 
   let dialogEl: HTMLDialogElement | undefined = $state(undefined);
-  let selectedBroker: BrokerId = $state(brokers[0]?.id ?? ('interactive-brokers' as BrokerId));
+  let selectedBroker: BrokerId = $state(brokers[0]?.id ?? ('ibkr' as BrokerId));
   let files: FileList | null = $state(null);
+  const acceptedExtensions = $derived(
+    brokers.find((b) => b.id === selectedBroker)?.fileExtensions.join(',') ?? '.csv',
+  );
   let importing = $state(false);
   let results: { fileName: string; success: boolean; message: string }[] = $state([]);
 
@@ -46,13 +49,12 @@
 
     for (const file of files) {
       try {
-        const text = await file.text();
         const result = await importFile({
           sessionId,
           brokerId: selectedBroker,
           fileName: file.name,
           fileSize: file.size,
-          text,
+          file,
         });
         results = [
           ...results,
@@ -125,7 +127,7 @@
         <input
           id="file-input"
           type="file"
-          accept=".csv"
+          accept={acceptedExtensions}
           multiple
           onchange={(e) => {
             files = (e.target as HTMLInputElement).files;

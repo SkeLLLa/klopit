@@ -505,4 +505,185 @@ void describe('calculateCapitalGains', () => {
     assert.ok(sellResult, 'Expected a sell result');
     assert.ok(sellResult.gainLossPln !== 0, 'Should have non-zero gain');
   });
+
+  /**
+   * FIFO across ESPP
+   * grants is semantically wrong — each grant is tracked independently at
+   * the broker and can be bought/sold in any interleaving relative to
+   * other grants. With `lotId` set per order, the FIFO engine isolates
+   * each grant's buy/sell into its own queue, so per-transaction P&L in
+   * the data table and dashboard reflects each order's own cost basis.
+   */
+  void it('partitions FIFO by lotId so ESPP grants do not commingle (same-day sells)', () => {
+    const buy71 = makeTrade({
+      datetime: new Date(2025, 7, 31),
+      symbol: 'TSLA',
+      quantity: 71,
+      price: 119.92,
+      proceeds: 119.92 * 71,
+      type: 'buy',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: '1000001',
+    });
+    const buy146 = makeTrade({
+      datetime: new Date(2026, 1, 28),
+      symbol: 'TSLA',
+      quantity: 146,
+      price: 59.89,
+      proceeds: 59.89 * 146,
+      type: 'buy',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: '2000002',
+    });
+    // Both sells share the exact same datetime. With lotId partitioning,
+    // each one consumes only its own grant's buy lot regardless of
+    // input array order.
+    const sell146 = makeTrade({
+      datetime: new Date(2026, 2, 30),
+      symbol: 'TSLA',
+      quantity: 146,
+      price: 87.21,
+      proceeds: 146 * 87.21,
+      type: 'sell',
+      commission: 17.11,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: '2000002',
+    });
+    const sell71 = makeTrade({
+      datetime: new Date(2026, 2, 30),
+      symbol: 'TSLA',
+      quantity: 71,
+      price: 87.21,
+      proceeds: 71 * 87.21,
+      type: 'sell',
+      commission: 10.19,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: '1000001',
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy71, buy146, sell146, sell71],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: {
+        year: 2026,
+        from: new Date(2026, 0, 1),
+        to: new Date(2026, 11, 31),
+      },
+    });
+
+    const sells = result.filter((r) => r.type === 'sell');
+    assert.equal(sells.length, 2);
+    const s71 = sells.find((s) => s.quantity === 71);
+    const s146 = sells.find((s) => s.quantity === 146);
+    assert.ok(s71 && s146);
+
+    // 71-share sell consumes the 71-share grant (cost 119.92 > proceeds 87.21) → loss.
+    assert.ok(
+      s71.gainLossPln < 0,
+      `71-share sell should be a loss; got ${String(s71.gainLossPln)}`,
+    );
+    // 146-share sell consumes the 146-share grant (cost 59.89 < proceeds 87.21) → gain.
+    assert.ok(
+      s146.gainLossPln > 0,
+      `146-share sell should be a gain; got ${String(s146.gainLossPln)}`,
+    );
+  });
+
+  /**
+   * Covers the user-described interleaved case: one grant is bought early
+   * and sold late, while a second grant is bought and sold in between. A
+   * global FIFO would consume the first grant's lot for the interleaved
+   * sell; with `lotId` partitioning, each sell hits its own grant.
+   */
+  void it('partitions FIFO by lotId across interleaved grant timelines', () => {
+    const buyA = makeTrade({
+      datetime: new Date(2024, 7, 31), // Aug 2024
+      symbol: 'TSLA',
+      quantity: 50,
+      price: 100,
+      proceeds: 5000,
+      type: 'buy',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: 'A',
+    });
+    const buyB = makeTrade({
+      datetime: new Date(2024, 10, 15), // Nov 2024
+      symbol: 'TSLA',
+      quantity: 30,
+      price: 200,
+      proceeds: 6000,
+      type: 'buy',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: 'B',
+    });
+    // B is bought and sold before A is sold.
+    const sellB = makeTrade({
+      datetime: new Date(2024, 11, 5), // Dec 2024
+      symbol: 'TSLA',
+      quantity: 30,
+      price: 250,
+      proceeds: 7500,
+      type: 'sell',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: 'B',
+    });
+    const sellA = makeTrade({
+      datetime: new Date(2024, 11, 20), // Dec 2024
+      symbol: 'TSLA',
+      quantity: 50,
+      price: 80, // sold at a loss
+      proceeds: 4000,
+      type: 'sell',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+      lotId: 'A',
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buyA, buyB, sellB, sellA],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    const sells = result.filter((r) => r.type === 'sell');
+    const rB = sells.find((s) => s.quantity === 30);
+    const rA = sells.find((s) => s.quantity === 50);
+    assert.ok(rA && rB);
+
+    // B: 30 @ 250 - 30 @ 200 = +50/share * 4.0 = +1500 × 30/30 → +6000 PLN
+    // Cost B: 30 × 200 × 4.0 = 24000 PLN; Proceeds B: 30 × 250 × 4.0 = 30000 PLN; Gain: 6000 PLN.
+    assert.ok(
+      Math.abs(rB.costPln - 24000) < 0.01,
+      `B cost should come from grant B only (price 200); got ${String(rB.costPln)}`,
+    );
+    assert.ok(
+      Math.abs(rB.gainLossPln - 6000) < 0.01,
+      `B gain: ${String(rB.gainLossPln)}`,
+    );
+
+    // A: Cost 50 × 100 × 4.0 = 20000 PLN; Proceeds 50 × 80 × 4.0 = 16000 PLN; Loss: -4000 PLN.
+    assert.ok(
+      Math.abs(rA.costPln - 20000) < 0.01,
+      `A cost should come from grant A only (price 100); got ${String(rA.costPln)}`,
+    );
+    assert.ok(
+      Math.abs(rA.gainLossPln - -4000) < 0.01,
+      `A loss: ${String(rA.gainLossPln)}`,
+    );
+  });
 });

@@ -6,7 +6,8 @@ export const TAX_RATE = 0.19;
 // ---------------------------------------------------------------------------
 
 export const BrokerId = {
-  InteractiveBrokers: 'interactive-brokers',
+  InteractiveBrokers: 'ibkr',
+  IbiCapital: 'ibi',
 } as const;
 
 export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];
@@ -14,6 +15,14 @@ export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];
 // ---------------------------------------------------------------------------
 // Parsed data (from broker CSV)
 // ---------------------------------------------------------------------------
+
+/**
+ * Origin tag attached to a parsed trade. Defaults to `'trade'` (regular
+ * broker transaction) when omitted. Parsers that produce synthetic lots
+ * from employee-share-purchase programs set `'espp'` so both legs are
+ * visible as ESPP in the output.
+ */
+export type TradeSource = 'trade' | 'espp';
 
 /** Raw trade from broker statement */
 export interface Trade {
@@ -27,6 +36,19 @@ export interface Trade {
   commission: number;
   commissionCurrency: string;
   type: 'buy' | 'sell';
+  /** Origin of this trade; absent means regular trade. */
+  source?: TradeSource;
+  /**
+   * Optional lot partition key. When set, FIFO treats this trade as living
+   * in a separate queue keyed by (symbol|isin, lotId), bypassing the global
+   * per-security FIFO. Used by IBI ESPP where each order pairs a specific
+   * grant-purchase with its own sell — grants can be bought and sold in any
+   * interleaving, so commingling them through a single FIFO queue mis-
+   * allocates per-transaction P&L even though the annual tax total is the
+   * same. Parsers that don't populate this field leave `lotKey` at its
+   * default symbol/ISIN value.
+   */
+  lotId?: string;
 }
 
 /** Raw dividend income */
@@ -175,7 +197,7 @@ export interface TradeResult {
   symbol: string;
   datetime: Date;
   type: 'buy' | 'sell';
-  source: 'trade' | 'corporate-action';
+  source: 'trade' | 'corporate-action' | 'espp';
   quantity: number;
   price: number;
   proceeds: number;

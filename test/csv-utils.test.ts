@@ -5,7 +5,7 @@ import {
   parseCsvLine,
   parseDateTime,
   parseDecimal,
-} from '../src/core/parsers/csv-utils.js';
+} from '../src/core/parsers/shared/csv-utils.js';
 
 void describe('parseCsvLine', () => {
   void it('splits simple comma-separated fields', () => {

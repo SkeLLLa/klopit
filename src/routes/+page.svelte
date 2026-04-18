@@ -3,58 +3,85 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { ArrowRight, BarChart3, FileText, Lock, Table, Upload } from 'lucide-svelte';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
+  import WhyPillars from '$lib/components/home/WhyPillars.svelte';
+  import HowItWorks from '$lib/components/home/HowItWorks.svelte';
+  import FaqTeaser from '$lib/components/home/FaqTeaser.svelte';
 
   $effect(() => {
     pageTitle.set(m.nav_home());
   });
+
+  const filingYear = new Date().getFullYear() - 1;
+  const deadline = `30.04.${filingYear + 1}`;
+  const deadlineLine = m.home_trust_deadline({ year: String(filingYear), deadline });
 
   const featureCards = [
     {
       href: '/data',
       title: m.home_feature_csv_title(),
       description: m.home_feature_csv_desc(),
-      icon: Upload
+      icon: Upload,
     },
     {
       href: '/rates',
       title: m.home_feature_fifo_title(),
       description: m.home_feature_fifo_desc(),
-      icon: Table
+      icon: Table,
     },
     {
       href: '/dashboard',
       title: m.home_feature_dashboard_title(),
       description: m.home_feature_dashboard_desc(),
-      icon: BarChart3
+      icon: BarChart3,
     },
     {
       href: '/tax-form',
       title: m.home_feature_pit38_title(),
       description: m.home_feature_pit38_desc(),
-      icon: FileText
+      icon: FileText,
     },
     {
       href: 'https://github.com/SkeLLLa/klopit',
       title: m.home_github_title(),
       description: m.about_card_repo_desc(),
-      icon: GitHubIcon
+      icon: GitHubIcon,
     },
     {
       href: null,
       title: m.about_card_security_title(),
       description: m.about_card_security_desc(),
-      icon: Lock
-    }
+      icon: Lock,
+    },
   ] as const;
 </script>
 
 <div>
-  <h1 class="mb-4 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+  <h1 class="mb-3 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
     {m.home_welcome()}
   </h1>
-  <p class="mb-2 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+  <p class="mb-5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
     {m.home_description()}
   </p>
+
+  <WhyPillars />
+
+  <div class="mb-5 flex flex-wrap items-center gap-2">
+    <a
+      href="/data"
+      class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+    >
+      {m.home_cta_primary()}
+      <ArrowRight size={12} />
+    </a>
+    <a
+      href="/dashboard"
+      class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-800 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:border-emerald-500/45"
+    >
+      {m.home_cta_demo()}
+    </a>
+    <span class="text-[11px] text-slate-500 dark:text-slate-400">{deadlineLine}</span>
+  </div>
+
   <p class="mb-5 text-[11px] italic text-slate-400 dark:text-slate-500">
     {m.home_name_origin()}
   </p>
@@ -70,30 +97,51 @@
         >
           <div class="mb-2 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <div class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-500/12">
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-500/12"
+              >
                 <card.icon size={14} class="text-emerald-500 dark:text-emerald-400" />
               </div>
-              <span class="text-xs font-semibold text-slate-900 dark:text-slate-100">{card.title}</span>
+              <span class="text-xs font-semibold text-slate-900 dark:text-slate-100"
+                >{card.title}</span
+              >
             </div>
-            <ArrowRight size={14} class="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:group-hover:text-emerald-400" />
+            <ArrowRight
+              size={14}
+              class="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:group-hover:text-emerald-400"
+            />
           </div>
-          <p class="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{card.description}</p>
+          <p class="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+            {card.description}
+          </p>
         </a>
       {:else}
-        <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-white/[0.03]">
+        <div
+          class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-white/[0.03]"
+        >
           <div class="mb-2 flex items-center gap-2">
-            <div class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-500/12">
+            <div
+              class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-500/12"
+            >
               <card.icon size={14} class="text-emerald-500 dark:text-emerald-400" />
             </div>
             <span class="text-xs font-semibold text-slate-900 dark:text-slate-100">{card.title}</span>
           </div>
-          <p class="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{card.description}</p>
+          <p class="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+            {card.description}
+          </p>
         </div>
       {/if}
     {/each}
   </div>
 
-  <div class="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3.5 dark:border-emerald-500/25 dark:bg-emerald-500/12">
+  <HowItWorks />
+
+  <FaqTeaser />
+
+  <div
+    class="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3.5 dark:border-emerald-500/25 dark:bg-emerald-500/12"
+  >
     <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400">{m.home_cta()}</span>
   </div>
 </div>

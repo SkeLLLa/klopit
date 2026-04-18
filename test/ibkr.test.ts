@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { interactiveBrokersDefinition } from '../src/core/parsers/interactive-brokers.js';
+import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures', 'ib');
 
 function parseFixture(filename: string) {
   const text = readFileSync(join(fixturesDir, filename), 'utf-8');
-  const parser = interactiveBrokersDefinition.createParser();
+  const parser = ibkrDefinition.createParser();
   for (const line of text.split('\n')) {
     parser.feed({ line });
   }
@@ -295,7 +295,7 @@ void describe('InteractiveBrokersParser', () => {
     });
 
     void it('extracts skipped row fields by header column name (Trades-like layout)', () => {
-      const parser = interactiveBrokersDefinition.createParser();
+      const parser = ibkrDefinition.createParser();
       for (const line of [
         'Statement,Header,Field Name,Field Value',
         'Statement,Data,Period,"January 1, 2025 - December 31, 2025"',
@@ -317,7 +317,7 @@ void describe('InteractiveBrokersParser', () => {
     });
 
     void it('extracts skipped row fields by header column name (Interest layout)', () => {
-      const parser = interactiveBrokersDefinition.createParser();
+      const parser = ibkrDefinition.createParser();
       for (const line of [
         'Statement,Header,Field Name,Field Value',
         'Statement,Data,Period,"January 1, 2025 - December 31, 2025"',
@@ -358,7 +358,7 @@ void describe('InteractiveBrokersParser', () => {
   void describe('Full statement integration', () => {
     void it('parses complete statement correctly', () => {
       const result = parseFixture('full-statement.csv');
-      assert.equal(result.broker, 'interactive-brokers');
+      assert.equal(result.broker, 'ibkr');
       assert.equal(result.year, 2024);
       assert.equal(result.trades.length, 5);
       assert.equal(result.dividends.length, 3);
@@ -373,7 +373,7 @@ void describe('InteractiveBrokersParser', () => {
 
   void describe('ISIN backfill', () => {
     void it('backfills ISINs on trades when FII section comes after Trades', () => {
-      const parser = interactiveBrokersDefinition.createParser();
+      const parser = ibkrDefinition.createParser();
       // Feed statement period first
       parser.feed({
         line: 'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
@@ -395,7 +395,7 @@ void describe('InteractiveBrokersParser', () => {
     });
 
     void it('backfills ISINs on dividends when FII section comes after Dividends', () => {
-      const parser = interactiveBrokersDefinition.createParser();
+      const parser = ibkrDefinition.createParser();
       parser.feed({
         line: 'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
       });

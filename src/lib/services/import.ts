@@ -1,5 +1,10 @@
 import { getParserDefinition } from '../../core/parsers/registry.js';
-import type { BrokerId, ImportWarning, SkippedRow } from '../../core/types.js';
+import type {
+  BrokerId,
+  ImportWarning,
+  ParsedStatement,
+  SkippedRow,
+} from '../../core/types.js';
 import {
   db,
   type CarryInPositionRecord,
@@ -16,7 +21,7 @@ export interface ImportFileArgs {
   brokerId: BrokerId;
   fileName: string;
   fileSize: number;
-  text: string;
+  file: File;
 }
 
 /** Import a broker CSV file into a session */
@@ -30,15 +35,10 @@ export async function importFile(args: ImportFileArgs): Promise<{
   skippedRows: SkippedRow[];
 }> {
   const definition = getParserDefinition({ brokerId: args.brokerId });
-  const parser = definition.createParser();
-
-  // Feed lines one by one (streaming-compatible)
-  const lines = args.text.split('\n');
-  for (const line of lines) {
-    parser.feed({ line });
-  }
-
-  const result = parser.finish();
+  const result: ParsedStatement = await runParser({
+    definition,
+    file: args.file,
+  });
   const warnings = deriveImportWarnings({ skippedRows: result.skippedRows });
 
   // Store parsed trades
@@ -134,6 +134,22 @@ export async function importFile(args: ImportFileArgs): Promise<{
     warnings,
     skippedRows: result.skippedRows,
   };
+}
+
+async function runParser(args: {
+  definition: ReturnType<typeof getParserDefinition>;
+  file: File;
+}): Promise<ParsedStatement> {
+  if (args.definition.kind === 'csv') {
+    const text = await args.file.text();
+    const parser = args.definition.createParser();
+    for (const line of text.split('\n')) {
+      parser.feed({ line });
+    }
+    return parser.finish();
+  }
+  const buffer = await args.file.arrayBuffer();
+  return args.definition.parse({ buffer });
 }
 
 export function deriveImportWarnings(args: {

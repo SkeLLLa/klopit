@@ -9,9 +9,9 @@ import type {
   SkippedRowKind,
   Trade,
   TransactionFee,
-} from '../types.js';
+} from '../../types.js';
+import type { StatementParser } from '../types.js';
 import { parseCsvLine } from './csv-utils.js';
-import type { StatementParser } from './types.js';
 
 /**
  * Abstract base class for CSV-based broker parsers.

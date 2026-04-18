@@ -22,7 +22,12 @@ export const navigation: NavSection[] = [
         children: [
           {
             labelKey: 'nav_docs_ib',
-            href: '/docs/interactive-brokers',
+            href: '/docs/ibkr',
+            icon: 'FileText',
+          },
+          {
+            labelKey: 'nav_docs_ibi',
+            href: '/docs/ibi',
             icon: 'FileText',
           },
           {

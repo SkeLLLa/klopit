@@ -12,7 +12,7 @@ void describe('registry', () => {
       const def = getParserDefinition({
         brokerId: BrokerId.InteractiveBrokers,
       });
-      assert.equal(def.brokerId, 'interactive-brokers');
+      assert.equal(def.brokerId, 'ibkr');
       assert.equal(def.brokerName, 'Interactive Brokers');
     });
 
@@ -20,6 +20,7 @@ void describe('registry', () => {
       const def = getParserDefinition({
         brokerId: BrokerId.InteractiveBrokers,
       });
+      assert.equal(def.kind, 'csv');
       const parser = def.createParser();
       assert.ok(typeof parser.feed === 'function');
       assert.ok(typeof parser.finish === 'function');

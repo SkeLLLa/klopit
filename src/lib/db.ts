@@ -18,8 +18,10 @@ import type {
 } from '../core/types.js';
 import { installStaleHooks } from './db-hooks.js';
 import {
+  renameInteractiveBrokersToIbkr,
   stripLegacyPriorYearLoss,
   type LegacySessionRecord,
+  type SessionWithFiles,
 } from './db-migrations.js';
 
 // ---------------------------------------------------------------------------
@@ -168,8 +170,8 @@ export class KlopitDB extends Dexie {
   nbpRates!: EntityTable<NbpRateRecord, 'id'>;
   symbolCountryOverrides!: EntityTable<SymbolCountryOverrideRecord, 'id'>;
 
-  constructor() {
-    super('klopit');
+  constructor(name = 'klopit') {
+    super(name);
     this.version(1).stores({
       sessions: 'id, year',
       trades: '++id, sessionId, symbol, datetime',
@@ -221,15 +223,44 @@ export class KlopitDB extends Dexie {
     // v7: wipe database — per-row tax fields added to DividendResult
     // (creditCapRate, deductibleWithholdingPln, taxPlnGross, taxToPayPln),
     // TradeResult (taxPln), and TaxSummary (post-LCF fields).
+    //
+    // Tables are listed explicitly rather than via `tx.storeNames` because
+    // Dexie reflects the *final* schema on the upgrade transaction, which
+    // includes stores added in later versions (v8's creditInterests) that
+    // haven't been physically created in IDB yet — `tx.table(name).clear()`
+    // on those throws "Table <name> not part of transaction" and leaves the
+    // database closed.
     this.version(7).upgrade(async (tx) => {
-      const tableNames = tx.storeNames;
-      for (const name of tableNames) {
+      const tablesAtV7 = [
+        'sessions',
+        'trades',
+        'dividends',
+        'corporateActions',
+        'tradeResults',
+        'dividendResults',
+        'taxSummaries',
+        'nbpRates',
+        'withholdingTaxes',
+        'carryInPositions',
+        'transactionFees',
+        'symbolCountryOverrides',
+        'priorLosses',
+      ];
+      for (const name of tablesAtV7) {
         await tx.table(name).clear();
       }
     });
     this.version(8).stores({
       creditInterests: '++id, sessionId, date',
       creditInterestResults: '++id, sessionId, date',
+    });
+    // v9: shorten broker id 'interactive-brokers' to 'ibkr' on imported-file
+    // records so pre-existing sessions align with the renamed BrokerId value.
+    this.version(9).upgrade(async (tx) => {
+      await tx
+        .table<SessionWithFiles>('sessions')
+        .toCollection()
+        .modify(renameInteractiveBrokersToIbkr);
     });
   }
 }

@@ -4,6 +4,6 @@ import { BrokerId } from '../src/core/types.js';
 
 void describe('core types', () => {
   void it('BrokerId has InteractiveBrokers value', () => {
-    assert.equal(BrokerId.InteractiveBrokers, 'interactive-brokers');
+    assert.equal(BrokerId.InteractiveBrokers, 'ibkr');
   });
 });

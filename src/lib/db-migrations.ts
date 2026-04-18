@@ -35,3 +35,27 @@ export function stripLegacyPriorYearLoss(session: LegacySessionRecord): void {
   }
   delete session.priorYearLoss;
 }
+
+/**
+ * v9 migration helper: rewrite the legacy broker id 'interactive-brokers'
+ * to 'ibkr' on each imported file record. The broker id was shortened when
+ * IBI Capital support (broker id 'ibi') was added.
+ */
+export interface LegacyImportedFileRecord {
+  broker: string;
+}
+
+export interface SessionWithFiles {
+  files?: LegacyImportedFileRecord[];
+}
+
+export function renameInteractiveBrokersToIbkr(
+  session: SessionWithFiles,
+): void {
+  if (!session.files) return;
+  for (const file of session.files) {
+    if (file.broker === 'interactive-brokers') {
+      file.broker = 'ibkr';
+    }
+  }
+}

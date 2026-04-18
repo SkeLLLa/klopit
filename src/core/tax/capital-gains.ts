@@ -24,8 +24,13 @@ type TimelineEvent =
   | { kind: 'trade'; datetime: Date; trade: EnrichedTrade }
   | { kind: 'action'; datetime: Date; action: EnrichedCorporateAction };
 
-function lotKey(args: { isin?: string; symbol: string }): string {
-  return (args.isin ?? args.symbol).toUpperCase();
+function lotKey(args: {
+  isin?: string;
+  symbol: string;
+  lotId?: string;
+}): string {
+  const base = (args.isin ?? args.symbol).toUpperCase();
+  return args.lotId ? `${base}::${args.lotId}` : base;
 }
 
 function isInPeriod(args: { datetime: Date; taxPeriod: TaxPeriod }): boolean {
@@ -84,13 +89,21 @@ export function calculateCapitalGains(
     ),
   ];
 
-  // Sort by datetime; corporate actions before trades on same datetime
+  // Sort by datetime; corporate actions before trades on same datetime.
+  // When two trades share a datetime, break ties by `lotId` so per-lot
+  // output order is stable regardless of DB insertion / array order — the
+  // data table is a stable sort by datetime, so this order flows through
+  // to display.
   timeline.sort((a, b) => {
     const timeDiff = a.datetime.getTime() - b.datetime.getTime();
     if (timeDiff !== 0) return timeDiff;
-    // Actions before trades
     if (a.kind === 'action' && b.kind === 'trade') return -1;
     if (a.kind === 'trade' && b.kind === 'action') return 1;
+    if (a.kind === 'trade' && b.kind === 'trade') {
+      const aLot = a.trade.lotId ?? '';
+      const bLot = b.trade.lotId ?? '';
+      if (aLot !== bLot) return aLot < bLot ? -1 : 1;
+    }
     return 0;
   });
 
@@ -223,7 +236,7 @@ function processTrade(args: {
         symbol: trade.symbol,
         datetime: trade.datetime,
         type: 'buy',
-        source: 'trade',
+        source: trade.source ?? 'trade',
         quantity: trade.quantity,
         price: trade.price,
         proceeds: 0,
@@ -279,7 +292,7 @@ function processTrade(args: {
         symbol: trade.symbol,
         datetime: trade.datetime,
         type: 'sell',
-        source: 'trade',
+        source: trade.source ?? 'trade',
         quantity: trade.quantity,
         price: trade.price,
         proceeds: trade.proceeds,

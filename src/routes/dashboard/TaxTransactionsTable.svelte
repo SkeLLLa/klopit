@@ -6,7 +6,6 @@
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { TAX_RATE } from '../../core/types.js';
   import {
-    sumTradeTaxPreLcf,
     sumDividendTaxGross,
     sumDeductibleWithholding,
     sumDividendTaxToPay,
@@ -52,7 +51,7 @@
   const tradeTotalGainLoss = $derived(
     sellTrades.reduce((s, t) => s + t.gainLossPln, 0),
   );
-  const tradeTotalTax = $derived(sumTradeTaxPreLcf({ rows: sellTrades }));
+  const tradeTotalTax = $derived(tradeTotalGainLoss * TAX_RATE);
 
   // Corporate action totals
   const caTotalProceeds = $derived(
@@ -64,7 +63,7 @@
   const caTotalGainLoss = $derived(
     corporateActionTrades.reduce((s, t) => s + t.gainLossPln, 0),
   );
-  const caTotalTax = $derived(sumTradeTaxPreLcf({ rows: corporateActionTrades }));
+  const caTotalTax = $derived(caTotalGainLoss * TAX_RATE);
 
   // Dividend totals — cap deductible withholding per-dividend (art. 30a ust. 9)
   const divTotalAmount = $derived(
@@ -132,8 +131,8 @@
           </tr>
         </thead>
         <tbody>
-          {#each sellTrades as trade (trade.symbol + trade.datetime)}
-            {@const taxOnTrade = trade.taxPln}
+          {#each sellTrades as trade, i (trade.id ?? i)}
+            {@const taxOnTrade = trade.gainLossPln * TAX_RATE}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
             >
@@ -161,7 +160,7 @@
                 >{formatPlnValue(trade.gainLossPln)}</td
               >
               <td
-                class="px-3 py-2 text-right tabular-nums font-medium text-slate-900 dark:text-slate-100"
+                class="px-3 py-2 text-right tabular-nums font-medium {taxOnTrade >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400'}"
                 >{formatPlnValue(taxOnTrade)}</td
               >
               <td class="px-3 py-2">
@@ -193,7 +192,7 @@
               >{formatPlnValue(tradeTotalGainLoss)}</td
             >
             <td
-              class="px-3 py-2 text-right tabular-nums text-slate-900 dark:text-slate-100"
+              class="px-3 py-2 text-right tabular-nums {tradeTotalTax >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400'}"
               >{formatPlnValue(tradeTotalTax)}</td
             >
             <td class="px-3 py-2"></td>
@@ -228,8 +227,8 @@
           </tr>
         </thead>
         <tbody>
-          {#each corporateActionTrades as trade (trade.symbol + trade.datetime)}
-            {@const taxOnTrade = trade.taxPln}
+          {#each corporateActionTrades as trade, i (trade.id ?? i)}
+            {@const taxOnTrade = trade.gainLossPln * TAX_RATE}
             <tr
               class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
             >
@@ -253,7 +252,7 @@
                 >{formatPlnValue(trade.gainLossPln)}</td
               >
               <td
-                class="px-3 py-2 text-right tabular-nums font-medium text-slate-900 dark:text-slate-100"
+                class="px-3 py-2 text-right tabular-nums font-medium {taxOnTrade >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400'}"
                 >{formatPlnValue(taxOnTrade)}</td
               >
               <td class="px-3 py-2">
@@ -285,7 +284,7 @@
               >{formatPlnValue(caTotalGainLoss)}</td
             >
             <td
-              class="px-3 py-2 text-right tabular-nums text-slate-900 dark:text-slate-100"
+              class="px-3 py-2 text-right tabular-nums {caTotalTax >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400'}"
               >{formatPlnValue(caTotalTax)}</td
             >
             <td class="px-3 py-2"></td>
@@ -321,7 +320,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each dividendResults as div (div.symbol + div.date)}
+          {#each dividendResults as div, i (div.id ?? i)}
             {@const taxPl = div.taxPlnGross}
             {@const deductible = div.deductibleWithholdingPln}
             {@const taxToPay = div.taxToPayPln}

@@ -18,7 +18,8 @@
     '/about': { label: () => m.nav_about(), linkable: true },
     '/docs': { label: () => m.nav_docs(), linkable: false },
     '/docs/faq': { label: () => m.nav_faq(), linkable: true },
-    '/docs/interactive-brokers': { label: () => m.nav_docs_ib(), linkable: true },
+    '/docs/ibkr': { label: () => m.nav_docs_ib(), linkable: true },
+    '/docs/ibi': { label: () => m.nav_docs_ibi(), linkable: true },
   };
 
   interface Crumb {

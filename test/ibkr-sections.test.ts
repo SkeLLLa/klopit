@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { interactiveBrokersDefinition } from '../src/core/parsers/interactive-brokers.js';
+import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures', 'ib');
 
 function parseFixture(filename: string) {
   const text = readFileSync(join(fixturesDir, filename), 'utf-8');
-  const parser = interactiveBrokersDefinition.createParser();
+  const parser = ibkrDefinition.createParser();
   for (const line of text.split('\n')) {
     parser.feed({ line });
   }
