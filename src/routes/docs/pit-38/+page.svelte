@@ -64,8 +64,8 @@
     <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
       {m.page_pit38_sec1_title()}
     </h2>
-    <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
       {@html m.page_pit38_sec1_body()}
     </p>
   </section>
@@ -86,8 +86,8 @@
     <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
       {m.page_pit38_sec3_title({ year: yearStr })}
     </h2>
-    <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
       {@html m.page_pit38_sec3_body({ year: yearStr, deadline })}
     </p>
   </section>
@@ -124,8 +124,8 @@
     <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
       {m.page_pit38_sec6_title()}
     </h2>
-    <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
       {@html m.page_pit38_sec6_intro()}
     </p>
     <div class="grid gap-3 sm:grid-cols-2">
