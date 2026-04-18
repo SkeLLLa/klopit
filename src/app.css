@@ -35,3 +35,13 @@
   --font-sans: 'Onest', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
+
+:root {
+  color-scheme: light;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+
+:root.dark {
+  color-scheme: dark;
+  scrollbar-color: var(--color-slate-600) transparent;
+}
