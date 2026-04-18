@@ -1,6 +1,7 @@
 <script lang="ts">
   import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
+  import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { sessionState } from '$lib/state/session.svelte.js';
   import { db } from '$lib/db.js';
@@ -138,6 +139,12 @@
       class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
     >
       {m.tax_go_to_data()} <ArrowRight size={14} />
+    </a>
+    <a
+      href={localizeHref('/docs/pit-38')}
+      class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+    >
+      {m.nav_docs_pit38()} <ArrowRight size={12} />
     </a>
   </div>
 {:else if !hasData && !pit38}

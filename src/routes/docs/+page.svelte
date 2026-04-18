@@ -3,19 +3,20 @@
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { navigation } from '$lib/nav.js';
-  import { FileText, HelpCircle } from 'lucide-svelte';
+  import { BookOpen, FileText, HelpCircle } from 'lucide-svelte';
 
   $effect(() => {
     pageTitle.set(m.page_docs());
   });
 
-  const iconMap: Record<string, typeof FileText> = { FileText, HelpCircle };
+  const iconMap: Record<string, typeof FileText> = { BookOpen, FileText, HelpCircle };
 
   const docsSection = navigation
     .flatMap((s) => s.items)
     .find((item) => item.labelKey === 'nav_docs');
 
   const descriptionKeys: Record<string, () => string> = {
+    nav_docs_pit38: m.page_docs_desc_pit38,
     nav_docs_ib: m.page_docs_desc_ib,
     nav_docs_ibi: m.page_docs_desc_ibi,
     nav_faq: m.page_docs_desc_faq,

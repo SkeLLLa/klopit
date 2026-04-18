@@ -1,10 +1,28 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
+  import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import { navigation } from '$lib/nav.js';
+  import { FileText } from 'lucide-svelte';
 
   $effect(() => {
     pageTitle.set(m.page_docs_ibi());
   });
+
+  const iconMap: Record<string, typeof FileText> = { FileText };
+
+  const ibiSection = navigation
+    .flatMap((s) => s.items)
+    .flatMap((item) => item.children ?? [])
+    .find((item) => item.labelKey === 'nav_docs_ibi');
+
+  const descriptionKeys: Record<string, () => string> = {
+    nav_docs_ibi_espp: m.page_docs_desc_ibi_espp,
+  };
+
+  function t(key: string): string {
+    return (m as Record<string, (...args: unknown[]) => string>)[key]?.() ?? key;
+  }
 </script>
 
 <div class="space-y-6">
@@ -12,27 +30,34 @@
     {m.page_docs_ibi()}
   </h1>
 
-  <section class="space-y-3">
-    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
-      {m.docs_ibi_export_title()}
-    </h2>
-    <!-- eslint-disable svelte/no-at-html-tags -- i18n messages are compile-time constants from Paraglide, not user input -->
-    <ol class="list-decimal space-y-2 pl-6 text-slate-700 dark:text-slate-300">
-      <li>{@html m.docs_ibi_step1()}</li>
-      <li>{@html m.docs_ibi_step2()}</li>
-      <li>{@html m.docs_ibi_step3()}</li>
-      <li>{@html m.docs_ibi_step4()}</li>
-    </ol>
-    <!-- eslint-enable svelte/no-at-html-tags -->
-  </section>
+  <p class="text-slate-600 dark:text-slate-400">
+    {m.page_docs_desc_ibi()}
+  </p>
 
-  <section class="space-y-3">
-    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
-      {m.docs_ib_tips_title()}
-    </h2>
-    <ul class="list-disc space-y-2 pl-6 text-slate-700 dark:text-slate-300">
-      <li>{m.docs_ibi_tip1()}</li>
-      <li>{m.docs_ibi_tip2()}</li>
-    </ul>
-  </section>
+  <div class="grid gap-4 sm:grid-cols-2">
+    {#each ibiSection?.children ?? [] as child (child.labelKey)}
+      {@const Icon = iconMap[child.icon]}
+      <a
+        href={localizeHref(child.href)}
+        class="group flex gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-emerald-600 dark:hover:bg-emerald-500/10"
+      >
+        {#if Icon}
+          <Icon
+            size={24}
+            class="mt-0.5 shrink-0 text-slate-400 transition-colors group-hover:text-emerald-500 dark:text-slate-500"
+          />
+        {/if}
+        <div>
+          <h2 class="font-semibold text-slate-900 dark:text-slate-100">
+            {t(child.labelKey)}
+          </h2>
+          {#if descriptionKeys[child.labelKey]}
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {descriptionKeys[child.labelKey]()}
+            </p>
+          {/if}
+        </div>
+      </a>
+    {/each}
+  </div>
 </div>

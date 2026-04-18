@@ -76,7 +76,7 @@
 </svelte:head>
 
 <div class="space-y-4">
-  <h1 class="text-3xl font-bold">{m.nav_faq()}</h1>
+  <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">{m.nav_faq()}</h1>
 
   <!-- eslint-disable svelte/no-at-html-tags -- i18n messages are compile-time constants from Paraglide, not user input -->
   {#each faqs as { question, answer }, i (i)}

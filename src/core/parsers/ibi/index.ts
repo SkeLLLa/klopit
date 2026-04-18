@@ -202,7 +202,7 @@ function buildStatement(args: {
 export const ibiDefinition: PdfParserDefinition = {
   kind: 'pdf',
   brokerId: 'ibi' as BrokerId,
-  brokerName: 'IBI Capital (ESPP)',
+  brokerName: 'IBI Capital',
   fileExtensions: ['.pdf'],
   async parse(args: { buffer: ArrayBuffer }): Promise<ParsedStatement> {
     const text = await extractPdfText({ buffer: args.buffer });

@@ -20,6 +20,7 @@
     '/docs/faq': { label: () => m.nav_faq(), linkable: true },
     '/docs/ibkr': { label: () => m.nav_docs_ib(), linkable: true },
     '/docs/ibi': { label: () => m.nav_docs_ibi(), linkable: true },
+    '/docs/ibi/espp': { label: () => m.nav_docs_ibi_espp(), linkable: true },
   };
 
   interface Crumb {

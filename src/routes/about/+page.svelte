@@ -66,13 +66,27 @@
       </p>
     </div>
 
-    <ul class="mt-4 space-y-1">
-      {#each KLO_ACRONYMS as acronym (acronym)}
-        <li class="text-sm text-slate-500 dark:text-slate-400">
-          <span class="font-semibold text-emerald-600 dark:text-emerald-400">klo</span>PIT &mdash; {acronym}
-        </li>
-      {/each}
-    </ul>
+    <details class="group mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+      <summary class="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <span class="inline-block text-emerald-600 transition group-open:rotate-90 dark:text-emerald-400">&rsaquo;</span>
+        {m.about_acronyms_question()}
+      </summary>
+      <ul class="mt-3 grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
+        {#each KLO_ACRONYMS as acronym (acronym)}
+          <li class="text-xs text-slate-500 dark:text-slate-400">
+            <span class="font-semibold text-emerald-600 dark:text-emerald-400">klo</span>PIT &mdash; {acronym}
+          </li>
+        {/each}
+      </ul>
+      <a
+        href={githubIssuesLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-3 inline-block text-xs font-semibold text-emerald-700 underline hover:opacity-80 dark:text-emerald-400"
+      >
+        {m.about_acronyms_submit()}
+      </a>
+    </details>
   </div>
 
   <section class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/40">

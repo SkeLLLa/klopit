@@ -1,5 +1,6 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
+  import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { ArrowRight, BarChart3, FileText, Lock, Table, Upload } from 'lucide-svelte';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
@@ -73,13 +74,14 @@
       {m.home_cta_primary()}
       <ArrowRight size={12} />
     </a>
-    <a
-      href="/dashboard"
-      class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-800 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:border-emerald-500/45"
-    >
-      {m.home_cta_demo()}
-    </a>
     <span class="text-[11px] text-slate-500 dark:text-slate-400">{deadlineLine}</span>
+    <a
+      href={localizeHref('/docs/pit-38')}
+      class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+    >
+      {m.nav_docs_pit38()}
+      <ArrowRight size={11} />
+    </a>
   </div>
 
   <p class="mb-5 text-[11px] italic text-slate-400 dark:text-slate-500">

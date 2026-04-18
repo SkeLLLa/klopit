@@ -21,6 +21,11 @@ export const navigation: NavSection[] = [
         icon: 'FolderOpen',
         children: [
           {
+            labelKey: 'nav_docs_pit38',
+            href: '/docs/pit-38',
+            icon: 'BookOpen',
+          },
+          {
             labelKey: 'nav_docs_ib',
             href: '/docs/ibkr',
             icon: 'FileText',
@@ -29,6 +34,13 @@ export const navigation: NavSection[] = [
             labelKey: 'nav_docs_ibi',
             href: '/docs/ibi',
             icon: 'FileText',
+            children: [
+              {
+                labelKey: 'nav_docs_ibi_espp',
+                href: '/docs/ibi/espp',
+                icon: 'FileText',
+              },
+            ],
           },
           {
             labelKey: 'nav_faq',
