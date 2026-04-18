@@ -1,3 +1,14 @@
+## [1.11.0](https://github.com/SkeLLLa/klopit/compare/v1.10.0...v1.11.0) (2026-04-18)
+
+### 🛠 Fixes
+
+* ibi refactoring and pit 38 general info ([e09607d](https://github.com/SkeLLLa/klopit/commit/e09607de6017af7b2b8c14979420126ec005bcfc))
+* lint ([bf26349](https://github.com/SkeLLLa/klopit/commit/bf2634991e592c881d13aa03f9b5f3458659f090))
+
+### 🚀 Features
+
+* SEO/home improvements and IBI broker support ([a9b9511](https://github.com/SkeLLLa/klopit/commit/a9b9511e14f717eb952b966d1f01a758c0cb3c1b))
+
 ## [1.10.0](https://github.com/SkeLLLa/klopit/compare/v1.9.0...v1.10.0) (2026-04-16)
 
 ### 🚀 Features
