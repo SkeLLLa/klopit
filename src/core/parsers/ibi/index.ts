@@ -1,8 +1,8 @@
-import type {
+import {
   BrokerId,
-  ParsedStatement,
-  ParseWarning,
-  Trade,
+  type ParsedStatement,
+  type ParseWarning,
+  type Trade,
 } from '../../types.js';
 import type { PdfParserDefinition } from '../types.js';
 import { extractPdfText } from './pdf-extract.js';
@@ -203,7 +203,7 @@ function buildStatement(args: {
 
 export const ibiDefinition: PdfParserDefinition = {
   kind: 'pdf',
-  brokerId: 'ibi' as BrokerId,
+  brokerId: BrokerId.IbiCapital,
   brokerName: 'IBI Capital',
   fileExtensions: ['.pdf'],
   async parse(args: { buffer: ArrayBuffer }): Promise<ParsedStatement> {
