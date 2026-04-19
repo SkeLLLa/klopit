@@ -100,4 +100,3 @@ A `.mcp.json` file is included at the repository root. It configures the [**Svel
 
 - Verify all generated tax logic against the legal references in the table above — AI can be wrong about specific Polish tax rules.
 - Run `pnpm test` and `pnpm svelte-check` on the final output; do not submit AI-generated code that has not been validated.
-- Do not include co-author footers (e.g. `Co-authored-by: Claude`) in commit messages — they break the commit linter.
