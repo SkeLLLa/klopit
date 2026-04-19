@@ -687,3 +687,72 @@ void describe('calculateCapitalGains', () => {
     );
   });
 });
+
+void describe('calculateCapitalGains — cross-year FIFO', () => {
+  /**
+   * Buy in tax year N-1 (2023), sell in tax year N (2024).
+   * The buy trade's datetime falls before taxPeriod.from, so it is excluded
+   * from results but must still seed the FIFO queue with the correct PLN cost
+   * basis. The sell result must reflect that prior-year cost.
+   *
+   * Buy:  100 shares, price 150 USD, rate 4.0 PLN/USD, no commission → costPln = 60 000
+   * Sell: 100 shares, price 180 USD, rate 4.2 PLN/USD, no commission
+   *       proceedsPln = 100 * 180 * 4.2 = 75 600
+   *       gainLossPln = 75 600 - 60 000 = 15 600
+   *       taxPln      = 15 600 * 0.19   =  2 964
+   */
+  void it('sell in year N uses cost basis from buy in year N-1', () => {
+    const buyPriorYear = makeTrade({
+      datetime: new Date(2023, 8, 15), // Sep 2023 — before taxPeriod2024.from
+      quantity: 100,
+      price: 150,
+      proceeds: 0,
+      type: 'buy',
+      commission: 0,
+      exchangeRate: 4.0,
+      commissionExchangeRate: 4.0,
+    });
+    const sellCurrentYear = makeTrade({
+      datetime: new Date(2024, 5, 20), // Jun 2024 — inside taxPeriod2024
+      quantity: 100,
+      price: 180,
+      proceeds: 18000,
+      type: 'sell',
+      commission: 0,
+      exchangeRate: 4.2,
+      commissionExchangeRate: 4.2,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buyPriorYear, sellCurrentYear],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    // Only the sell falls within taxPeriod2024 → one result
+    assert.equal(result.length, 1);
+    assert.equal(result[0].type, 'sell');
+
+    // proceedsPln = 18000 * 4.2 = 75 600
+    assert.ok(
+      Math.abs(result[0].proceedsPln - 75600) < 0.01,
+      `proceedsPln: ${String(result[0].proceedsPln)}`,
+    );
+    // costPln = 100 * 150 * 4.0 = 60 000 (prior-year FIFO lot)
+    assert.ok(
+      Math.abs(result[0].costPln - 60000) < 0.01,
+      `costPln: ${String(result[0].costPln)}`,
+    );
+    // gainLossPln = 75 600 − 60 000 = 15 600
+    assert.ok(
+      Math.abs(result[0].gainLossPln - 15600) < 0.01,
+      `gainLossPln: ${String(result[0].gainLossPln)}`,
+    );
+    // taxPln = 15 600 * 0.19 = 2 964
+    assert.ok(
+      Math.abs(result[0].taxPln - 2964) < 0.01,
+      `taxPln: ${String(result[0].taxPln)}`,
+    );
+  });
+});
