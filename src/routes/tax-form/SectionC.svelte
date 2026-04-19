@@ -8,7 +8,11 @@
 </script>
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-  <SectionHeader title={m.tax_section_c()} />
+  <SectionHeader
+    title={m.tax_section_c()}
+    seeTransactionsHref="/dashboard#trades"
+    seeTransactionsLabel={m.taxform_see_trades()}
+  />
   <div class="space-y-0.5">
     <FormField label={m.tax_c_pit8c_proceeds()} poz={20} value={pit38[20]} />
     <FormField label={m.tax_c_pit8c_costs()} poz={21} value={pit38[21]} />

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle } from 'lucide-svelte';
+  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
@@ -202,6 +202,22 @@
         <RefreshCw size={14} />
         {m.tax_recalculate()}
       </button>
+    </div>
+
+    <!-- Transparency banner -->
+    <div
+      class="flex items-center justify-between gap-3 rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm dark:border-blue-500/40 dark:bg-blue-500/10"
+    >
+      <div class="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+        <Info size={16} class="shrink-0" />
+        <span>{m.taxform_transparency_banner_body()}</span>
+      </div>
+      <a
+        href={localizeHref('/dashboard')}
+        class="shrink-0 text-xs font-medium text-blue-700 hover:underline dark:text-blue-300"
+      >
+        {m.taxform_transparency_banner_cta()} <ArrowRight size={12} class="inline" />
+      </a>
     </div>
 
     <!-- OPP Donation -->
