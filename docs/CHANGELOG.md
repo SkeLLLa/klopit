@@ -1,3 +1,10 @@
+## [1.13.2](https://github.com/SkeLLLa/klopit/compare/v1.13.1...v1.13.2) (2026-04-19)
+
+### 🛠 Fixes
+
+* **ui:** descriptions and i18n ([ae263d7](https://github.com/SkeLLLa/klopit/commit/ae263d70abbffda770e1a02d9e10b9b61bfd0e41))
+* **ui:** page descriptions and i18n ([63f5535](https://github.com/SkeLLLa/klopit/commit/63f5535eb409757b45169851310740f4ed4090b6))
+
 ## [1.13.1](https://github.com/SkeLLLa/klopit/compare/v1.13.0...v1.13.1) (2026-04-19)
 
 ### 🛠 Fixes

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json.schemastore.org/package.json",
   "name": "klopit",
-  "version": "1.13.1",
+  "version": "1.13.2",
   "private": true,
   "description": "Polish PIT tax calculator from brokerage income.",
   "keywords": [
