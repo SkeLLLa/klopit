@@ -1,3 +1,9 @@
+## [1.13.0](https://github.com/SkeLLLa/klopit/compare/v1.12.0...v1.13.0) (2026-04-19)
+
+### 🚀 Features
+
+* **ibi:** add RSU statement parser and user guide ([644b549](https://github.com/SkeLLLa/klopit/commit/644b54998da05870594164fec6c18a9814440b4a))
+
 ## [1.12.0](https://github.com/SkeLLLa/klopit/compare/v1.11.1...v1.12.0) (2026-04-19)
 
 ### 🛠 Fixes
