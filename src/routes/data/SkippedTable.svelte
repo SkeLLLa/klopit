@@ -2,6 +2,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { db, type SessionRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { kindLabel } from '$lib/utils/skipped-row.js';
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import type { ImportWarning, SkippedRow } from '../../core/types.js';
   import RawRowModal from './RawRowModal.svelte';
@@ -53,17 +54,6 @@
 
   const hasInMemoryRows = $derived(inMemoryRows.length > 0);
   let selectedRow: SkippedTableRow | null = $state(null);
-
-  function kindLabel(kind: SkippedRow['kind']): string {
-    switch (kind) {
-      case 'known-unsupported':
-        return m.data_skipped_kind_known_unsupported();
-      case 'unknown':
-        return m.data_skipped_kind_unknown();
-      case 'parse-failure':
-        return m.data_skipped_kind_parse_failure();
-    }
-  }
 
   function formatValue(value?: string): string {
     return value && value.trim().length > 0 ? value : '—';
