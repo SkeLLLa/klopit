@@ -23,7 +23,7 @@
   import CarryInTable from './CarryInTable.svelte';
   import CreditInterestTable from './CreditInterestTable.svelte';
   import CountryMappingTable from './CountryMappingTable.svelte';
-  import DeleteConfirm from './DeleteConfirm.svelte';
+  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   pageTitle.set(m.page_data());

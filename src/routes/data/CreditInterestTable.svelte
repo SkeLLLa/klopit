@@ -9,7 +9,7 @@
     deleteCreditInterest,
   } from '$lib/services/data.js';
   import { formatDate, toDateInput } from '$lib/utils/format-date.js';
-  import DeleteConfirm from './DeleteConfirm.svelte';
+  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   let { sessionId }: { sessionId: string } = $props();
