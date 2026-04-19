@@ -75,17 +75,17 @@
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!symbol.trim()) e.symbol = 'Required';
+    if (!symbol.trim()) e.symbol = m.data_validation_required();
     if (!datetimeText.trim()) {
-      e.datetime = 'Required';
+      e.datetime = m.data_validation_required();
     } else if (!parsedDatetime) {
       e.datetime = datetimePlaceholder();
     }
     const qty = parseFloat(quantity);
-    if (isNaN(qty) || qty <= 0) e.quantity = 'Must be > 0';
+    if (isNaN(qty) || qty <= 0) e.quantity = m.data_validation_must_be_positive();
     const p = parseFloat(price);
-    if (isNaN(p) || p < 0) e.price = 'Must be >= 0';
-    if (!currency.trim()) e.currency = 'Required';
+    if (isNaN(p) || p < 0) e.price = m.data_validation_must_be_non_negative();
+    if (!currency.trim()) e.currency = m.data_validation_required();
     errors = e;
     return Object.keys(e).length === 0;
   }
