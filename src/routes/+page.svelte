@@ -2,7 +2,16 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight, BarChart3, Eye, FileText, Lock, Table, Upload } from 'lucide-svelte';
+  import {
+    ArrowRight,
+    BarChart3,
+    CalendarClock,
+    Eye,
+    FileText,
+    Lock,
+    Table,
+    Upload,
+  } from 'lucide-svelte';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
   import WhyPillars from '$lib/components/home/WhyPillars.svelte';
   import HowItWorks from '$lib/components/home/HowItWorks.svelte';
@@ -61,39 +70,87 @@
 </script>
 
 <div>
-  <h1 class="mb-3 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+  <h1 class="mb-1 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
     {m.home_welcome()}
   </h1>
+  <p
+    class="mb-4 border-r-2 border-emerald-300/60 pr-3 text-right text-[11px] italic leading-relaxed text-slate-400 dark:border-emerald-500/30 dark:text-slate-500"
+  >
+    {m.home_name_origin()}
+  </p>
   <p class="mb-5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
     {m.home_description()}
   </p>
 
   <WhyPillars />
 
-  <div class="mb-5 flex flex-wrap items-center gap-2">
-    <a
-      href="/data"
-      class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-    >
-      {m.home_cta_primary()}
-      <ArrowRight size={12} />
-    </a>
-    <span class="text-[11px] text-slate-500 dark:text-slate-400">{deadlineLine}</span>
-    <a
-      href={localizeHref('/docs/pit-38')}
-      class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400"
-    >
-      {m.nav_docs_pit38()}
-      <ArrowRight size={11} />
-    </a>
-  </div>
+  <section
+    aria-labelledby="home-cta-heading"
+    class="relative mb-6 overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/60 p-6 sm:p-7 dark:border-emerald-500/30 dark:from-emerald-500/15 dark:via-slate-900/30 dark:to-emerald-400/10"
+  >
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute -top-24 -right-20 h-56 w-56 rounded-full bg-emerald-300/40 blur-3xl dark:bg-emerald-500/20"
+    ></div>
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute -bottom-28 -left-16 h-56 w-56 rounded-full bg-emerald-200/50 blur-3xl dark:bg-emerald-400/10"
+    ></div>
 
-  <p class="mb-5 text-[11px] italic text-slate-400 dark:text-slate-500">
-    {m.home_name_origin()}
-  </p>
+    <div
+      class="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8"
+    >
+      <div class="max-w-xl">
+        <span
+          class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-300/70 bg-white/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+        >
+          <CalendarClock size={11} />
+          {deadlineLine}
+        </span>
+        <h2
+          id="home-cta-heading"
+          class="mb-2 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100"
+        >
+          {m.home_cta_heading()}
+        </h2>
+        <p class="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+          {m.home_cta()}
+        </p>
+      </div>
 
-  <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-    {#each featureCards as card (card.title)}
+      <div class="flex flex-col items-start gap-2 sm:items-end">
+        <a
+          href="/data"
+          class="group inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600 hover:shadow-emerald-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:shadow-emerald-500/10 dark:focus-visible:ring-offset-slate-900"
+        >
+          {m.home_cta_primary()}
+          <ArrowRight
+            size={16}
+            class="transition-transform group-hover:translate-x-0.5"
+          />
+        </a>
+        <a
+          href={localizeHref('/docs/pit-38')}
+          class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+        >
+          {m.nav_docs_pit38()}
+          <ArrowRight size={11} />
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <HowItWorks />
+
+  <section aria-labelledby="home-features" class="mb-5">
+    <h2
+      id="home-features"
+      class="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100"
+    >
+      {m.home_features_title()}
+    </h2>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {#each featureCards as card (card.title)}
       {#if card.href !== null}
         <a
           href={card.href}
@@ -138,16 +195,9 @@
           </p>
         </div>
       {/if}
-    {/each}
-  </div>
-
-  <HowItWorks />
+      {/each}
+    </div>
+  </section>
 
   <FaqTeaser />
-
-  <div
-    class="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3.5 dark:border-emerald-500/25 dark:bg-emerald-500/12"
-  >
-    <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400">{m.home_cta()}</span>
-  </div>
 </div>
