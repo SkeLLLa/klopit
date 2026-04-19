@@ -36,37 +36,19 @@
     oncancel: () => void;
   } = $props();
 
-  let symbol = $state('');
-  let isin = $state('');
-  let datetimeText = $state('');
-  let parsedDatetime: Date | null = $state(null);
-  let pickerValue = $state('');
-  let type: 'buy' | 'sell' = $state('buy');
-  let quantity = $state('');
-  let price = $state('');
-  let proceeds = $state('');
-  let commission = $state('0');
-  let commissionCurrency = $state('');
-  let currency = $state('USD');
+  let symbol = $state(initial?.symbol ?? '');
+  let isin = $state(initial?.isin ?? '');
+  let datetimeText = $state(initial?.datetime ? formatDatetime(initial.datetime) : '');
+  let parsedDatetime: Date | null = $state(initial?.datetime ?? null);
+  let pickerValue = $state(initial?.datetime ? dateToPickerValue(initial.datetime) : '');
+  let type: 'buy' | 'sell' = $state(initial?.type ?? 'buy');
+  let quantity = $state(initial?.quantity?.toString() ?? '');
+  let price = $state(initial?.price?.toString() ?? '');
+  let proceeds = $state(initial?.proceeds?.toString() ?? '');
+  let commission = $state(initial?.commission?.toString() ?? '0');
+  let commissionCurrency = $state(initial?.commissionCurrency ?? '');
+  let currency = $state(initial?.currency ?? 'USD');
   let errors: Record<string, string> = $state({});
-
-  // Populate from initial prop
-  $effect(() => {
-    if (initial) {
-      symbol = initial.symbol ?? '';
-      isin = initial.isin ?? '';
-      datetimeText = initial.datetime ? formatDatetime(initial.datetime) : '';
-      parsedDatetime = initial.datetime ?? null;
-      pickerValue = initial.datetime ? dateToPickerValue(initial.datetime) : '';
-      type = initial.type ?? 'buy';
-      quantity = initial.quantity?.toString() ?? '';
-      price = initial.price?.toString() ?? '';
-      proceeds = initial.proceeds?.toString() ?? '';
-      commission = initial.commission?.toString() ?? '0';
-      commissionCurrency = initial.commissionCurrency ?? '';
-      currency = initial.currency ?? 'USD';
-    }
-  });
 
   // Anchor the picker view to the session year when no date is set yet.
   // This only seeds svelty-picker's internal value; the text input stays
