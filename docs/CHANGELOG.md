@@ -1,3 +1,55 @@
+## [1.12.0](https://github.com/SkeLLLa/klopit/compare/v1.11.1...v1.12.0) (2026-04-19)
+
+### 🛠 Fixes
+
+* lint ([29fb71b](https://github.com/SkeLLLa/klopit/commit/29fb71b628d683788ecf568298191155bbe94a9f))
+* svelte warnings on init ([bea031c](https://github.com/SkeLLLa/klopit/commit/bea031c49d717a9c06a7315b007d044a1868f73c))
+* **country-mapping:** satisfy Dexie IndexableTypeArray return type for empty fallback ([6696afa](https://github.com/SkeLLLa/klopit/commit/6696afa105aee7326c2ea6ebb5dc270243246e8e))
+* **data:** use interface for TabCounts to satisfy ESLint ([13e2b5d](https://github.com/SkeLLLa/klopit/commit/13e2b5dd0ef69750b1a69e636117a75c893a51b4))
+* **i18n:** update PIT-38 form version from (17) to (18) ([94c2d56](https://github.com/SkeLLLa/klopit/commit/94c2d560009774dd37ce90013da755ba841ff1d7))
+* **i18n:** use imperative verb in UK transparency banner CTA ([bbebf11](https://github.com/SkeLLLa/klopit/commit/bbebf11367e4560268259457eb136d68c9d912be))
+* **ibi:** flag missing Total Fees instead of silently defaulting to 0 ([7a42142](https://github.com/SkeLLLa/klopit/commit/7a4214234da205c3c3330a52e8d6d2e111757b07))
+* **nbp:** correct TimeoutError handling, native Error.cause, export timeout constant ([12b2c3c](https://github.com/SkeLLLa/klopit/commit/12b2c3cc12e14737cf2d4a02f9d6edffbcd583d2))
+
+### 🚀 Features
+
+* **dashboard:** add [#trades](https://github.com/SkeLLLa/klopit/issues/trades)/[#dividends](https://github.com/SkeLLLa/klopit/issues/dividends) anchors and link W-8BEN warning ([ea7c371](https://github.com/SkeLLLa/klopit/commit/ea7c371ab299478621d4852724709b66267ff986))
+* **dividends:** add manual entry form component ([f45ab0d](https://github.com/SkeLLLa/klopit/commit/f45ab0d9d02d8db4841c196db6b306df02265e1b))
+* **dividends:** add service layer for manual CRUD ([a809b09](https://github.com/SkeLLLa/klopit/commit/a809b099356bdb5b5f91b13d6539869f21154761))
+* **dividends:** wire DividendForm into DividendsTable (add/edit) ([b8dfc41](https://github.com/SkeLLLa/klopit/commit/b8dfc4168810b167e4b606a44cced4e7ec2282de))
+* **docs:** add /docs/ibkr/w8ben page with nav and breadcrumb ([3e2d5a6](https://github.com/SkeLLLa/klopit/commit/3e2d5a6a15530cf5d0d024e464abeb3f165fba73))
+* **docs:** link W-8BEN on /docs/ibkr and note upcoming brokers ([a7b0474](https://github.com/SkeLLLa/klopit/commit/a7b0474767962d38cb855b6ff99e2d24961712f6))
+* **home:** add transparency feature card ([8858d02](https://github.com/SkeLLLa/klopit/commit/8858d0289e502adb3369992ab72d4c4c784d95f7))
+* **i18n:** add keys for transparency, multi-broker, and W-8BEN doc ([33a7c9c](https://github.com/SkeLLLa/klopit/commit/33a7c9ce933e2d983862d395781e30a59acc33c3))
+* **nbp:** add 10s fetch timeout with typed NbpFetchError ([b61e6c1](https://github.com/SkeLLLa/klopit/commit/b61e6c1a4db6a2a7583e7ca89d5effc50aa21f8c))
+* **parsers:** add locale-aware parseDecimalLocale, document IBKR-specific assumptions ([b0f3e6e](https://github.com/SkeLLLa/klopit/commit/b0f3e6e65bfc242453f4eddfdb323c0b7ddc2f7a))
+* **tax-form:** add transparency banner and section-to-dashboard links ([2e23638](https://github.com/SkeLLLa/klopit/commit/2e23638f78acd479a08c807f94651648768b03f5))
+* **trade-form:** translate validation error strings ([6eb313b](https://github.com/SkeLLLa/klopit/commit/6eb313bdbcb7d9545b2ebacbd483bad9957bc5b0))
+
+### 📔 Docs
+
+* highlight transparency, W-8BEN, and parser plugin architecture ([001156f](https://github.com/SkeLLLa/klopit/commit/001156f7a43f3f72818571a3bd4003a7d7a359f2))
+* update ([7517ce4](https://github.com/SkeLLLa/klopit/commit/7517ce4d5b1c673028948bdc17bf0093b3ca1a05))
+
+### ✂️ Refactor
+
+* **data:** remove unsafe m-as-Record casts, use typed Paraglide calls directly ([86dd21d](https://github.com/SkeLLLa/klopit/commit/86dd21d5d9f2fba8635f6d82d427c9cdee90edfe))
+* **import:** share import loop between dialog and panel ([94c6720](https://github.com/SkeLLLa/klopit/commit/94c67203838ae51c8d49626bb5f41288657c4f6a))
+* **parsers:** centralize ALL_PARSERS barrel, registry consumes list ([ccf591f](https://github.com/SkeLLLa/klopit/commit/ccf591ff55e46361aff7aed83d700579a702efb9))
+* **parsers:** drop `as BrokerId` casts using typed constants ([946b93f](https://github.com/SkeLLLa/klopit/commit/946b93fbbfee61914e21c11855d196cd50d02bc7))
+* **prior-losses:** reuse DeleteConfirm dialog for consistent a11y ([702a173](https://github.com/SkeLLLa/klopit/commit/702a17375859dd7b88439ae1ee1b7c3ff43a6e5f))
+* **routes:** drop redundant \$effect around pageTitle.set ([7fdc3fe](https://github.com/SkeLLLa/klopit/commit/7fdc3fea2433d6e75211a1201358a53009355ee1))
+* **routes:** extract useSessionBootstrap, remove 4-way duplication ([03c12bd](https://github.com/SkeLLLa/klopit/commit/03c12bd8d9882058614fa4a1a6b3f6b6c23c198d))
+* **skipped-rows:** extract kindLabel to shared util ([b8246c0](https://github.com/SkeLLLa/klopit/commit/b8246c08ec60a79cc2b485296376abb4c07aea7d))
+* **TradeForm:** init local state from props once; drop fragile sync $effect ([8ea1fae](https://github.com/SkeLLLa/klopit/commit/8ea1faee921442af54ccfa0845677ed41b21325c))
+
+### ⏩ Performance
+
+* **country-mapping:** use compound-index uniqueKeys instead of full array scan ([9b90cc0](https://github.com/SkeLLLa/klopit/commit/9b90cc0d148c08f44a4fa6692401f0f5c0e312ec))
+* **dashboard:** pre-map timestamps before sort to avoid per-compare Date alloc ([fb0b670](https://github.com/SkeLLLa/klopit/commit/fb0b670b3955dde6cd5f7a9c7ab3748a6ea831d4))
+* **data:** merge 6 count queries into one Dexie transaction ([91af4ad](https://github.com/SkeLLLa/klopit/commit/91af4ada4691a9f9d51f45e29feac024131cee1a))
+* **opp-donation:** debounce KRS/details persistence to 400ms ([7f5a01a](https://github.com/SkeLLLa/klopit/commit/7f5a01ac0b3cf2964eeb7cbddcc9fe2848fe0dc6))
+
 ## [1.11.1](https://github.com/SkeLLLa/klopit/compare/v1.11.0...v1.11.1) (2026-04-18)
 
 ### 🛠 Fixes
