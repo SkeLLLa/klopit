@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseLongDate, parseAmount } from '../src/core/parsers/ibi/index.js';
+import { parseAmount, parseLongDate } from '../src/core/parsers/ibi/index.js';
 
 void describe('parseLongDate', () => {
   void it('parses "August 31, 2025" (IBI long date format)', () => {
