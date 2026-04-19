@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it, mock } from 'node:test';
-import { fetchRate, fetchRates } from '../src/core/nbp.js';
+import { fetchRate, fetchRates, NbpFetchError } from '../src/core/nbp.js';
 
 function mockResponse(body: unknown, status = 200): Response {
   return {
@@ -194,5 +194,34 @@ void describe('nbp', () => {
       const url = fetchMock.mock.calls[0]?.arguments[0] as string;
       assert.ok(url.includes('/EUR/'));
     });
+  });
+});
+
+void describe('NbpFetchError', () => {
+  let savedFetch: typeof globalThis.fetch;
+
+  before(() => {
+    savedFetch = globalThis.fetch;
+  });
+
+  after(() => {
+    globalThis.fetch = savedFetch;
+  });
+
+  void it('wraps AbortError as NbpFetchError', async () => {
+    globalThis.fetch = (() =>
+      Promise.reject(
+        new DOMException('aborted', 'AbortError'),
+      )) as typeof fetch;
+
+    await assert.rejects(
+      fetchRates({
+        currency: 'USD',
+        startDate: '2024-01-02',
+        endDate: '2024-01-02',
+      }),
+      (err: unknown) =>
+        err instanceof NbpFetchError && err.message.includes('timed out'),
+    );
   });
 });
