@@ -23,23 +23,21 @@
 
   const TAX_PCT = TAX_RATE * 100;
 
-  const sellTrades = $derived(
-    tradeResults
+  const sellTrades = $derived.by(() => {
+    const out = tradeResults
       .filter((t) => t.type === 'sell' && t.source !== 'corporate-action')
-      .sort(
-        (a, b) =>
-          new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
-      ),
-  );
+      .map((t) => ({ trade: t, ts: t.datetime.getTime() }));
+    out.sort((a, b) => a.ts - b.ts);
+    return out.map((x) => x.trade);
+  });
 
-  const corporateActionTrades = $derived(
-    tradeResults
+  const corporateActionTrades = $derived.by(() => {
+    const out = tradeResults
       .filter((t) => t.type === 'sell' && t.source === 'corporate-action')
-      .sort(
-        (a, b) =>
-          new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
-      ),
-  );
+      .map((t) => ({ trade: t, ts: t.datetime.getTime() }));
+    out.sort((a, b) => a.ts - b.ts);
+    return out.map((x) => x.trade);
+  });
 
   // Capital gains totals
   const tradeTotalProceeds = $derived(
