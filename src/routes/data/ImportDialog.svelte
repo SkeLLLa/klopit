@@ -3,7 +3,7 @@
   import { importFiles } from '$lib/services/import-files.js';
   import type { ImportFileResult } from '$lib/services/import-files.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
-  import type { BrokerId } from '../../core/types.js';
+  import { BrokerId } from '../../core/types.js';
 
   let {
     sessionId,
@@ -18,7 +18,7 @@
   const brokers = supportedBrokers();
 
   let dialogEl: HTMLDialogElement | undefined = $state(undefined);
-  let selectedBroker: BrokerId = $state(brokers[0]?.id ?? ('ibkr' as BrokerId));
+  let selectedBroker: BrokerId = $state(brokers[0]?.id ?? BrokerId.InteractiveBrokers);
   let files: FileList | null = $state(null);
   const acceptedExtensions = $derived(
     brokers.find((b) => b.id === selectedBroker)?.fileExtensions.join(',') ?? '.csv',

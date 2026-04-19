@@ -1,4 +1,4 @@
-import type { BrokerId } from '../../types.js';
+import { BrokerId } from '../../types.js';
 import { CsvStatementParser } from '../shared/csv-parser.js';
 import {
   cleanField,
@@ -635,7 +635,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
 /** Parser definition for Interactive Brokers — the only public export */
 export const ibkrDefinition: CsvParserDefinition = {
   kind: 'csv',
-  brokerId: 'ibkr' as BrokerId,
+  brokerId: BrokerId.InteractiveBrokers,
   brokerName: 'Interactive Brokers',
   fileExtensions: ['.csv'],
   createParser(): StatementParser {
