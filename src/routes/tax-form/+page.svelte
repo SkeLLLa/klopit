@@ -21,9 +21,7 @@
   import SectionG from './SectionG.svelte';
   import SectionH from './SectionH.svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_tax_form());
-  });
+  pageTitle.set(m.page_tax_form());
 
   // --- Bootstrap session state (in case user navigates here directly) ---
   const bootstrap = useSessionBootstrap();

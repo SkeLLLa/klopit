@@ -21,9 +21,7 @@
     clearSessionResults,
   } from '$lib/services/tax.js';
 
-  $effect(() => {
-    pageTitle.set(m.page_dashboard());
-  });
+  pageTitle.set(m.page_dashboard());
 
   // --- Bootstrap session state ---
   const bootstrap = useSessionBootstrap();

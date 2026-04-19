@@ -13,9 +13,7 @@
 
   const locale = $derived(getLocale());
 
-  $effect(() => {
-    pageTitle.set(m.page_support());
-  });
+  pageTitle.set(m.page_support());
 </script>
 
 <div class="space-y-8">

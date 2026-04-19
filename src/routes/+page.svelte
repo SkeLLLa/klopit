@@ -8,9 +8,7 @@
   import HowItWorks from '$lib/components/home/HowItWorks.svelte';
   import FaqTeaser from '$lib/components/home/FaqTeaser.svelte';
 
-  $effect(() => {
-    pageTitle.set(m.nav_home());
-  });
+  pageTitle.set(m.nav_home());
 
   const filingYear = new Date().getFullYear() - 1;
   const deadline = `30.04.${filingYear + 1}`;

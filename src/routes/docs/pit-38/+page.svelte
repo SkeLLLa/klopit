@@ -4,9 +4,7 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { ArrowRight, ExternalLink } from 'lucide-svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_pit38());
-  });
+  pageTitle.set(m.page_pit38());
 
   const filingYear = new Date().getFullYear() - 1;
   const deadline = `30.04.${filingYear + 1}`;

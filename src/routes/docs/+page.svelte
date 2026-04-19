@@ -5,9 +5,7 @@
   import { navigation } from '$lib/nav.js';
   import { BookOpen, FileText, HelpCircle } from 'lucide-svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_docs());
-  });
+  pageTitle.set(m.page_docs());
 
   const iconMap: Record<string, typeof FileText> = { BookOpen, FileText, HelpCircle };
 
