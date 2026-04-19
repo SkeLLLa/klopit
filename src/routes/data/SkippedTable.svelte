@@ -8,15 +8,6 @@
 
   let { sessionId }: { sessionId: string } = $props();
 
-  const messages = m as unknown as Record<
-    string,
-    (inputs?: Record<string, string>) => string
-  >;
-  function t(key: string, fallback: string, inputs?: Record<string, string>): string {
-    const fn = messages[key];
-    return typeof fn === 'function' ? fn(inputs ?? {}) : fallback;
-  }
-
   type SessionWithImportWarnings = SessionRecord & {
     importWarnings?: ImportWarning[];
   };
@@ -66,11 +57,11 @@
   function kindLabel(kind: SkippedRow['kind']): string {
     switch (kind) {
       case 'known-unsupported':
-        return t('data_skipped_kind_known_unsupported', 'Known unsupported');
+        return m.data_skipped_kind_known_unsupported();
       case 'unknown':
-        return t('data_skipped_kind_unknown', 'Unknown');
+        return m.data_skipped_kind_unknown();
       case 'parse-failure':
-        return t('data_skipped_kind_parse_failure', 'Parse failure');
+        return m.data_skipped_kind_parse_failure();
     }
   }
 
@@ -88,10 +79,7 @@
   <div class="space-y-3">
     {#if !hasInMemoryRows}
       <div class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-        {t(
-          'data_skipped_empty_after_reload',
-          'Detailed row data is only available during the import session. Re-import the file to inspect individual rows.',
-        )}
+        {m.data_skipped_empty_after_reload()}
       </div>
     {/if}
 
@@ -99,14 +87,14 @@
       <table class="w-full text-left text-sm">
         <thead>
           <tr class="border-b border-slate-200 text-xs font-medium uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            <th class="px-3 py-2">{t('data_skipped_col_section', 'Section')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_kind', 'Kind')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_line', 'Line')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_asset_category', 'Asset Category')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_currency', 'Currency')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_symbol', 'Symbol')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_datetime', 'Date/Time')}</th>
-            <th class="px-3 py-2">{t('data_skipped_col_description', 'Description')}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_section()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_kind()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_line()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_asset_category()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_currency()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_symbol()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_datetime()}</th>
+            <th class="px-3 py-2">{m.data_skipped_col_description()}</th>
           </tr>
         </thead>
         <tbody>
