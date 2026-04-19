@@ -41,14 +41,14 @@
   );
 
   // --- Tab counts (reactive) ---
-  type TabCounts = {
+  interface TabCounts {
     trades: number;
     dividends: number;
     withholding: number;
     corporateActions: number;
     creditInterest: number;
     carryIn: number;
-  };
+  }
 
   const allCounts = useLiveQuery<TabCounts>(async () => {
     if (!activeSessionId) {
