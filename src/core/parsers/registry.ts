@@ -1,11 +1,9 @@
 import type { BrokerId } from '../types.js';
-import { ibiDefinition } from './ibi/index.js';
-import { ibkrDefinition } from './ibkr/index.js';
+import { ALL_PARSERS } from './index.js';
 import type { ParserDefinition } from './types.js';
 
-/** All registered parser definitions, keyed by BrokerId */
-const definitions = new Map<BrokerId, ParserDefinition>(
-  [ibkrDefinition, ibiDefinition].map((d) => [d.brokerId, d]),
+const definitions: ReadonlyMap<BrokerId, ParserDefinition> = new Map(
+  ALL_PARSERS.map((d) => [d.brokerId, d] as const),
 );
 
 /** Get parser definition for a specific broker. Throws if unsupported. */
