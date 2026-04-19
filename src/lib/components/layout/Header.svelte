@@ -17,10 +17,10 @@
     <Logo />
   </div>
 
-  <!-- Desktop: page title -->
-  <h1 class="hidden text-sm font-semibold text-slate-900 dark:text-slate-100 md:block">
+  <!-- Desktop: page title (not an h1 — each route owns its heading) -->
+  <p class="hidden text-sm font-semibold text-slate-900 dark:text-slate-100 md:block">
     {pageTitle.title}
-  </h1>
+  </p>
 
   <ThemeToggle />
 </header>

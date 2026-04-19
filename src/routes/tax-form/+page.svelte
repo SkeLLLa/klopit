@@ -112,6 +112,8 @@
   }
 </script>
 
+<h1 class="sr-only">{m.page_tax_form()}</h1>
+
 {#if !session}
   <!-- No session selected -->
   <div class="flex flex-col items-center justify-center py-24 text-center">

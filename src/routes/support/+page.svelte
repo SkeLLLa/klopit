@@ -18,9 +18,9 @@
 
 <div class="space-y-8">
   <section>
-    <h2 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+    <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">
       {m.support_title()}
-    </h2>
+    </h1>
     <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
       {m.support_intro()}
     </p>

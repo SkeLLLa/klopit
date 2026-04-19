@@ -120,6 +120,8 @@
   }
 </script>
 
+<h1 class="sr-only">{m.page_data()}</h1>
+
 {#if sessions.length === 0}
   <div class="flex flex-col items-center justify-center py-24 text-center">
     <EmptyState message={m.data_no_sessions()} />

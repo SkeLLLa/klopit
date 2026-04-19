@@ -50,9 +50,9 @@
 
 <div class="space-y-8 max-w-4xl">
   <div>
-    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
       {m.page_about()}
-    </h2>
+    </h1>
     <p class="mt-4 text-base text-slate-700 dark:text-slate-300 leading-relaxed">
       {m.about_intro()}
     </p>

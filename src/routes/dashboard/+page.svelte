@@ -119,6 +119,8 @@
   }
 </script>
 
+<h1 class="sr-only">{m.page_dashboard()}</h1>
+
 {#if loading}
   <div class="flex flex-col items-center justify-center py-24 text-center">
     <LoaderCircle size={32} class="mb-3 animate-spin text-slate-400" />

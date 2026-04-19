@@ -15,9 +15,9 @@
 
 <div class="space-y-4">
   <div>
-    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+    <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
       {m.prior_losses_title()}
-    </h2>
+    </h1>
     {#if session}
       <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
         {m.prior_losses_intro({ year: session.year })}

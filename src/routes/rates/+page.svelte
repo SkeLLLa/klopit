@@ -91,6 +91,8 @@
   });
 </script>
 
+<h1 class="sr-only">{m.page_rates()}</h1>
+
 <div class="space-y-4">
   <!-- Fetch control -->
   <div
