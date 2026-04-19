@@ -4,9 +4,7 @@
   import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
   import { Bug, FileText, Lock, Scale } from 'lucide-svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_about());
-  });
+  pageTitle.set(m.page_about());
 
   const githubIssuesLink = 'https://github.com/SkeLLLa/klopit/issues';
   const githubRepoLink = 'https://github.com/SkeLLLa/klopit';

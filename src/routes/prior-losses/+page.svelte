@@ -5,9 +5,7 @@
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import PriorLossTable from '$lib/components/PriorLossTable.svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_prior_losses());
-  });
+  pageTitle.set(m.page_prior_losses());
 
   // Bootstrap session state if user lands here directly.
   const bootstrap = useSessionBootstrap();

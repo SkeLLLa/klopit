@@ -2,9 +2,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
 
-  $effect(() => {
-    pageTitle.set(m.page_docs_ib());
-  });
+  pageTitle.set(m.page_docs_ib());
 </script>
 
 <div class="space-y-6">

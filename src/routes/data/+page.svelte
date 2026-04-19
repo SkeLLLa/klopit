@@ -26,9 +26,7 @@
   import DeleteConfirm from './DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_data());
-  });
+  pageTitle.set(m.page_data());
 
   const messages = m as unknown as Record<
     string,

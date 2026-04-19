@@ -12,9 +12,7 @@
     datePlaceholder,
   } from '$lib/utils/format-date.js';
 
-  $effect(() => {
-    pageTitle.set(m.page_rates());
-  });
+  pageTitle.set(m.page_rates());
 
   // --- Fetch control state ---
   let fetchCurrency = $state('USD');

@@ -5,9 +5,7 @@
   import { navigation } from '$lib/nav.js';
   import { FileText } from 'lucide-svelte';
 
-  $effect(() => {
-    pageTitle.set(m.page_docs_ibi());
-  });
+  pageTitle.set(m.page_docs_ibi());
 
   const iconMap: Record<string, typeof FileText> = { FileText };
 

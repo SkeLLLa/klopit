@@ -2,9 +2,7 @@
   import { m } from '$lib/paraglide/messages';
   import { pageTitle } from '$lib/state/page-title.svelte';
 
-  $effect(() => {
-    pageTitle.set(m.nav_faq());
-  });
+  pageTitle.set(m.nav_faq());
 
   const faqs = [
     {
