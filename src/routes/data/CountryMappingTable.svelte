@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { IndexableTypeArray } from 'dexie';
   import { m } from '$lib/paraglide/messages.js';
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
@@ -49,14 +50,14 @@
 
   // Distinct (symbol, isin) pairs — covers records that have an ISIN.
   const tradeSymbolIsinQuery = useLiveQuery(() => {
-    if (!sessionId) return [] as unknown[];
+    if (!sessionId) return [] as IndexableTypeArray;
     return db.trades
       .where('[sessionId+symbol+isin]')
       .between([sessionId, '\u0000', '\u0000'], [sessionId, '\uffff', '\uffff'])
       .uniqueKeys();
   });
   const dividendSymbolIsinQuery = useLiveQuery(() => {
-    if (!sessionId) return [] as unknown[];
+    if (!sessionId) return [] as IndexableTypeArray;
     return db.dividends
       .where('[sessionId+symbol+isin]')
       .between([sessionId, '\u0000', '\u0000'], [sessionId, '\uffff', '\uffff'])
@@ -65,14 +66,14 @@
 
   // Distinct symbols — covers ALL records including those without an ISIN.
   const tradeSymbolsQuery = useLiveQuery(() => {
-    if (!sessionId) return [] as unknown[];
+    if (!sessionId) return [] as IndexableTypeArray;
     return db.trades
       .where('[sessionId+symbol]')
       .between([sessionId, '\u0000'], [sessionId, '\uffff'])
       .uniqueKeys();
   });
   const dividendSymbolsQuery = useLiveQuery(() => {
-    if (!sessionId) return [] as unknown[];
+    if (!sessionId) return [] as IndexableTypeArray;
     return db.dividends
       .where('[sessionId+symbol]')
       .between([sessionId, '\u0000'], [sessionId, '\uffff'])
