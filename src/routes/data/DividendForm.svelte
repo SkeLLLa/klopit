@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Calendar } from 'lucide-svelte';
+  import { untrack } from 'svelte';
   import SveltyPicker from 'svelty-picker';
   import { m } from '$lib/paraglide/messages.js';
   import { formatDate, parseDate, datePlaceholder } from '$lib/utils/format-date.js';
@@ -32,13 +33,16 @@
     oncancel: () => void;
   } = $props();
 
-  let symbol = $state(initial?.symbol ?? '');
-  let isin = $state(initial?.isin ?? '');
-  let dateText = $state(initial?.date ? formatDate(initial.date) : '');
-  let parsedDate: Date | null = $state(initial?.date ?? null);
-  let pickerValue = $state(initial?.date ? dateToPickerValue(initial.date) : '');
-  let amount = $state(initial?.amount?.toString() ?? '');
-  let currency = $state(initial?.currency ?? 'USD');
+  // Parent wraps this form in `{#key editingId}`, so `initial` is always a
+  // fresh snapshot at construction time — intentionally non-reactive here.
+  const seed = untrack(() => initial);
+  let symbol = $state(seed?.symbol ?? '');
+  let isin = $state(seed?.isin ?? '');
+  let dateText = $state(seed?.date ? formatDate(seed.date) : '');
+  let parsedDate: Date | null = $state(seed?.date ?? null);
+  let pickerValue = $state(seed?.date ? dateToPickerValue(seed.date) : '');
+  let amount = $state(seed?.amount?.toString() ?? '');
+  let currency = $state(seed?.currency ?? 'USD');
   let errors: Record<string, string> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.

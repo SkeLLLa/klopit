@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Calendar } from 'lucide-svelte';
+  import { untrack } from 'svelte';
   import SveltyPicker from 'svelty-picker';
   import { m } from '$lib/paraglide/messages.js';
   import {
@@ -36,18 +37,21 @@
     oncancel: () => void;
   } = $props();
 
-  let symbol = $state(initial?.symbol ?? '');
-  let isin = $state(initial?.isin ?? '');
-  let datetimeText = $state(initial?.datetime ? formatDatetime(initial.datetime) : '');
-  let parsedDatetime: Date | null = $state(initial?.datetime ?? null);
-  let pickerValue = $state(initial?.datetime ? dateToPickerValue(initial.datetime) : '');
-  let type: 'buy' | 'sell' = $state(initial?.type ?? 'buy');
-  let quantity = $state(initial?.quantity?.toString() ?? '');
-  let price = $state(initial?.price?.toString() ?? '');
-  let proceeds = $state(initial?.proceeds?.toString() ?? '');
-  let commission = $state(initial?.commission?.toString() ?? '0');
-  let commissionCurrency = $state(initial?.commissionCurrency ?? '');
-  let currency = $state(initial?.currency ?? 'USD');
+  // Parent wraps this form in `{#key editingId}`, so `initial` is always a
+  // fresh snapshot at construction time — intentionally non-reactive here.
+  const seed = untrack(() => initial);
+  let symbol = $state(seed?.symbol ?? '');
+  let isin = $state(seed?.isin ?? '');
+  let datetimeText = $state(seed?.datetime ? formatDatetime(seed.datetime) : '');
+  let parsedDatetime: Date | null = $state(seed?.datetime ?? null);
+  let pickerValue = $state(seed?.datetime ? dateToPickerValue(seed.datetime) : '');
+  let type: 'buy' | 'sell' = $state(seed?.type ?? 'buy');
+  let quantity = $state(seed?.quantity?.toString() ?? '');
+  let price = $state(seed?.price?.toString() ?? '');
+  let proceeds = $state(seed?.proceeds?.toString() ?? '');
+  let commission = $state(seed?.commission?.toString() ?? '0');
+  let commissionCurrency = $state(seed?.commissionCurrency ?? '');
+  let currency = $state(seed?.currency ?? 'USD');
   let errors: Record<string, string> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.
