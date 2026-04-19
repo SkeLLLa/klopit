@@ -61,7 +61,7 @@ const MONTHS: Record<string, number> = {
   december: 11,
 };
 
-function parseLongDate(value: string): Date | undefined {
+export function parseLongDate(value: string): Date | undefined {
   const match = /^([A-Za-z]+)\s+(\d+),\s+(\d{4})$/.exec(value.trim());
   if (!match) return undefined;
   const monthName = match[1].toLowerCase();
@@ -73,7 +73,7 @@ function parseLongDate(value: string): Date | undefined {
   return new Date(year, month, day);
 }
 
-function parseAmount(raw: string): number {
+export function parseAmount(raw: string): number {
   return Number(raw.replace(/,/g, ''));
 }
 
