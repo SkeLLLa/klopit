@@ -28,20 +28,6 @@
 
   pageTitle.set(m.page_data());
 
-  const messages = m as unknown as Record<
-    string,
-    (inputs?: Record<string, string>) => string
-  >;
-  function t(key: string, fallback: string, inputs?: Record<string, string>): string {
-    const fn = messages[key];
-    if (typeof fn === 'function') return fn(inputs ?? {});
-    if (!inputs) return fallback;
-    return Object.entries(inputs).reduce(
-      (value, [name, replacement]) => value.replaceAll(`{${name}}`, replacement),
-      fallback,
-    );
-  }
-
   type SessionWithImportWarnings = SessionRecord & {
     importWarnings?: ImportWarning[];
   };
@@ -169,14 +155,10 @@
           class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
         >
           <summary class="cursor-pointer font-medium">
-            {t('data_skipped_banner', 'Some data was not imported')} - {t(
-              'data_skipped_banner_detail',
-              '{count} rows skipped across {sectionCount} sections',
-              {
-                count: String(importWarnings.reduce((sum, warning) => sum + warning.rowCount, 0)),
-                sectionCount: String(new Set(importWarnings.map((warning) => warning.section)).size),
-              },
-            )}
+            {m.data_skipped_banner()} - {m.data_skipped_banner_detail({
+              count: String(importWarnings.reduce((sum, warning) => sum + warning.rowCount, 0)),
+              sectionCount: String(new Set(importWarnings.map((warning) => warning.section)).size),
+            })}
           </summary>
           <ul class="mt-2 list-disc space-y-1 pl-5 text-xs">
             {#each importWarnings as warning (warning.section + warning.kind)}
