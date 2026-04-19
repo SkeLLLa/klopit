@@ -1,3 +1,9 @@
+## [1.13.1](https://github.com/SkeLLLa/klopit/compare/v1.13.0...v1.13.1) (2026-04-19)
+
+### 🛠 Fixes
+
+* **ui:** homepage ux improvements ([e527684](https://github.com/SkeLLLa/klopit/commit/e52768469df7f9f2418d30f93a1ca6f34f6e812b))
+
 ## [1.13.0](https://github.com/SkeLLLa/klopit/compare/v1.12.0...v1.13.0) (2026-04-19)
 
 ### 🚀 Features
