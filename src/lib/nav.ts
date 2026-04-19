@@ -29,6 +29,13 @@ export const navigation: NavSection[] = [
             labelKey: 'nav_docs_ib',
             href: '/docs/ibkr',
             icon: 'FileText',
+            children: [
+              {
+                labelKey: 'nav_docs_ibkr_w8ben',
+                href: '/docs/ibkr/w8ben',
+                icon: 'FileText',
+              },
+            ],
           },
           {
             labelKey: 'nav_docs_ibi',
