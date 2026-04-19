@@ -14,6 +14,11 @@
 
   const locale = $derived(getLocale());
   const currentPath = $derived(page.url.pathname);
+  const pageMetaData = $derived(
+    (page.data as { meta?: { title?: string; description?: string } }).meta,
+  );
+  const metaTitle = $derived(pageMetaData?.title ?? m.meta_title());
+  const metaDescription = $derived(pageMetaData?.description ?? m.meta_description());
 
   const publisher = {
     '@type': 'Organization',
@@ -32,7 +37,7 @@
       '@type': 'WebApplication',
       name: 'kloPIT',
       url: 'https://klopit.co.pl/',
-      description: m.meta_description(),
+      description: metaDescription,
       applicationCategory: 'FinanceApplication',
       applicationSubCategory: 'TaxPreparation',
       operatingSystem: 'All',
@@ -63,8 +68,8 @@
 </script>
 
 <svelte:head>
-  <title>{m.meta_title()}</title>
-  <meta name="description" content={m.meta_description()} />
+  <title>{metaTitle}</title>
+  <meta name="description" content={metaDescription} />
   <meta name="keywords" content={m.meta_keywords()} />
   <meta name="author" content="kloPIT" />
   <meta name="robots" content="index, follow" />
@@ -95,8 +100,8 @@
       content={altLocale === 'pl' ? 'pl_PL' : altLocale === 'uk' ? 'uk_UA' : 'en_GB'}
     />
   {/each}
-  <meta property="og:title" content={m.meta_title()} />
-  <meta property="og:description" content={m.meta_description()} />
+  <meta property="og:title" content={metaTitle} />
+  <meta property="og:description" content={metaDescription} />
   <meta property="og:url" content="https://klopit.co.pl{currentPath}" />
   <meta property="og:site_name" content="kloPIT" />
 
@@ -106,8 +111,8 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content={m.meta_title()} />
-  <meta name="twitter:description" content={m.meta_description()} />
+  <meta name="twitter:title" content={metaTitle} />
+  <meta name="twitter:description" content={metaDescription} />
   <meta name="twitter:image" content="https://klopit.co.pl/og-image.png" />
 
   <!-- Structured Data -->

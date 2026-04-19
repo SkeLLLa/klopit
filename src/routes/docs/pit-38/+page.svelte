@@ -44,10 +44,6 @@
   ];
 </script>
 
-<svelte:head>
-  <title>{m.page_pit38_meta_title({ year: yearStr })}</title>
-</svelte:head>
-
 <article class="space-y-8">
   <header class="space-y-3">
     <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">
