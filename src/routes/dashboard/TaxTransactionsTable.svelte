@@ -4,6 +4,7 @@
   import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
   import { formatDatetime, formatDate } from '$lib/utils/format-date.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
+  import { localizeHref } from '$lib/paraglide/runtime';
   import { TAX_RATE } from '../../core/types.js';
   import {
     sumDividendTaxGross,
@@ -105,12 +106,13 @@
 
   <!-- Capital Gains Trades -->
   {#if sellTrades.length > 0}
-    <h4
-      class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400"
-    >
-      {m.dash_capital_gains()}
-    </h4>
-    <div class="mb-6 overflow-x-auto">
+    <section id="trades" class="scroll-mt-4">
+      <h4
+        class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400"
+      >
+        {m.dash_capital_gains()}
+      </h4>
+      <div class="mb-6 overflow-x-auto">
       <table class="w-full text-left text-sm">
         <thead>
           <tr
@@ -197,7 +199,8 @@
           </tr>
         </tfoot>
       </table>
-    </div>
+      </div>
+    </section>
   {/if}
 
   <!-- Corporate Actions -->
@@ -294,12 +297,13 @@
 
   <!-- Dividends -->
   {#if dividendResults.length > 0}
-    <h4
-      class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400"
-    >
-      {m.dash_dividend_income()}
-    </h4>
-    <div class="overflow-x-auto">
+    <section id="dividends" class="scroll-mt-4">
+      <h4
+        class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400"
+      >
+        {m.dash_dividend_income()}
+      </h4>
+      <div class="overflow-x-auto">
       <table class="w-full text-left text-sm">
         <thead>
           <tr
@@ -356,15 +360,26 @@
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
               >
-                <span
-                  class={warningText
-                    ? 'cursor-help text-amber-600 dark:text-amber-400'
-                    : ''}
-                  title={warningText}
-                  aria-label={warningText}
-                >
-                  {formatPlnValue(div.withholdingTaxPln)}
-                </span>
+                {#if hasWhtLapse}
+                  <a
+                    href={localizeHref('/docs/ibkr/w8ben')}
+                    class="cursor-help text-amber-600 underline decoration-dotted hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                    title={warningText}
+                    aria-label={warningText}
+                  >
+                    {formatPlnValue(div.withholdingTaxPln)}
+                  </a>
+                {:else}
+                  <span
+                    class={warningText
+                      ? 'cursor-help text-amber-600 dark:text-amber-400'
+                      : ''}
+                    title={warningText}
+                    aria-label={warningText}
+                  >
+                    {formatPlnValue(div.withholdingTaxPln)}
+                  </span>
+                {/if}
                 <span class="text-xs text-slate-400">
                   ({formatPct(effectiveWithholdingPct)})
                 </span>
@@ -437,7 +452,8 @@
           </tr>
         </tfoot>
       </table>
-    </div>
+      </div>
+    </section>
   {/if}
 
   <!-- Credit Interest -->
