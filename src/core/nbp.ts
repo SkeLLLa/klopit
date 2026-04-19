@@ -3,17 +3,15 @@ const MAX_RANGE_DAYS = 93;
 
 export class NbpFetchError extends Error {
   readonly url: string;
-  readonly cause?: unknown;
 
   constructor(args: { url: string; message: string; cause?: unknown }) {
-    super(args.message);
+    super(args.message, { cause: args.cause });
     this.name = 'NbpFetchError';
     this.url = args.url;
-    this.cause = args.cause;
   }
 }
 
-const NBP_FETCH_TIMEOUT_MS = 10_000;
+export const NBP_FETCH_TIMEOUT_MS = 10_000;
 
 export interface NbpRate {
   date: string;
@@ -110,11 +108,11 @@ async function fetchChunk(
       signal: AbortSignal.timeout(NBP_FETCH_TIMEOUT_MS),
     });
   } catch (cause) {
-    const isAbort =
-      cause instanceof DOMException && cause.name === 'AbortError';
+    const isTimeout =
+      cause instanceof DOMException && cause.name === 'TimeoutError';
     throw new NbpFetchError({
       url,
-      message: isAbort
+      message: isTimeout
         ? `NBP API request timed out after ${String(NBP_FETCH_TIMEOUT_MS)}ms: ${url}`
         : `NBP API network error for ${url}: ${String(cause)}`,
       cause,
@@ -129,6 +127,7 @@ async function fetchChunk(
     throw new NbpFetchError({
       url,
       message: `NBP API error: ${String(response.status)} ${response.statusText} for ${url}`,
+      cause: response,
     });
   }
 

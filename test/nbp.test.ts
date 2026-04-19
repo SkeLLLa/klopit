@@ -211,7 +211,7 @@ void describe('NbpFetchError', () => {
   void it('wraps AbortError as NbpFetchError', async () => {
     globalThis.fetch = (() =>
       Promise.reject(
-        new DOMException('aborted', 'AbortError'),
+        new DOMException('signal timed out', 'TimeoutError'),
       )) as typeof fetch;
 
     await assert.rejects(
