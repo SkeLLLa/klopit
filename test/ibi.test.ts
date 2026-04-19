@@ -106,6 +106,26 @@ void describe('parseIbiText', () => {
     assert.equal(sell.lotId, '1234567');
   });
 
+  void it('flags totalFees as missing when Total Fees regex fails to match', () => {
+    const pdfWithoutFees = `
+Grant Date: 15/01/2024
+Execution Date: 20/03/2024
+Price For Tax: 100.00
+Order 123456
+10 150.00 1500.00
+Company: TEST
+`.trim();
+
+    const result = parseIbiText({ text: pdfWithoutFees });
+
+    // Expect a warning referencing Total Fees and no trades emitted
+    const feeWarning = result.warnings.find((w) =>
+      w.message.includes('Total Fees'),
+    );
+    assert.ok(feeWarning, 'expected a warning flagging missing Total Fees');
+    assert.equal(result.trades.length, 0);
+  });
+
   void it('emits distinct lotIds for distinct orders (FIFO partition key)', () => {
     const textA = [
       'Sale Of Stock Activity Statement Order Number: 1000001',
