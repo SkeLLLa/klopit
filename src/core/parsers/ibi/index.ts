@@ -110,7 +110,7 @@ export function parseIbiText(args: { text: string }): ParsedStatement {
   const totalValue = orderLineMatch
     ? parseAmount(orderLineMatch[3])
     : undefined;
-  const totalFees = totalFeesMatch ? parseAmount(totalFeesMatch[1]) : 0;
+  const totalFees = totalFeesMatch ? parseAmount(totalFeesMatch[1]) : undefined;
   const symbol = companyMatch ? companyMatch[1].toUpperCase() : undefined;
 
   const missing: string[] = [];
@@ -120,6 +120,7 @@ export function parseIbiText(args: { text: string }): ParsedStatement {
   if (shares === undefined) missing.push('Shares');
   if (salePrice === undefined) missing.push('Sale Price');
   if (totalValue === undefined) missing.push('Total Amount Due to Order');
+  if (totalFees === undefined) missing.push('Total Fees');
   if (!symbol) missing.push('Company');
 
   if (
@@ -130,6 +131,7 @@ export function parseIbiText(args: { text: string }): ParsedStatement {
     shares === undefined ||
     salePrice === undefined ||
     totalValue === undefined ||
+    totalFees === undefined ||
     !symbol
   ) {
     warnings.push({
