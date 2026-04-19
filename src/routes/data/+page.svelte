@@ -41,36 +41,37 @@
   );
 
   // --- Tab counts (reactive) ---
-  const tradeCount = useLiveQuery(() =>
-    activeSessionId
-      ? db.trades.where('sessionId').equals(activeSessionId).count()
-      : Promise.resolve(0),
-  );
-  const dividendCount = useLiveQuery(() =>
-    activeSessionId
-      ? db.dividends.where('sessionId').equals(activeSessionId).count()
-      : Promise.resolve(0),
-  );
-  const withholdingCount = useLiveQuery(() =>
-    activeSessionId
-      ? db.withholdingTaxes.where('sessionId').equals(activeSessionId).count()
-      : Promise.resolve(0),
-  );
-  const corporateActionCount = useLiveQuery(() =>
-    activeSessionId
-      ? db.corporateActions.where('sessionId').equals(activeSessionId).count()
-      : Promise.resolve(0),
-  );
-  const creditInterestCount = useLiveQuery(() =>
-    activeSessionId
-      ? db.creditInterests.where('sessionId').equals(activeSessionId).count()
-      : Promise.resolve(0),
-  );
-  const carryInCount = useLiveQuery(() =>
-    activeSessionId
-      ? db.carryInPositions.where('sessionId').equals(activeSessionId).count()
-      : Promise.resolve(0),
-  );
+  type TabCounts = {
+    trades: number;
+    dividends: number;
+    withholding: number;
+    corporateActions: number;
+    creditInterest: number;
+    carryIn: number;
+  };
+
+  const allCounts = useLiveQuery<TabCounts>(async () => {
+    if (!activeSessionId) {
+      return {
+        trades: 0,
+        dividends: 0,
+        withholding: 0,
+        corporateActions: 0,
+        creditInterest: 0,
+        carryIn: 0,
+      };
+    }
+    const [trades, dividends, withholding, corporateActions, creditInterest, carryIn] =
+      await Promise.all([
+        db.trades.where('sessionId').equals(activeSessionId).count(),
+        db.dividends.where('sessionId').equals(activeSessionId).count(),
+        db.withholdingTaxes.where('sessionId').equals(activeSessionId).count(),
+        db.corporateActions.where('sessionId').equals(activeSessionId).count(),
+        db.creditInterests.where('sessionId').equals(activeSessionId).count(),
+        db.carryInPositions.where('sessionId').equals(activeSessionId).count(),
+      ]);
+    return { trades, dividends, withholding, corporateActions, creditInterest, carryIn };
+  });
   const inMemorySkippedRows = $derived(
     activeSessionId ? skippedRowsStore.getSkippedRows({ sessionId: activeSessionId }) : [],
   );
@@ -93,12 +94,12 @@
   );
 
   const counts = $derived({
-    trades: tradeCount.current ?? 0,
-    dividends: dividendCount.current ?? 0,
-    interest: creditInterestCount.current ?? 0,
-    withholding: withholdingCount.current ?? 0,
-    corporateActions: corporateActionCount.current ?? 0,
-    carryIn: carryInCount.current ?? 0,
+    trades: allCounts.current?.trades ?? 0,
+    dividends: allCounts.current?.dividends ?? 0,
+    interest: allCounts.current?.creditInterest ?? 0,
+    withholding: allCounts.current?.withholding ?? 0,
+    corporateActions: allCounts.current?.corporateActions ?? 0,
+    carryIn: allCounts.current?.carryIn ?? 0,
     skipped: skippedCount,
   });
 
