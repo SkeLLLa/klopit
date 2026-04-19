@@ -1,49 +1,33 @@
 <!-- src/routes/data/DividendsTable.svelte -->
 <script lang="ts">
-  import { Pencil, Trash2 } from 'lucide-svelte';
+  import { Pencil, Trash2, Plus } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { db, type DividendRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { updateDividend, deleteDividend } from '$lib/services/data.js';
-  import { formatDate, toDateInput } from '$lib/utils/format-date.js';
+  import { addDividend, updateDividend, deleteDividend } from '$lib/services/data.js';
+  import type { RawDividend } from '../../core/types.js';
+  import { formatDate } from '$lib/utils/format-date.js';
+  import DividendForm from './DividendForm.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
-  let { sessionId }: { sessionId: string } = $props();
+  let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();
 
   const dividends = useLiveQuery(() =>
     db.dividends.where('sessionId').equals(sessionId).sortBy('date'),
   );
 
+  let showAddForm = $state(false);
   let editingId: number | null = $state(null);
-  let editSymbol = $state('');
-  let editIsin = $state('');
-  let editDate = $state('');
-  let editAmount = $state('');
-  let editCurrency = $state('');
   let deleteTarget: DividendRecord | null = $state(null);
 
-  function startEdit(row: DividendRecord) {
-    editingId = row.id as number;
-    editSymbol = row.symbol;
-    editIsin = row.isin ?? '';
-    editDate = toDateInput(row.date);
-    editAmount = String(row.amount);
-    editCurrency = row.currency;
+  async function handleAdd(dividend: RawDividend) {
+    await addDividend({ sessionId, dividend });
+    showAddForm = false;
   }
 
-  async function saveEdit() {
-    if (editingId === null) return;
-    await updateDividend({
-      id: editingId,
-      changes: {
-        symbol: editSymbol.trim().toUpperCase(),
-        isin: editIsin.trim() || undefined,
-        date: new Date(editDate),
-        amount: parseFloat(editAmount),
-        currency: editCurrency.trim().toUpperCase(),
-      },
-    });
+  async function handleUpdate(id: number, dividend: RawDividend) {
+    await updateDividend({ id, changes: dividend });
     editingId = null;
   }
 
@@ -52,14 +36,28 @@
     await deleteDividend({ id: deleteTarget.id });
     deleteTarget = null;
   }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') saveEdit();
-    if (e.key === 'Escape') editingId = null;
-  }
 </script>
 
 <div>
+  {#if !showAddForm}
+    <div class="mb-3">
+      <button
+        onclick={() => {
+          showAddForm = true;
+          editingId = null;
+        }}
+        class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+      >
+        <Plus size={14} />
+        {m.data_add_dividend()}
+      </button>
+    </div>
+  {:else}
+    <div class="mb-3">
+      <DividendForm defaultYear={sessionYear} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
+    </div>
+  {/if}
+
   {#if !dividends.current || dividends.current.length === 0}
     <EmptyState message={m.data_empty_dividends()} />
   {:else}
@@ -78,17 +76,15 @@
         <tbody>
           {#each dividends.current as row (row.id)}
             {#if editingId === row.id}
-              <tr class="border-b border-slate-100 dark:border-slate-800">
-                <td class="px-3 py-2"><input type="text" bind:value={editSymbol} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2"><input type="text" bind:value={editIsin} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2"><input type="date" bind:value={editDate} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2"><input type="number" step="any" bind:value={editAmount} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2"><input type="text" bind:value={editCurrency} onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2">
-                  <div class="flex gap-1">
-                    <button onclick={saveEdit} class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700">{m.data_save()}</button>
-                    <button onclick={() => (editingId = null)} class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">{m.data_cancel()}</button>
-                  </div>
+              <tr>
+                <td colspan="6" class="p-2">
+                  {#key editingId}
+                    <DividendForm
+                      initial={row}
+                      onsave={(d) => handleUpdate(row.id as number, d)}
+                      oncancel={() => (editingId = null)}
+                    />
+                  {/key}
                 </td>
               </tr>
             {:else}
@@ -100,8 +96,23 @@
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-400">{row.currency}</td>
                 <td class="px-3 py-2">
                   <div class="flex gap-1">
-                    <button onclick={() => startEdit(row)} class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300" aria-label={m.data_edit()}><Pencil size={14} /></button>
-                    <button onclick={() => (deleteTarget = row)} class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400" aria-label={m.data_delete()}><Trash2 size={14} /></button>
+                    <button
+                      onclick={() => {
+                        editingId = row.id as number;
+                        showAddForm = false;
+                      }}
+                      class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                      aria-label={m.data_edit()}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onclick={() => (deleteTarget = row)}
+                      class="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                      aria-label={m.data_delete()}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
