@@ -932,3 +932,17 @@ Key Polish tax law provisions used in kloPIT calculations:
 | **Corporate Action** | Stock split, dividend spin-off, etc.                                           |
 | **Session**          | One tax year's workspace (trades + dividends + results)                        |
 | **IndexedDB**        | Browser database where your data is stored locally                             |
+
+---
+
+## Verification & Transparency
+
+kloPIT treats the PIT-38 form page as a **summary view** — every number is computed from rows you can inspect on the Dashboard.
+
+**How to audit your numbers:**
+
+- **Capital gains (Sections C + D)** — `/dashboard#trades` shows each closed trade with proceeds (PLN), FIFO-matched cost basis (PLN), gain/loss (PLN), and the 19% tax on that trade. Totals at the bottom of the table tie to `poz. 22` (proceeds), `poz. 23` (costs), `poz. 28` (gain) or `poz. 29` (loss). Prior-year loss deductions feeding `poz. 30` are broken down per-year in Section D.
+- **Dividends (Section G)** — `/dashboard#dividends` shows each dividend with PLN amount, effective foreign withholding %, the UPO-capped deductible %, and PL tax-to-pay %. Totals correspond to `poz. 45` (19% of gross), `poz. 46` (capped withholding), `poz. 47` (non-deductible excess), and `poz. 49` (final PL tax).
+- **Rounding** — the base and PL tax amounts (`poz. 31`, `poz. 35`) are rounded to full PLN (`roundToFullPln` in `src/core/rounding.ts`). Dividend amounts (`poz. 47`, `poz. 49`) are rounded up to full grosze (`roundToGroszUp`). See `src/core/tax/pit38.ts` and `src/core/tax/aggregates.ts`.
+
+**Parser architecture.** Imports run through `ParserDefinition` implementations in `src/core/parsers/` (Interactive Brokers CSV, IBI Capital PDF, manual entry). More brokers are on the roadmap — see `docs/ROADMAP.md`. Parser PRs are welcome.

@@ -21,7 +21,7 @@
 
 kloPIT automates the most tedious parts of filing **PIT-38** (capital gains & dividends):
 
-1. **Import** — parse your broker's CSV activity statement (Interactive Brokers supported; plugin architecture makes adding others straightforward)
+1. **Import** — parse your broker's statement (Interactive Brokers CSV and IBI Capital PDF ship today; more brokers on the roadmap)
 2. **Convert** — fetch NBP exchange rates and convert foreign-currency amounts to PLN automatically; rates are cached locally
 3. **Calculate** — apply the legally-required FIFO method to determine cost basis and compute capital gains
 4. **Report** — fill your PIT-38 fields (Sections C, D, G) and PIT/ZG attachment values automatically; handle prior-year loss carry-forwards and optional 1.5% OPP charity donations
@@ -36,6 +36,9 @@ kloPIT automates the most tedious parts of filing **PIT-38** (capital gains & di
 - **Multi-session** — manage multiple tax years independently; edit or delete individual rows after import
 - **Offline-capable** — works without an internet connection once rates are cached
 - **Localised UI** — English, Polish, Ukrainian (Paraglide JS compile-time i18n)
+- **Full transparency** — Every PIT-38 number on the tax-form page maps to concrete transactions shown on the [Dashboard](https://klopit.co.pl/dashboard): per-trade proceeds / cost / gain / 19% tax, per-dividend effective withholding / treaty-capped deduction / PL tax-to-pay, and per-year loss-carry-forward breakdown under `poz. 30`.
+- **W-8BEN & US dividend awareness** — Warns per-dividend when foreign withholding exceeds the Poland–US treaty rate (15%). See the [W-8BEN doc](https://klopit.co.pl/docs/ibkr/w8ben) for how to file or renew the form in IBKR.
+- **Plugin parser architecture, more brokers coming** — Interactive Brokers (CSV), IBI Capital (PDF), and manual entry ship today. The parser API lives in `src/core/parsers/types.ts` (`ParserDefinition`) — more brokers are on the roadmap, and community PRs are welcome.
 
 ## Tech Stack
 
