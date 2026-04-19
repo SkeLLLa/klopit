@@ -83,11 +83,13 @@
             {#if editingId === trade.id}
               <tr>
                 <td colspan="10" class="p-2">
-                  <TradeForm
-                    initial={trade}
-                    onsave={(t) => handleUpdate(trade.id as number, t)}
-                    oncancel={() => (editingId = null)}
-                  />
+                  {#key editingId}
+                    <TradeForm
+                      initial={trade}
+                      onsave={(t) => handleUpdate(trade.id as number, t)}
+                      oncancel={() => (editingId = null)}
+                    />
+                  {/key}
                 </td>
               </tr>
             {:else}
