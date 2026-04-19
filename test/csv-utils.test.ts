@@ -5,6 +5,7 @@ import {
   parseCsvLine,
   parseDateTime,
   parseDecimal,
+  parseDecimalLocale,
 } from '../src/core/parsers/shared/csv-utils.js';
 
 void describe('parseCsvLine', () => {
@@ -127,5 +128,36 @@ void describe('parseDateTime', () => {
 
   void it('returns undefined for empty string', () => {
     assert.equal(parseDateTime({ value: '' }), undefined);
+  });
+});
+
+void describe('parseDecimalLocale', () => {
+  void it('anglo locale parses "1,234.56"', () => {
+    assert.equal(
+      parseDecimalLocale({ value: '1,234.56', locale: 'anglo' }),
+      1234.56,
+    );
+  });
+
+  void it('eu locale parses "1 234,56"', () => {
+    assert.equal(
+      parseDecimalLocale({ value: '1 234,56', locale: 'eu' }),
+      1234.56,
+    );
+  });
+
+  void it('eu locale parses "1.234,56"', () => {
+    assert.equal(
+      parseDecimalLocale({ value: '1.234,56', locale: 'eu' }),
+      1234.56,
+    );
+  });
+
+  void it('returns undefined for empty input', () => {
+    assert.equal(parseDecimalLocale({ value: '', locale: 'anglo' }), undefined);
+  });
+
+  void it('returns undefined for garbage', () => {
+    assert.equal(parseDecimalLocale({ value: 'abc', locale: 'eu' }), undefined);
   });
 });

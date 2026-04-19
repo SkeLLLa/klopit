@@ -69,7 +69,14 @@ export function cleanField(args: { value: string }): string {
   return v;
 }
 
-/** Parse a decimal number, handling comma as thousands separator. Returns undefined on failure. */
+/**
+ * Parse a decimal number, handling comma as thousands separator.
+ * ASSUMES ANGLO LOCALE: `.` is the decimal mark, `,` is a thousands
+ * separator. Will MISPARSE European locales where `,` is the decimal mark
+ * (e.g. "1 234,56"). For broker parsers that may receive EU-formatted
+ * numbers, call `parseDecimalLocale({ value, locale: 'eu' })` instead.
+ * Returns undefined on failure.
+ */
 export function parseDecimal(args: { value: string }): number | undefined {
   const trimmed = args.value.trim();
   if (trimmed === '') return undefined;
@@ -80,7 +87,40 @@ export function parseDecimal(args: { value: string }): number | undefined {
   return Number.isNaN(num) ? undefined : num;
 }
 
-/** Parse a date/time string. Tries IB formats in order. Returns undefined on failure. */
+export type NumericLocale = 'anglo' | 'eu';
+
+/**
+ * Locale-aware decimal parser.
+ * - `anglo`: `.` decimal, `,` thousands (e.g. "1,234.56" → 1234.56)
+ * - `eu`:    `,` decimal, `.` or ` ` thousands (e.g. "1 234,56" → 1234.56)
+ */
+export function parseDecimalLocale(args: {
+  value: string;
+  locale: NumericLocale;
+}): number | undefined {
+  const trimmed = args.value.trim();
+  if (trimmed === '') return undefined;
+
+  const cleaned =
+    args.locale === 'eu'
+      ? trimmed.replace(/[\s.]/g, '').replace(',', '.')
+      : trimmed.replace(/,/g, '');
+
+  const num = Number(cleaned);
+  return Number.isNaN(num) ? undefined : num;
+}
+
+/**
+ * Parse a date/time string IN IBKR ACTIVITY STATEMENT FORMAT.
+ * Supports three known IBKR variants:
+ *   1. "yyyy-MM-dd, HH:mm:ss"  (quoted datetime with comma)
+ *   2. "yyyy-MM-dd HH:mm:ss"   (space separator)
+ *   3. "yyyy-MM-dd"            (date-only)
+ * Returns undefined on failure.
+ *
+ * This helper is IBKR-specific. New brokers using different formats
+ * (e.g. "dd.MM.yyyy") must provide their own parser.
+ */
 export function parseDateTime(args: { value: string }): Date | undefined {
   const v = args.value.trim();
   if (v === '') return undefined;
