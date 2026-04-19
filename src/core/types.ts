@@ -19,10 +19,11 @@ export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];
 /**
  * Origin tag attached to a parsed trade. Defaults to `'trade'` (regular
  * broker transaction) when omitted. Parsers that produce synthetic lots
- * from employee-share-purchase programs set `'espp'` so both legs are
- * visible as ESPP in the output.
+ * from employee-share-purchase programs set `'espp'`; parsers that produce
+ * synthetic lots from restricted stock unit plans set `'rsu'`. Both keep
+ * the buy + sell legs visible and tagged in the output.
  */
-export type TradeSource = 'trade' | 'espp';
+export type TradeSource = 'trade' | 'espp' | 'rsu';
 
 /** Raw trade from broker statement */
 export interface Trade {
@@ -197,7 +198,7 @@ export interface TradeResult {
   symbol: string;
   datetime: Date;
   type: 'buy' | 'sell';
-  source: 'trade' | 'corporate-action' | 'espp';
+  source: TradeSource | 'corporate-action';
   quantity: number;
   price: number;
   proceeds: number;
