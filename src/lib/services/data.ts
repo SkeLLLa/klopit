@@ -31,7 +31,20 @@ export async function deleteTrade(args: { id: number }): Promise<void> {
   await db.trades.delete(args.id);
 }
 
-// --- Dividends (edit/delete) ---
+// --- Dividends (full CRUD) ---
+
+export async function addDividend(args: {
+  sessionId: string;
+  dividend: RawDividend;
+}): Promise<number> {
+  const id = await db.dividends.add({
+    ...args.dividend,
+    sessionId: args.sessionId,
+    withholdingTax: 0,
+  });
+  if (id === undefined) throw new Error('Failed to insert dividend');
+  return id;
+}
 
 export async function updateDividend(args: {
   id: number;
