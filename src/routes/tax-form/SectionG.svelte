@@ -8,7 +8,11 @@
 </script>
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-  <SectionHeader title={m.tax_section_g()} />
+  <SectionHeader
+    title={m.tax_section_g()}
+    seeTransactionsHref="/dashboard#dividends"
+    seeTransactionsLabel={m.taxform_see_dividends()}
+  />
   <div class="space-y-0.5">
     <FormField label={m.tax_g_flat_rate_tax()} poz={46} value={pit38[46]} />
     <FormField label={m.tax_g_dividend_tax()} poz={47} value={pit38[47]} />

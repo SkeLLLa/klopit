@@ -22,7 +22,11 @@
 </script>
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-  <SectionHeader title={m.tax_section_d()} />
+  <SectionHeader
+    title={m.tax_section_d()}
+    seeTransactionsHref="/dashboard#trades"
+    seeTransactionsLabel={m.taxform_see_trades()}
+  />
   <div class="space-y-0.5">
     <FormField label={m.tax_d_prior_loss()} poz={30} value={pit38[30]} />
 
