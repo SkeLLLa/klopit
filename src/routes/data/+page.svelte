@@ -9,6 +9,7 @@
   import { db, type SessionRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { sessionState } from '$lib/state/session.svelte.js';
+  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import type { ImportWarning } from '../../core/types.js';
   import SessionBar from './SessionBar.svelte';
   import SessionInfo from './SessionInfo.svelte';
@@ -48,24 +49,11 @@
   };
 
   // --- Session state (drive liveQuery here, sync into shared state) ---
-  const sessionsQuery = useLiveQuery(() =>
-    db.sessions.orderBy('year').reverse().toArray(),
-  );
-  let initialized = $state(false);
-  $effect(() => {
-    const list = sessionsQuery.current;
-    if (!list) return;
-    if (!initialized) {
-      sessionState.init(list);
-      initialized = true;
-    } else {
-      sessionState.setSessions(list);
-    }
-  });
-  const sessions = $derived(sessionState.sessions);
-  const activeSessionId = $derived(sessionState.activeSessionId);
+  const bootstrap = useSessionBootstrap();
+  const sessions = $derived(bootstrap.sessions);
+  const activeSessionId = $derived(bootstrap.activeSessionId);
   const activeSession = $derived(
-    sessionState.activeSession as SessionWithImportWarnings | undefined,
+    bootstrap.activeSession as SessionWithImportWarnings | undefined,
   );
 
   // --- Tab counts (reactive) ---

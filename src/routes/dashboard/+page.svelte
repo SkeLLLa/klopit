@@ -14,6 +14,7 @@
   import { db } from '$lib/db.js';
   import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import { isSessionStale } from '$lib/utils/stale.js';
   import {
     calculateSessionTaxes,
@@ -25,28 +26,15 @@
   });
 
   // --- Bootstrap session state ---
-  const sessionsQuery = useLiveQuery(() =>
-    db.sessions.orderBy('year').reverse().toArray(),
-  );
-  let initialized = $state(false);
-  $effect(() => {
-    const list = sessionsQuery.current;
-    if (!list) return;
-    if (!initialized) {
-      sessionState.init(list);
-      initialized = true;
-    } else {
-      sessionState.setSessions(list);
-    }
-  });
+  const bootstrap = useSessionBootstrap();
 
   // --- Derived session state ---
-  const session = $derived(sessionState.activeSession);
-  const sessionId = $derived(sessionState.activeSessionId);
+  const session = $derived(bootstrap.activeSession);
+  const sessionId = $derived(bootstrap.activeSessionId);
 
   // --- Calculated sessions for dropdown ---
   const calculatedSessions = $derived(
-    sessionState.sessions.filter((s) => s.status === 'calculated'),
+    bootstrap.sessions.filter((s) => s.status === 'calculated'),
   );
 
   // --- Data queries ---
@@ -104,7 +92,7 @@
 
   // --- Loading state: true until IndexedDB queries have resolved ---
   const loading = $derived(
-    !initialized || (session?.status === 'calculated' && !taxSummary),
+    !bootstrap.initialized || (session?.status === 'calculated' && !taxSummary),
   );
 
   function handleSessionChange(e: Event) {
@@ -137,7 +125,7 @@
   <div class="flex flex-col items-center justify-center py-24 text-center">
     <LoaderCircle size={32} class="mb-3 animate-spin text-slate-400" />
   </div>
-{:else if sessionState.sessions.length === 0}
+{:else if bootstrap.sessions.length === 0}
   <!-- No sessions exist at all -->
   <div class="flex flex-col items-center justify-center py-24 text-center">
     <AlertCircle size={40} class="mb-3 text-slate-400" />

@@ -3,9 +3,9 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import {
     calculateSessionTaxes,
     clearSessionResults,
@@ -26,27 +26,14 @@
   });
 
   // --- Bootstrap session state (in case user navigates here directly) ---
-  const sessionsQuery = useLiveQuery(() =>
-    db.sessions.orderBy('year').reverse().toArray(),
-  );
-  let initialized = $state(false);
-  $effect(() => {
-    const list = sessionsQuery.current;
-    if (!list) return;
-    if (!initialized) {
-      sessionState.init(list);
-      initialized = true;
-    } else {
-      sessionState.setSessions(list);
-    }
-  });
+  const bootstrap = useSessionBootstrap();
 
   // --- State ---
   let calculating = $state(false);
   let error: string | null = $state(null);
 
-  const session = $derived(sessionState.activeSession);
-  const sessionId = $derived(sessionState.activeSessionId);
+  const session = $derived(bootstrap.activeSession);
+  const sessionId = $derived(bootstrap.activeSessionId);
 
   // Read tax summary from Dexie
   const taxSummaryQuery = useLiveQuery(async () =>

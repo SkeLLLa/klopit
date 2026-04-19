@@ -2,9 +2,7 @@
   import { AlertCircle, ArrowRight, Info } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import PriorLossTable from '$lib/components/PriorLossTable.svelte';
 
   $effect(() => {
@@ -12,22 +10,9 @@
   });
 
   // Bootstrap session state if user lands here directly.
-  const sessionsQuery = useLiveQuery(() =>
-    db.sessions.orderBy('year').reverse().toArray(),
-  );
-  let initialized = $state(false);
-  $effect(() => {
-    const list = sessionsQuery.current;
-    if (!list) return;
-    if (!initialized) {
-      sessionState.init(list);
-      initialized = true;
-    } else {
-      sessionState.setSessions(list);
-    }
-  });
+  const bootstrap = useSessionBootstrap();
 
-  const session = $derived(sessionState.activeSession);
+  const session = $derived(bootstrap.activeSession);
 </script>
 
 <div class="space-y-4">
