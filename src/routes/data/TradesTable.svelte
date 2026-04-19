@@ -9,7 +9,7 @@
   import type { TradeRecord } from '$lib/db.js';
   import { formatDatetime } from '$lib/utils/format-date.js';
   import TradeForm from './TradeForm.svelte';
-  import DeleteConfirm from './DeleteConfirm.svelte';
+  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();

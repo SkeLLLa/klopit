@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Pencil, Trash2, Plus } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
+  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import { db, type PriorYearLossRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import {
@@ -273,31 +274,10 @@
     </table>
   </div>
 
-  {#if deleteTarget !== null}
-    <div
-      class="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
-    >
-      <div
-        class="rounded-lg border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-      >
-        <p class="mb-3 text-sm text-slate-700 dark:text-slate-200">
-          {m.data_delete_row_confirm()}
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-            onclick={() => (deleteTarget = null)}
-            class="rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            {m.data_cancel()}
-          </button>
-          <button
-            onclick={() => void handleDelete()}
-            class="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-          >
-            {m.data_delete()}
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <DeleteConfirm
+    open={deleteTarget !== null}
+    message={m.data_delete_row_confirm()}
+    onconfirm={() => void handleDelete()}
+    oncancel={() => (deleteTarget = null)}
+  />
 </div>
