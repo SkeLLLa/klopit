@@ -1,0 +1,10 @@
+Sale of Trustee Shares Activity Statement Order Number: 9999001
+Jane Doe ID / SS # Company: ACME
+Grant Date: January 15, 2022 Grant No.: RSU000001 Plan: ACME INC. 2020- RSU
+Letter Date: January 15, 2022 Exercise Price: USD 0.0000
+Tax Plan: NQ 30 days Price: USD .000
+Execution Date: July 20, 2024 Ex. rate at Sell Date: 0.000
+Total Amount Due to Order 25 USD 125.0000 USD 3,125.00
+Total Fees (THE ABOVE FEES DO NOT INCLUDE TRANSFER FEES) USD 4.17
+Net Amount For Tax Income Component USD 3,120.83 Capital Component USD 0.00
+Net Gain Due to Order USD 3,120.83

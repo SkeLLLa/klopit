@@ -16,6 +16,7 @@
 
   const descriptionKeys: Record<string, () => string> = {
     nav_docs_ibi_espp: m.page_docs_desc_ibi_espp,
+    nav_docs_ibi_rsu: m.page_docs_desc_ibi_rsu,
   };
 
   function t(key: string): string {

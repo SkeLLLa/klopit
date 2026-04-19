@@ -47,6 +47,11 @@ export const navigation: NavSection[] = [
                 href: '/docs/ibi/espp',
                 icon: 'FileText',
               },
+              {
+                labelKey: 'nav_docs_ibi_rsu',
+                href: '/docs/ibi/rsu',
+                icon: 'FileText',
+              },
             ],
           },
           {

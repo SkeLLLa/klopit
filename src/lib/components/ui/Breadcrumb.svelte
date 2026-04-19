@@ -22,6 +22,7 @@
     '/docs/ibkr/w8ben': { label: () => m.nav_docs_ibkr_w8ben(), linkable: true },
     '/docs/ibi': { label: () => m.nav_docs_ibi(), linkable: true },
     '/docs/ibi/espp': { label: () => m.nav_docs_ibi_espp(), linkable: true },
+    '/docs/ibi/rsu': { label: () => m.nav_docs_ibi_rsu(), linkable: true },
   };
 
   interface Crumb {
