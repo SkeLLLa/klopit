@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { Heart } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { updateSession } from '$lib/services/session.js';
   import { taxSupportFunds } from '$lib/constants/support-funds.js';
+  import { debounce } from '$lib/utils/debounce.js';
 
   let {
     sessionId,
@@ -56,6 +58,12 @@
     });
   }
 
+  const persistOppDebounced = debounce(persistOpp, 400);
+
+  onDestroy(() => {
+    persistOppDebounced.flush();
+  });
+
   function handleFundChange() {
     if (selectedFundId === '' || selectedFundId === CUSTOM) {
       // Switching to custom — clear fields so user can type
@@ -75,11 +83,11 @@
   }
 
   function handleKrsInput() {
-    void persistOpp();
+    persistOppDebounced();
   }
 
   function handleDetailsInput() {
-    void persistOpp();
+    persistOppDebounced();
   }
 
   function handleConsentChange() {
