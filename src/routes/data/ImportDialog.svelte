@@ -1,6 +1,7 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
-  import { importFile } from '$lib/services/import.js';
+  import { importFiles } from '$lib/services/import-files.js';
+  import type { ImportFileResult } from '$lib/services/import-files.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
   import type { BrokerId } from '../../core/types.js';
 
@@ -23,7 +24,7 @@
     brokers.find((b) => b.id === selectedBroker)?.fileExtensions.join(',') ?? '.csv',
   );
   let importing = $state(false);
-  let results: { fileName: string; success: boolean; message: string }[] = $state([]);
+  let results: ImportFileResult[] = $state([]);
 
   $effect(() => {
     if (!dialogEl) return;
@@ -45,43 +46,11 @@
   async function handleImport() {
     if (!files || files.length === 0) return;
     importing = true;
-    results = [];
-
-    for (const file of files) {
-      try {
-        const result = await importFile({
-          sessionId,
-          brokerId: selectedBroker,
-          fileName: file.name,
-          fileSize: file.size,
-          file,
-        });
-        results = [
-          ...results,
-          {
-            fileName: file.name,
-            success: true,
-            message: m.data_import_success({
-              tradeCount: String(result.tradeCount),
-              dividendCount: String(result.dividendCount),
-              fileName: file.name,
-            }),
-          },
-        ];
-      } catch (err) {
-        results = [
-          ...results,
-          {
-            fileName: file.name,
-            success: false,
-            message: m.data_import_error({
-              fileName: file.name,
-              error: err instanceof Error ? err.message : String(err),
-            }),
-          },
-        ];
-      }
-    }
+    results = await importFiles({
+      sessionId,
+      brokerId: selectedBroker,
+      files,
+    });
     importing = false;
   }
 

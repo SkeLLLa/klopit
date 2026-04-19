@@ -1,10 +1,11 @@
 <script lang="ts">
   import { ChevronDown, ChevronUp } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
-  import { importFile } from '$lib/services/import.js';
+  import { importFiles } from '$lib/services/import-files.js';
+  import type { ImportFileResult } from '$lib/services/import-files.js';
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
-  import type { BrokerId, ImportWarning } from '../../core/types.js';
+  import type { BrokerId } from '../../core/types.js';
 
   let {
     sessionId,
@@ -22,12 +23,7 @@
     brokers.find((b) => b.id === selectedBroker)?.fileExtensions.join(',') ?? '.csv',
   );
   let importing = $state(false);
-  let results: {
-    fileName: string;
-    success: boolean;
-    message: string;
-    warnings: ImportWarning[];
-  }[] = $state([]);
+  let results: ImportFileResult[] = $state([]);
 
   function toggle() {
     open = !open;
@@ -41,49 +37,17 @@
   async function handleImport() {
     if (!files || files.length === 0) return;
     importing = true;
-    results = [];
-
-    for (const file of files) {
-      try {
-        const result = (await importFile({
+    results = await importFiles({
+      sessionId,
+      brokerId: selectedBroker,
+      files,
+    });
+    for (const result of results) {
+      if (result.skippedRows.length > 0) {
+        skippedRowsStore.addSkippedRows({
           sessionId,
-          brokerId: selectedBroker,
-          fileName: file.name,
-          fileSize: file.size,
-          file,
-        }));
-        if (result.skippedRows.length > 0) {
-          skippedRowsStore.addSkippedRows({
-            sessionId,
-            rows: result.skippedRows,
-          });
-        }
-        results = [
-          ...results,
-          {
-            fileName: file.name,
-            success: true,
-            message: m.data_import_success({
-              tradeCount: String(result.tradeCount),
-              dividendCount: String(result.dividendCount),
-              fileName: file.name,
-            }),
-            warnings: result.warnings,
-          },
-        ];
-      } catch (err) {
-        results = [
-          ...results,
-          {
-            fileName: file.name,
-            success: false,
-            message: m.data_import_error({
-              fileName: file.name,
-              error: err instanceof Error ? err.message : String(err),
-            }),
-            warnings: [],
-          },
-        ];
+          rows: result.skippedRows,
+        });
       }
     }
     importing = false;
