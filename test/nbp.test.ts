@@ -208,7 +208,7 @@ void describe('NbpFetchError', () => {
     globalThis.fetch = savedFetch;
   });
 
-  void it('wraps AbortError as NbpFetchError', async () => {
+  void it('wraps fetch TimeoutError as NbpFetchError', async () => {
     globalThis.fetch = (() =>
       Promise.reject(
         new DOMException('signal timed out', 'TimeoutError'),
