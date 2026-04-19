@@ -7,13 +7,78 @@
 
   let { sessionId }: { sessionId: string } = $props();
 
-  // Load all symbols with ISINs from trades and dividends
-  const tradesQuery = useLiveQuery(() =>
-    db.trades.where('sessionId').equals(sessionId).toArray(),
-  );
-  const dividendsQuery = useLiveQuery(() =>
-    db.dividends.where('sessionId').equals(sessionId).toArray(),
-  );
+  // ---------------------------------------------------------------------------
+  // Indexed uniqueKeys() queries — avoids full table scans on large sessions.
+  //
+  // Two queries per table are required because `isin` is optional on Trade and
+  // RawDividend. Records where isin is undefined are excluded from the
+  // [sessionId+symbol+isin] compound index, so we also enumerate all distinct
+  // symbols via [sessionId+symbol] to ensure ISIN-less symbols are still shown.
+  // ---------------------------------------------------------------------------
+
+  interface SymbolIsin {
+    symbol: string;
+    isin: string | undefined;
+  }
+
+  /** Extract (symbol, isin?) pairs from uniqueKeys() results for [sessionId+symbol+isin]. */
+  function keysToSymbolIsin(keys: readonly unknown[]): SymbolIsin[] {
+    const out: SymbolIsin[] = [];
+    for (const k of keys) {
+      if (!Array.isArray(k)) continue;
+      const tuple = k as [unknown, unknown, unknown];
+      const symbol = tuple[1];
+      const isin = tuple[2];
+      if (typeof symbol !== 'string') continue;
+      out.push({ symbol, isin: typeof isin === 'string' ? isin : undefined });
+    }
+    return out;
+  }
+
+  /** Extract distinct symbols from uniqueKeys() results for [sessionId+symbol]. */
+  function keysToSymbols(keys: readonly unknown[]): string[] {
+    const out: string[] = [];
+    for (const k of keys) {
+      if (!Array.isArray(k)) continue;
+      const tuple = k as [unknown, unknown];
+      const symbol = tuple[1];
+      if (typeof symbol === 'string') out.push(symbol);
+    }
+    return out;
+  }
+
+  // Distinct (symbol, isin) pairs — covers records that have an ISIN.
+  const tradeSymbolIsinQuery = useLiveQuery(() => {
+    if (!sessionId) return [] as unknown[];
+    return db.trades
+      .where('[sessionId+symbol+isin]')
+      .between([sessionId, '\u0000', '\u0000'], [sessionId, '\uffff', '\uffff'])
+      .uniqueKeys();
+  });
+  const dividendSymbolIsinQuery = useLiveQuery(() => {
+    if (!sessionId) return [] as unknown[];
+    return db.dividends
+      .where('[sessionId+symbol+isin]')
+      .between([sessionId, '\u0000', '\u0000'], [sessionId, '\uffff', '\uffff'])
+      .uniqueKeys();
+  });
+
+  // Distinct symbols — covers ALL records including those without an ISIN.
+  const tradeSymbolsQuery = useLiveQuery(() => {
+    if (!sessionId) return [] as unknown[];
+    return db.trades
+      .where('[sessionId+symbol]')
+      .between([sessionId, '\u0000'], [sessionId, '\uffff'])
+      .uniqueKeys();
+  });
+  const dividendSymbolsQuery = useLiveQuery(() => {
+    if (!sessionId) return [] as unknown[];
+    return db.dividends
+      .where('[sessionId+symbol]')
+      .between([sessionId, '\u0000'], [sessionId, '\uffff'])
+      .uniqueKeys();
+  });
+
   const overridesQuery = useLiveQuery(() =>
     db.symbolCountryOverrides.where('sessionId').equals(sessionId).toArray(),
   );
@@ -26,28 +91,39 @@
   }
 
   const entries = $derived.by(() => {
-    const trades = tradesQuery.current ?? [];
-    const dividends = dividendsQuery.current ?? [];
+    const tradeSymbolIsins = keysToSymbolIsin(tradeSymbolIsinQuery.current ?? []);
+    const dividendSymbolIsins = keysToSymbolIsin(dividendSymbolIsinQuery.current ?? []);
+    const tradeSymbols = keysToSymbols(tradeSymbolsQuery.current ?? []);
+    const dividendSymbols = keysToSymbols(dividendSymbolsQuery.current ?? []);
     const overrides = overridesQuery.current ?? [];
 
     const overrideMap = new Map(overrides.map((o) => [o.symbol, o.country]));
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable inside $derived.by, not reactive state
     const symbolMap = new Map<string, { isin?: string }>();
 
-    for (const t of trades) {
-      const existing = symbolMap.get(t.symbol);
+    // Seed all distinct symbols first (ensures ISIN-less symbols appear).
+    for (const symbol of tradeSymbols) {
+      if (!symbolMap.has(symbol)) symbolMap.set(symbol, {});
+    }
+    for (const symbol of dividendSymbols) {
+      if (!symbolMap.has(symbol)) symbolMap.set(symbol, {});
+    }
+
+    // Fill in ISINs from the compound-index results.
+    for (const { symbol, isin } of tradeSymbolIsins) {
+      const existing = symbolMap.get(symbol);
       if (!existing) {
-        symbolMap.set(t.symbol, { isin: t.isin });
-      } else if (t.isin && !existing.isin) {
-        existing.isin = t.isin;
+        symbolMap.set(symbol, { isin });
+      } else if (isin && !existing.isin) {
+        existing.isin = isin;
       }
     }
-    for (const d of dividends) {
-      const existing = symbolMap.get(d.symbol);
+    for (const { symbol, isin } of dividendSymbolIsins) {
+      const existing = symbolMap.get(symbol);
       if (!existing) {
-        symbolMap.set(d.symbol, { isin: d.isin });
-      } else if (d.isin && !existing.isin) {
-        existing.isin = d.isin;
+        symbolMap.set(symbol, { isin });
+      } else if (isin && !existing.isin) {
+        existing.isin = isin;
       }
     }
 

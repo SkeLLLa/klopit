@@ -262,6 +262,18 @@ export class KlopitDB extends Dexie {
         .toCollection()
         .modify(renameInteractiveBrokersToIbkr);
     });
+    // v10: add compound indexes for efficient uniqueKeys() queries in
+    // CountryMappingTable. [sessionId+symbol] lets us enumerate distinct
+    // symbols per session without a full table scan; [sessionId+symbol+isin]
+    // lets us enumerate distinct (symbol, isin) pairs in a single range query.
+    // Both are additive-only — no data migration needed; Dexie auto-builds
+    // the new index entries on existing records during upgrade.
+    this.version(10).stores({
+      trades:
+        '++id, sessionId, symbol, datetime, [sessionId+symbol], [sessionId+symbol+isin]',
+      dividends:
+        '++id, sessionId, symbol, date, [sessionId+symbol], [sessionId+symbol+isin]',
+    });
   }
 }
 
