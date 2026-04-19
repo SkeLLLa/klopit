@@ -107,22 +107,23 @@ void describe('parseIbiText', () => {
   });
 
   void it('flags totalFees as missing when Total Fees regex fails to match', () => {
-    const pdfWithoutFees = `
-Grant Date: 15/01/2024
-Execution Date: 20/03/2024
-Price For Tax: 100.00
-Order 123456
-10 150.00 1500.00
-Company: TEST
-`.trim();
+    // Otherwise-valid statement with the Total Fees line removed — isolates
+    // the missing-fees branch from the all-fields-missing path covered above.
+    const pdfWithoutFees = SAMPLE_ORDER_TEXT.split('\n')
+      .filter((line) => !line.startsWith('Total Fees'))
+      .join('\n');
 
     const result = parseIbiText({ text: pdfWithoutFees });
 
-    // Expect a warning referencing Total Fees and no trades emitted
     const feeWarning = result.warnings.find((w) =>
       w.message.includes('Total Fees'),
     );
     assert.ok(feeWarning, 'expected a warning flagging missing Total Fees');
+    assert.equal(
+      feeWarning.message,
+      'Missing required fields: Total Fees',
+      'warning should mention only Total Fees, not other fields',
+    );
     assert.equal(result.trades.length, 0);
   });
 
