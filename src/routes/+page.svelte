@@ -2,7 +2,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight, BarChart3, FileText, Lock, Table, Upload } from 'lucide-svelte';
+  import { ArrowRight, BarChart3, Eye, FileText, Lock, Table, Upload } from 'lucide-svelte';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
   import WhyPillars from '$lib/components/home/WhyPillars.svelte';
   import HowItWorks from '$lib/components/home/HowItWorks.svelte';
@@ -26,6 +26,12 @@
       title: m.home_feature_fifo_title(),
       description: m.home_feature_fifo_desc(),
       icon: Table,
+    },
+    {
+      href: '/dashboard',
+      title: m.home_feature_transparency_title(),
+      description: m.home_feature_transparency_desc(),
+      icon: Eye,
     },
     {
       href: '/dashboard',
