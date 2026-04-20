@@ -1,3 +1,13 @@
+## [1.13.3](https://github.com/SkeLLLa/klopit/compare/v1.13.2...v1.13.3) (2026-04-20)
+
+### 🛠 Fixes
+
+* add languages to jsonld ([b4c63c8](https://github.com/SkeLLLa/klopit/commit/b4c63c855fe8bc05a3bd043f5ea828208a063a7b))
+
+### 🧾 Other
+
+* **deps:** bump actions/upload-pages-artifact in the all-actions group ([7939c06](https://github.com/SkeLLLa/klopit/commit/7939c06dfe59cf812d720add9ba84924ec70b839))
+
 ## [1.13.2](https://github.com/SkeLLLa/klopit/compare/v1.13.1...v1.13.2) (2026-04-19)
 
 ### 🛠 Fixes
