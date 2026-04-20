@@ -301,6 +301,7 @@
   "page_docs": "Documentation",
   "page_docs_desc_faq": "Answers to common questions about PIT-38 filing, tax calculations, and using kloPIT.",
   "page_docs_desc_ib": "Step-by-step guide to exporting your activity statement from Interactive Brokers.",
+  "page_docs_desc_ibkr_w8ben": "How to file W-8BEN to claim the Poland-US treaty rate (15%) on US dividends.",
   "page_docs_desc_ibi": "Guides for IBI Capital — the Israeli broker that administers employee share plans for Israeli-headquartered employers.",
   "page_docs_desc_ibi_espp": "How to import IBI Capital ESPP \"Sale Of Stock Activity Statement\" PDFs.",
   "page_docs_desc_ibi_rsu": "How to import IBI Capital RSU \"Sale of Trustee Shares Activity Statement\" PDFs.",

@@ -16,7 +16,7 @@
     '/tax-form': { label: () => m.nav_tax_form(), linkable: true },
     '/support': { label: () => m.nav_support(), linkable: true },
     '/about': { label: () => m.nav_about(), linkable: true },
-    '/docs': { label: () => m.nav_docs(), linkable: false },
+    '/docs': { label: () => m.nav_docs(), linkable: true },
     '/docs/faq': { label: () => m.nav_faq(), linkable: true },
     '/docs/ibkr': { label: () => m.nav_docs_ib(), linkable: true },
     '/docs/ibkr/w8ben': { label: () => m.nav_docs_ibkr_w8ben(), linkable: true },

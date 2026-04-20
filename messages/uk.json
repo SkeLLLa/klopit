@@ -295,6 +295,7 @@
   "page_docs": "Документація",
   "page_docs_desc_faq": "Відповіді на поширені питання про PIT-38, податкові розрахунки та використання kloPIT.",
   "page_docs_desc_ib": "Покрокова інструкція з експорту виписки з Interactive Brokers.",
+  "page_docs_desc_ibkr_w8ben": "Як подати W-8BEN та отримати ставку 15% на дивіденди з США за договором Польща–США.",
   "page_docs_desc_ibi": "Посібники IBI Capital — ізраїльського брокера, що обслуговує плани участі працівників у капіталі ізраїльських компаній.",
   "page_docs_desc_ibi_espp": "Як імпортувати PDF-и «Sale Of Stock Activity Statement» з IBI Capital (план ESPP).",
   "page_docs_desc_ibi_rsu": "Як імпортувати PDF-и «Sale of Trustee Shares Activity Statement» з IBI Capital (RSU).",
