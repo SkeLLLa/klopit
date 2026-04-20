@@ -1,3 +1,9 @@
+## [1.14.1](https://github.com/SkeLLLa/klopit/compare/v1.14.0...v1.14.1) (2026-04-20)
+
+### 🛠 Fixes
+
+* **ui:** more fancy homepage ([e7ab05e](https://github.com/SkeLLLa/klopit/commit/e7ab05ebb7ad217c43e410da15a71563448924df))
+
 ## [1.14.0](https://github.com/SkeLLLa/klopit/compare/v1.13.3...v1.14.0) (2026-04-20)
 
 ### 🚀 Features
