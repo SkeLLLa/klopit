@@ -149,7 +149,7 @@
     >
       {m.home_features_title()}
     </h2>
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {#each featureCards as card (card.title)}
       {#if card.href !== null}
         <a
