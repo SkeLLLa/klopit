@@ -45,6 +45,7 @@
       isAccessibleForFree: true,
       license: 'https://www.gnu.org/licenses/agpl-3.0.html',
       codeRepository: 'https://github.com/SkeLLLa/klopit',
+      softwareVersion: __APP_VERSION__,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'PLN' },
       featureList: [
         'CSV import (Interactive Brokers)',
@@ -55,6 +56,11 @@
         'PIT-ZG attachment',
         'Loss carryforward (5 years)',
         'Foreign dividend withholding credit',
+      ],
+      availableLanguage: [
+        { '@type': 'Language', name: 'English', alternateName: 'en' },
+        { '@type': 'Language', name: 'Polish', alternateName: 'pl' },
+        { '@type': 'Language', name: 'Ukrainian', alternateName: 'uk' },
       ],
       inLanguage: locale,
       publisher,
