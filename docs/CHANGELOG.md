@@ -1,3 +1,9 @@
+## [1.14.0](https://github.com/SkeLLLa/klopit/compare/v1.13.3...v1.14.0) (2026-04-20)
+
+### 🚀 Features
+
+* **ui:** add dedicated docs page ([b5b5bb4](https://github.com/SkeLLLa/klopit/commit/b5b5bb4e519f60447d74e59a6876ea10dc689f69))
+
 ## [1.13.3](https://github.com/SkeLLLa/klopit/compare/v1.13.2...v1.13.3) (2026-04-20)
 
 ### 🛠 Fixes
