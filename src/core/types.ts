@@ -8,6 +8,7 @@ export const TAX_RATE = 0.19;
 export const BrokerId = {
   InteractiveBrokers: 'ibkr',
   IbiCapital: 'ibi',
+  Schwab: 'schwab',
 } as const;
 
 export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];

@@ -16,6 +16,14 @@ void describe('registry', () => {
       assert.equal(def.brokerName, 'Interactive Brokers');
     });
 
+    void it('returns definition for Charles Schwab', () => {
+      const def = getParserDefinition({
+        brokerId: BrokerId.Schwab,
+      });
+      assert.equal(def.brokerId, 'schwab');
+      assert.equal(def.brokerName, 'Charles Schwab');
+    });
+
     void it('creates a working parser from definition', () => {
       const def = getParserDefinition({
         brokerId: BrokerId.InteractiveBrokers,
@@ -39,6 +47,7 @@ void describe('registry', () => {
       const brokers = supportedBrokers();
       assert.ok(brokers.length >= 1);
       assert.ok(brokers.some((b) => b.name === 'Interactive Brokers'));
+      assert.ok(brokers.some((b) => b.name === 'Charles Schwab'));
     });
   });
 });
