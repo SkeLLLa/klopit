@@ -1,5 +1,6 @@
 import { ibiDefinition } from './ibi/index.js';
 import { ibkrDefinition } from './ibkr/index.js';
+import { schwabDefinition } from './schwab/index.js';
 import type { ParserDefinition } from './types.js';
 
 /**
@@ -10,4 +11,5 @@ import type { ParserDefinition } from './types.js';
 export const ALL_PARSERS: readonly ParserDefinition[] = [
   ibkrDefinition,
   ibiDefinition,
+  schwabDefinition,
 ];

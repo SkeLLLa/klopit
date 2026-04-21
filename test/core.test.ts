@@ -6,4 +6,8 @@ void describe('core types', () => {
   void it('BrokerId has InteractiveBrokers value', () => {
     assert.equal(BrokerId.InteractiveBrokers, 'ibkr');
   });
+
+  void it('BrokerId has Schwab value', () => {
+    assert.equal(BrokerId.Schwab, 'schwab');
+  });
 });
