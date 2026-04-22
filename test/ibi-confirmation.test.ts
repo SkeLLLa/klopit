@@ -99,11 +99,7 @@ void describe('parseIbiText — Confirmation of Sale happy path', () => {
     const [buy, sell] = result.trades;
     const { lotId } = buy;
     assert.ok(lotId, 'buy lotId should be set');
-    assert.equal(
-      lotId,
-      sell.lotId,
-      'both trades must share the same lotId',
-    );
+    assert.equal(lotId, sell.lotId, 'both trades must share the same lotId');
     assert.match(
       lotId,
       /^\d{4}-\d{2}-\d{2}-\d{4}-\d{2}-\d{2}$/,
