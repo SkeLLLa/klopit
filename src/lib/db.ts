@@ -279,6 +279,26 @@ export class KlopitDB extends Dexie {
     this.version(11).stores({
       sessions: 'id, year',
     });
+    // v12: PIT/ZG shape and includeAllInPitZg semantics changed. Old
+    // taxSummaries / result rows can keep stale PIT/ZG payloads that no
+    // longer match the current calculator output, so invalidate derived
+    // tables and force recalculation while preserving imported source data.
+    this.version(12).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('tradeResults').clear(),
+        tx.table('dividendResults').clear(),
+        tx.table('creditInterestResults').clear(),
+        tx.table('taxSummaries').clear(),
+      ]);
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          session.status = 'draft';
+          session.calculatedAt = undefined;
+          session.dataUpdatedAt = new Date();
+        });
+    });
   }
 }
 

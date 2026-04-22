@@ -100,4 +100,102 @@ void describe('KlopitDB schema upgrade', () => {
     assert.equal(rows[0].id, 'post-upgrade-session');
     klopit.close();
   });
+
+  void it('clears stale derived tax tables when upgrading from v11 to v12', async () => {
+    const dbName = `klopit_upgrade_${String(Date.now())}_${Math.random().toString(36).slice(2)}`;
+
+    const legacy = new Dexie(dbName);
+    legacy.version(1).stores({
+      sessions: 'id, year',
+      trades: '++id, sessionId, symbol, datetime',
+      dividends: '++id, sessionId, symbol, date',
+      corporateActions: '++id, sessionId, datetime',
+      tradeResults: '++id, sessionId, symbol, datetime',
+      dividendResults: '++id, sessionId, symbol, date',
+      taxSummaries: 'sessionId',
+      nbpRates: 'id, currency, date',
+    });
+    legacy.version(2).stores({
+      withholdingTaxes: '++id, sessionId, symbol, date',
+      carryInPositions: '++id, sessionId, symbol',
+      transactionFees: '++id, sessionId, symbol, datetime',
+    });
+    legacy.version(3).stores({
+      symbolCountryOverrides: '++id, sessionId, symbol',
+    });
+    legacy.version(4).stores({ sessions: 'id, year' });
+    legacy.version(6).stores({
+      priorLosses: '++id, sessionId, year, [sessionId+year]',
+    });
+    legacy.version(8).stores({
+      creditInterests: '++id, sessionId, date',
+      creditInterestResults: '++id, sessionId, date',
+    });
+    legacy.version(10).stores({
+      trades:
+        '++id, sessionId, symbol, datetime, [sessionId+symbol], [sessionId+symbol+isin]',
+      dividends:
+        '++id, sessionId, symbol, date, [sessionId+symbol], [sessionId+symbol+isin]',
+    });
+    legacy.version(11).stores({
+      sessions: 'id, year',
+    });
+    await legacy.open();
+    await legacy.table('sessions').add({
+      id: 'legacy-session',
+      year: 2024,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      files: [],
+      status: 'calculated',
+      calculatedAt: new Date('2025-04-01T00:00:00.000Z'),
+      includeAllInPitZg: true,
+    });
+    await legacy.table('taxSummaries').put({
+      sessionId: 'legacy-session',
+      year: 2024,
+      totalProceedsPln: 0,
+      totalCostPln: 0,
+      capitalGainPln: 0,
+      capitalGainTaxPln: 0,
+      totalDividendsPln: 100,
+      totalWithholdingPln: 15,
+      totalDeductibleWithholdingPln: 15,
+      dividendTaxOwedPln: 4,
+      totalCreditInterestPln: 0,
+      totalCreditInterestForeignTaxPln: 0,
+      capitalGainAfterLcfPln: 0,
+      capitalGainTaxPostLcfPln: 0,
+      pit38: {},
+      pitZg: [{ country: 'US' }],
+    });
+    await legacy.table('tradeResults').add({
+      sessionId: 'legacy-session',
+      symbol: 'AAPL',
+      datetime: new Date(),
+      type: 'sell',
+    });
+    await legacy.table('dividendResults').add({
+      sessionId: 'legacy-session',
+      symbol: 'AAPL',
+      date: new Date(),
+    });
+    legacy.close();
+
+    const klopit = new KlopitDB(dbName);
+    await klopit.open();
+
+    assert.equal(await klopit.taxSummaries.count(), 0);
+    assert.equal(await klopit.tradeResults.count(), 0);
+    assert.equal(await klopit.dividendResults.count(), 0);
+    assert.equal(await klopit.creditInterestResults.count(), 0);
+
+    const upgradedSession = await klopit.sessions.get('legacy-session');
+    assert.ok(upgradedSession);
+    assert.equal(upgradedSession?.status, 'draft');
+    assert.equal(upgradedSession?.calculatedAt, undefined);
+    assert.equal(upgradedSession?.includeAllInPitZg, true);
+
+    klopit.close();
+  });
 });
