@@ -25,7 +25,7 @@ import { buildStatement, parseAmount, parseLongDate } from './shared.js';
 const ENTRY_DATE_RE = /Entry Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const EXERCISE_DATE_RE = /Exercise Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const SALE_DATE_RE = /Sale Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
-const EXERCISE_PRICE_RE = /Exercise Period Price[^:]*:\s*([\d,]+\.\d+)/;
+const EXERCISE_PRICE_RE = /Exercise Period Price[^:]*:\s*([\d,]+(?:\.\d+)?)/;
 /**
  * "Shares Purchased: 82" (Calculation section) or "Shares Sold: 82"
  * (Quick Sale section). Both carry the same value; the first match wins.
@@ -35,13 +35,13 @@ const SHARES_RE = /Shares (?:Purchased|Sold):\s*(\d+)/;
  * "Sale Price* $140.4901" — the asterisk and dollar sign may be separated
  * from the label by spaces or appear flush; the \s*\*? handles both.
  */
-const SALE_PRICE_RE = /Sale Price\s*\*?\s*\$([\d,]+\.\d+)/;
-const TOTAL_CONSIDERATION_RE = /Total Consideration:\s*([\d,]+\.\d+)/;
+const SALE_PRICE_RE = /Sale Price\s*\*?\s*\$([\d,]+(?:\.\d+)?)/;
+const TOTAL_CONSIDERATION_RE = /Total Consideration:\s*([\d,]+(?:\.\d+)?)/;
 /**
  * "Total Fees: 13.98 $" — distinct from the Activity Statement's
  * "Total Fees (…) USD …" pattern, so there is no regex collision.
  */
-const TOTAL_FEES_RE = /Total Fees:\s*([\d,]+\.\d+)/;
+const TOTAL_FEES_RE = /Total Fees:\s*([\d,]+(?:\.\d+)?)/;
 /**
  * Extract a ticker-like symbol from the document title, e.g.
  * "Wix.com Ltd. Employee Stock Purchase Plan" → capture "Wix" → "WIX".
@@ -126,7 +126,11 @@ export function parseIbiConfirmationText(args: {
 
   // Synthetic lot ID: exercise-period boundaries uniquely identify this
   // grant. No order number appears in this document format.
-  const lotId = `${entryDate.toISOString().slice(0, 10)}-${exerciseDate.toISOString().slice(0, 10)}`;
+  // Use local-calendar components (not toISOString/UTC) to avoid an
+  // off-by-one date shift in non-UTC timezones.
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const lotId = `${fmt(entryDate)}-${fmt(exerciseDate)}`;
 
   trades.push({
     symbol,
