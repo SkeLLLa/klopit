@@ -67,6 +67,8 @@ function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
     rateUnavailable: false,
     country: 'US',
     taxPln: 2272.4,
+    foreignTaxPln: 0,
+    foreignTaxOriginal: 0,
     ...overrides,
   };
 }

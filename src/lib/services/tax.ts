@@ -236,6 +236,7 @@ export async function calculateSessionTaxes(args: {
     })),
     taxPeriod,
     symbolCountryMap,
+    includeAllInPitZg: session.includeAllInPitZg ?? false,
   });
 
   // 12. Persist results

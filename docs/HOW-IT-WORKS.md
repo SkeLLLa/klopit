@@ -121,13 +121,15 @@ The form displays **six sections** with calculated numbers:
 
 **PIT/ZG attachment:**
 
-When you have income from foreign sources (foreign broker trades or foreign dividends), you must submit a **PIT/ZG** attachment alongside your PIT-38 ([art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)). PIT/ZG reports:
+When you receive **dividends from foreign companies with foreign tax withheld**, you must submit a **PIT/ZG** attachment alongside your PIT-38 ([art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)). PIT/ZG reports:
 
-- Country of income origin (e.g., USA for Interactive Brokers)
-- Income amount in PLN
+- Country of income origin = **company's country of residence** (not the exchange)
+- Dividend income amount in PLN
 - Tax paid abroad (withholding tax)
 
-You need **one PIT/ZG per country** — if you have dividends from US and German stocks, you file two PIT/ZG attachments. When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
+You need **one PIT/ZG per country** — if you have dividends from US and German stocks with withholding tax, you file two PIT/ZG attachments. When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
+
+**Capital gains are NOT included in PIT/ZG.** Under [Art. 30b PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) and OECD Model Convention Art. 13, gains from selling shares are taxed exclusively in Poland (country of residence). There is no per-country breakdown — all gains are aggregated in PIT-38 Section C.
 
 **Practical example:**
 
@@ -152,7 +154,7 @@ The tax calculator (`calculator.ts`) orchestrates six steps:
 3. calculateCreditInterest()→  CreditInterestResult[] (PLN conversion, 19% flat rate)
 4. buildSummary()           →  TaxSummary             (aggregate totals for dashboard)
 5. buildPit38()             →  Pit38Fields            (PIT-38 form field values with rounding)
-6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG attachment)
+6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG: dividends only)
 ```
 
 All inputs arrive **pre-enriched** with NBP exchange rates resolved by the service layer before reaching the calculator.
@@ -539,30 +541,48 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 
 **Implementation:** `pit-zg.ts`
 
-**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) — PIT/ZG is required for foreign income. One attachment per country of income.
+**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) — PIT/ZG is required for foreign-source income with foreign tax. One attachment per country of income.
 
-**Country determination:** Extracted from the ISIN prefix (first 2 characters, ISO 3166-1 alpha-2). Falls back to `'XX'` if ISIN is unavailable.
+**Default behavior (toggle OFF):**
+
+Under [Art. 30b PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) and OECD Model Convention Art. 13, capital gains from selling shares are taxed exclusively in the country of residence (Poland). Art. 30b ust. 5a treats all gains as one pool — no per-country breakdown is required. Since there is typically no foreign withholding tax on capital gains and no treaty allocation to a foreign country, capital gains do not generate PIT/ZG entries.
+
+Dividends, by contrast, are foreign-source income under [Art. 17 ust. 1 PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-17/) and OECD Art. 10. The source country is determined by the **company's country of residence** (not the exchange). When foreign tax is withheld on dividends, PIT/ZG is required.
+
+**Exceptions / toggle ON:**
+
+Capital gains *can* be taxed abroad in certain situations under specific treaty provisions:
+- **Real estate companies** (OECD Art. 13(4)) — if >50% of company value derives from real estate in another country
+- **Permanent establishment** (OECD Art. 13(2)) — shares connected with a foreign PE
+- **Significant shareholding** — some treaties allow taxation when holding a large stake (e.g. >10–25%)
+- **No-treaty countries** — domestic law of that country may apply
+
+These edge cases affect a minority of investors. kloPIT therefore defaults to dividend-only PIT/ZG entries, but exposes a per-session `includeAllInPitZg` toggle in `/settings` and on `/tax-form`. When enabled, PIT/ZG includes all foreign dividends and all sell trades by country. See `/docs/pit-zg` for the legal rationale and examples.
+
+**Country determination:** Extracted from the ISIN prefix (first 2 characters, ISO 3166-1 alpha-2). This represents the company's country of incorporation (issuer), which is the source country for dividend income under treaty rules. Falls back to `'XX'` if ISIN is unavailable.
 
 **Algorithm:**
 
 ```
-For each country:
-    // From sell trades:
-    proceedsPln = sum of trade.proceedsPln for sells in this country
-    costPln     = sum of trade.costPln for sells in this country
-    gainPln     = max(proceedsPln − costPln, 0)
-    lossPln     = max(costPln − proceedsPln, 0)
+For each dividend:
+    Group by country (from ISIN prefix = company residence)
+    dividendIncomePln        += div.amountPln
+    dividendForeignTaxPln    += div.withholdingTaxPln
+    deductibleDividendTaxPln += div.deductibleWithholdingPln
 
-    // From dividends (per-country):
-    dividendIncomePln       = sum of div.amountPln
-    foreignTaxPaidPln       = sum of div.withholdingTaxPln
-    capRate                 = min(treatyRate(country) ?? 0.19, 0.19)
-    deductibleForeignTaxPln = sum of min(div.withholdingTaxPln, div.amountPln × capRate)
-                              // Per-dividend cap per art. 30a ust. 2 + ust. 9
-                              // (DTT rate or 19% fallback; see Section 5 table)
+For each sell trade:
+    If includeAllInPitZg OR trade.foreignTaxPln > 0:
+        Group by country
+        proceedsPln          += trade.proceedsPln
+        costPln              += trade.costPln
+        tradeForeignTaxPln   += trade.foreignTaxPln
+
+If toggle OFF:
+    Filter: only countries where dividendForeignTaxPln > 0
+            OR tradeForeignTaxPln > 0
 ```
 
-Results are sorted alphabetically by country code.
+Results are sorted alphabetically by country code. With the toggle OFF, countries with no foreign tax withheld are excluded. With the toggle ON, every country with dividend or trade data is kept.
 
 ---
 
@@ -771,8 +791,10 @@ The app supports **three languages:**
    - Round tax base and tax due to full PLN ([art. 63 § 1](https://lexlege.pl/ordynacja-podatkowa/art-63/))
    - Round dividend and credit interest tax to full groszy up ([art. 63 § 1a](https://lexlege.pl/ordynacja-podatkowa/art-63/))
 8. **PIT/ZG** (`buildPitZg`):
-   - Group trades and dividends by country (from ISIN prefix)
-   - Compute per-country proceeds, costs, gain/loss, dividend income, and foreign tax
+   - Group dividends by country (from ISIN prefix = company residence)
+   - Compute per-country dividend income, foreign tax paid, and deductible tax
+   - Exclude countries with no foreign tax withheld
+   - Capital gains excluded (Art. 30b PIT — taxed only in Poland, no country split)
 9. **Store & display** — Save all results to IndexedDB, update dashboard charts and form fields
 
 **Time:** Usually < 1 second (depends on number of trades, mostly waiting for NBP rate API responses during the enrichment step).

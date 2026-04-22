@@ -6,6 +6,7 @@
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  import { updateSession } from '$lib/services/session.js';
   import {
     calculateSessionTaxes,
     clearSessionResults,
@@ -39,6 +40,7 @@
   );
   const taxSummary = $derived(taxSummaryQuery.current);
   const pit38 = $derived(taxSummary?.pit38);
+  const includeAllInPitZg = $derived(session?.includeAllInPitZg ?? false);
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,
@@ -109,6 +111,17 @@
     } finally {
       calculating = false;
     }
+  }
+
+  async function handleToggleIncludeAll(value: boolean) {
+    if (!sessionId) return;
+    await updateSession({
+      id: sessionId,
+      changes: {
+        includeAllInPitZg: value,
+        dataUpdatedAt: new Date(),
+      },
+    });
   }
 </script>
 
@@ -236,6 +249,8 @@
       <DocumentSidebar
         countries={pitZgCountries}
         {activeDocument}
+        {includeAllInPitZg}
+        onToggleIncludeAll={handleToggleIncludeAll}
         onselect={(doc) => (activeDocument = doc)}
       />
 
