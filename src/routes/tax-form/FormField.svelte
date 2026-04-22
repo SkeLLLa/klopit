@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { roundToFullPln, roundToGroszUp } from '../../core/tax/rounding.js';
@@ -69,16 +70,24 @@
   let copied = $state(false);
   let copiedResetTimeout: ReturnType<typeof setTimeout> | undefined;
 
+  onDestroy(() => {
+    if (copiedResetTimeout) clearTimeout(copiedResetTimeout);
+  });
+
   async function handleCopy() {
     if (!globalThis.navigator?.clipboard) return;
 
-    await navigator.clipboard.writeText(rawValue);
-    copied = true;
+    try {
+      await navigator.clipboard.writeText(rawValue);
+      copied = true;
 
-    if (copiedResetTimeout) clearTimeout(copiedResetTimeout);
-    copiedResetTimeout = setTimeout(() => {
-      copied = false;
-    }, 1200);
+      if (copiedResetTimeout) clearTimeout(copiedResetTimeout);
+      copiedResetTimeout = setTimeout(() => {
+        copied = false;
+      }, 1200);
+    } catch {
+      return;
+    }
   }
 </script>
 

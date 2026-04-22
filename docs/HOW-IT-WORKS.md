@@ -129,7 +129,7 @@ When you receive **dividends from foreign companies with foreign tax withheld**,
 
 You need **one PIT/ZG per country** — if you have dividends from US and German stocks with withholding tax, you file two PIT/ZG attachments. When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
 
-**Capital gains are NOT included in PIT/ZG.** Under [Art. 30b PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) and OECD Model Convention Art. 13, gains from selling shares are taxed exclusively in Poland (country of residence). There is no per-country breakdown — all gains are aggregated in PIT-38 Section C.
+**By default, capital gains are NOT included in PIT/ZG.** Under [Art. 30b PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) and OECD Model Convention Art. 13, gains from selling shares are taxed exclusively in Poland (country of residence). There is no per-country breakdown — all gains are aggregated in PIT-38 Section C. kloPIT also supports an exception for including them in PIT/ZG; see the later section describing the relevant toggle and edge cases.
 
 **Practical example:**
 
@@ -154,7 +154,7 @@ The tax calculator (`calculator.ts`) orchestrates six steps:
 3. calculateCreditInterest()→  CreditInterestResult[] (PLN conversion, 19% flat rate)
 4. buildSummary()           →  TaxSummary             (aggregate totals for dashboard)
 5. buildPit38()             →  Pit38Fields            (PIT-38 form field values with rounding)
-6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG: dividends only)
+6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG: dividends, plus conditional capital gains fields)
 ```
 
 All inputs arrive **pre-enriched** with NBP exchange rates resolved by the service layer before reaching the calculator.

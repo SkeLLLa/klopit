@@ -192,9 +192,9 @@ void describe('KlopitDB schema upgrade', () => {
 
     const upgradedSession = await klopit.sessions.get('legacy-session');
     assert.ok(upgradedSession);
-    assert.equal(upgradedSession?.status, 'draft');
-    assert.equal(upgradedSession?.calculatedAt, undefined);
-    assert.equal(upgradedSession?.includeAllInPitZg, true);
+    assert.equal(upgradedSession.status, 'draft');
+    assert.equal(upgradedSession.calculatedAt, undefined);
+    assert.equal(upgradedSession.includeAllInPitZg, true);
 
     klopit.close();
   });
