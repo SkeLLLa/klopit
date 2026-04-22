@@ -97,10 +97,15 @@ void describe('parseIbiText — Confirmation of Sale happy path', () => {
     const result = parseIbiText({ text: SAMPLE_CONFIRMATION_TEXT });
     assert.equal(result.trades.length, 2);
     const [buy, sell] = result.trades;
-    assert.ok(buy.lotId, 'buy lotId should be set');
-    assert.equal(buy.lotId, sell.lotId, 'both trades must share the same lotId');
+    const { lotId } = buy;
+    assert.ok(lotId, 'buy lotId should be set');
+    assert.equal(
+      lotId,
+      sell.lotId,
+      'both trades must share the same lotId',
+    );
     assert.match(
-      buy.lotId!,
+      lotId,
       /^\d{4}-\d{2}-\d{2}-\d{4}-\d{2}-\d{2}$/,
       'lotId should encode entry and exercise dates',
     );
@@ -154,7 +159,9 @@ void describe('parseIbiText — Confirmation of Sale happy path', () => {
   });
 
   void it('returns empty trades with a warning when required fields are missing', () => {
-    const result = parseIbiText({ text: 'Confirmation of Sale\nSome unrelated text' });
+    const result = parseIbiText({
+      text: 'Confirmation of Sale\nSome unrelated text',
+    });
     assert.equal(result.trades.length, 0);
     assert.ok(result.warnings.length > 0, 'expected at least one warning');
     assert.match(result.warnings[0].message, /Missing required fields/);
@@ -268,7 +275,9 @@ async function generateConfirmationPdf(data: {
       },
       {
         y: 460,
-        tokens: [{ x: 40, text: `Total Consideration: ${data.totalConsideration} $` }],
+        tokens: [
+          { x: 40, text: `Total Consideration: ${data.totalConsideration} $` },
+        ],
       },
       {
         y: 420,

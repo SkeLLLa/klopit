@@ -33,7 +33,7 @@ const EXERCISE_PRICE_RE = /Exercise Period Price[^:]*:\s*([\d,]+(?:\.\d+)?)/;
 const SHARES_RE = /Shares (?:Purchased|Sold):\s*(\d+)/;
 /**
  * "Sale Price* $140.4901" — the asterisk and dollar sign may be separated
- * from the label by spaces or appear flush; the \s*\*? handles both.
+ * from the label by spaces or appear flush; the `\s*\*?` pattern handles both.
  */
 const SALE_PRICE_RE = /Sale Price\s*\*?\s*\$([\d,]+(?:\.\d+)?)/;
 const TOTAL_CONSIDERATION_RE = /Total Consideration:\s*([\d,]+(?:\.\d+)?)/;
