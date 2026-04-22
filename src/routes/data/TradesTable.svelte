@@ -8,6 +8,7 @@
   import type { Trade } from '../../core/types.js';
   import type { TradeRecord } from '$lib/db.js';
   import { formatDatetime } from '$lib/utils/format-date.js';
+  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import TradeForm from './TradeForm.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -95,7 +96,13 @@
             {:else}
               <tr class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50">
                 <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{trade.symbol}</td>
-                <td class="px-3 py-2 text-slate-500 dark:text-slate-400">{trade.isin ?? ''}</td>
+                <td class="px-3 py-2 text-slate-500 dark:text-slate-400">
+                  {#if trade.isin}
+                    {trade.isin}
+                  {:else}
+                    <MissingIsinLookup symbol={trade.symbol} />
+                  {/if}
+                </td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{formatDatetime(trade.datetime)}</td>
                 <td class="px-3 py-2">
                   <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {trade.type === 'buy' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">

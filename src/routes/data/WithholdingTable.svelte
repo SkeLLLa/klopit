@@ -9,6 +9,7 @@
     deleteWithholdingTax,
   } from '$lib/services/data.js';
   import { formatDate, toDateInput } from '$lib/utils/format-date.js';
+  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
@@ -97,7 +98,13 @@
             {:else}
               <tr class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50">
                 <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{row.symbol}</td>
-                <td class="px-3 py-2 text-slate-500 dark:text-slate-400">{row.isin ?? ''}</td>
+                <td class="px-3 py-2 text-slate-500 dark:text-slate-400">
+                  {#if row.isin}
+                    {row.isin}
+                  {:else}
+                    <MissingIsinLookup symbol={row.symbol} />
+                  {/if}
+                </td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{formatDate(row.date)}</td>
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{row.amount.toFixed(2)}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-400">{row.currency}</td>

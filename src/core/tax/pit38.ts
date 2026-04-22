@@ -65,10 +65,11 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   f[20] = 0; // No PIT-8C for foreign broker
   f[21] = 0;
   f[22] = totalProceedsPln; // Other proceeds
+  f[23] = totalCostPln; // Other costs
   f[24] = 0; // No exemptions
   f[25] = 0;
   f[26] = f[20] + f[22] - f[24]; // Total proceeds
-  f[27] = f[21] + totalCostPln - f[25]; // Total costs
+  f[27] = f[21] + f[23] - f[25]; // Total costs
   f[28] = Math.max(f[26] - f[27], 0); // Gain
   f[29] = Math.max(f[27] - f[26], 0); // Loss
 

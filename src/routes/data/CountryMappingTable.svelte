@@ -3,6 +3,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import { isinToCountry } from '../../core/tax/country.js';
   import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
@@ -186,9 +187,16 @@
               <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100"
                 >{entry.symbol}</td
               >
-              <td class="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400"
-                >{entry.isin ?? '—'}</td
-              >
+              <td class="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">
+                {#if entry.isin}
+                  {entry.isin}
+                {:else}
+                  <div class="flex items-center gap-1">
+                    <span>—</span>
+                    <MissingIsinLookup symbol={entry.symbol} />
+                  </div>
+                {/if}
+              </td>
               <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{entry.detected}</td>
               <td class="px-3 py-2">
                 <input

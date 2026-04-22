@@ -318,6 +318,7 @@ export type Pit38Position =
   | 20 // PIT-8C proceeds
   | 21 // PIT-8C costs
   | 22 // Other proceeds (foreign broker)
+  | 23 // Other costs (foreign broker)
   | 24 // Exempt proceeds (art. 21.1.105a)
   | 25 // Exempt costs
   | 26 // Total proceeds (Razem)
