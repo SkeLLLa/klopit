@@ -1,3 +1,15 @@
+## [1.15.0](https://github.com/SkeLLLa/klopit/compare/v1.14.1...v1.15.0) (2026-04-22)
+
+### 🛠 Fixes
+
+* **parser:** address Copilot review comments on confirmation parser ([00d6b3d](https://github.com/SkeLLLa/klopit/commit/00d6b3dea3c3fb9f600e45fd0d1d197a6747c3c1))
+* **parser:** fix restrict-template-expressions and prettier ([e703210](https://github.com/SkeLLLa/klopit/commit/e7032109675829eec870d59cb898d9390396c105))
+* **parser:** resolve lint and prettier errors from CI ([822ffb4](https://github.com/SkeLLLa/klopit/commit/822ffb4888df331ee1e86e53f6f78197170feae4))
+
+### 🚀 Features
+
+* **parser:** add IBI Capital Confirmation of Sale parser ([bf1847f](https://github.com/SkeLLLa/klopit/commit/bf1847f5292112530563df69388915a029078f88))
+
 ## [1.14.1](https://github.com/SkeLLLa/klopit/compare/v1.14.0...v1.14.1) (2026-04-20)
 
 ### 🛠 Fixes
