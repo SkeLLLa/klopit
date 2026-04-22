@@ -212,6 +212,10 @@ export interface TradeResult {
   country: string;
   /** Pre-LCF per-trade tax: max(gainLossPln, 0) * 0.19. Display-only. */
   taxPln: number;
+  /** Foreign tax paid on this trade in PLN (default 0). */
+  foreignTaxPln: number;
+  /** Foreign tax paid in original currency (default 0). */
+  foreignTaxOriginal: number;
 }
 
 /** Warning on a dividend result */
@@ -262,18 +266,28 @@ export interface CreditInterestResult {
   foreignTaxExchangeRate: number;
 }
 
-/** Per-country PIT/ZG attachment fields */
+/**
+ * Per-country PIT/ZG attachment fields.
+ *
+ * Capital gains fields are optional — populated only when the session's
+ * `includeAllInPitZg` toggle is ON, or when a trade has foreignTaxPln > 0.
+ *
+ * Dividend fields are always present when the entry exists.
+ */
 export interface PitZgFields {
   country: string;
-  // Section C — Capital gains per country
-  proceedsPln: number;
-  costPln: number;
-  gainPln: number;
-  lossPln: number;
-  // Section D — Dividends per country
+
+  // Dividends
   dividendIncomePln: number;
-  foreignTaxPaidPln: number;
-  deductibleForeignTaxPln: number;
+  dividendForeignTaxPln: number;
+  deductibleDividendTaxPln: number;
+
+  // Capital gains (present when includeAll OR trade foreign tax > 0)
+  proceedsPln?: number;
+  costPln?: number;
+  gainPln?: number;
+  lossPln?: number;
+  tradeForeignTaxPln?: number;
 }
 
 /** Aggregated tax summary for a year */

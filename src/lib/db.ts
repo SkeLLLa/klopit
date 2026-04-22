@@ -45,6 +45,8 @@ export interface SessionRecord {
   dataUpdatedAt?: Date;
   /** Set by calculateSessionTaxes on successful completion. */
   calculatedAt?: Date;
+  /** Include all income in PIT/ZG, even when no foreign tax was withheld. */
+  includeAllInPitZg?: boolean;
 }
 
 export interface ImportedFileRecord {
@@ -273,6 +275,9 @@ export class KlopitDB extends Dexie {
         '++id, sessionId, symbol, datetime, [sessionId+symbol], [sessionId+symbol+isin]',
       dividends:
         '++id, sessionId, symbol, date, [sessionId+symbol], [sessionId+symbol+isin]',
+    });
+    this.version(11).stores({
+      sessions: 'id, year',
     });
   }
 }

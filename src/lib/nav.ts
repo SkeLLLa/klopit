@@ -26,6 +26,11 @@ export const navigation: NavSection[] = [
             icon: 'BookOpen',
           },
           {
+            labelKey: 'nav_docs_pitzg',
+            href: '/docs/pit-zg',
+            icon: 'BookOpen',
+          },
+          {
             labelKey: 'nav_docs_ib',
             href: '/docs/ibkr',
             icon: 'FileText',
@@ -80,6 +85,7 @@ export const navigation: NavSection[] = [
   {
     labelKey: 'section_other',
     items: [
+      { labelKey: 'nav_settings', href: '/settings', icon: 'Settings' },
       { labelKey: 'nav_support', href: '/support', icon: 'Heart' },
       { labelKey: 'nav_about', href: '/about', icon: 'Info' },
     ],

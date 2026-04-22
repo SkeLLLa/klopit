@@ -94,6 +94,7 @@ void describe('calculateTaxes', () => {
     assert.equal(result.summary.totalDividendsPln, 0);
     assert.equal(result.summary.totalCreditInterestPln, 0);
     assert.equal(result.pit38[51], 0);
+    assert.deepEqual(result.pitZg, []);
   });
 
   void it('handles full pipeline with trades and dividends', () => {
@@ -121,6 +122,7 @@ void describe('calculateTaxes', () => {
       corporateActions: [],
       carryInPositions: [],
       taxPeriod: taxPeriod2024,
+      includeAllInPitZg: true,
     });
 
     // Trades
@@ -158,6 +160,9 @@ void describe('calculateTaxes', () => {
     // PIT-38 total tax > 0
     assert.ok(result.pit38[51] > 0);
     assert.equal(result.pit38[51], result.pit38[35] + result.pit38[49]);
+    assert.equal(result.pitZg.length, 1);
+    assert.ok((result.pitZg[0]?.proceedsPln ?? 0) > 0);
+    assert.ok((result.pitZg[0]?.dividendIncomePln ?? 0) > 0);
   });
 
   void it('handles trades only (no dividends)', () => {
@@ -183,6 +188,7 @@ void describe('calculateTaxes', () => {
       corporateActions: [],
       carryInPositions: [],
       taxPeriod: taxPeriod2024,
+      includeAllInPitZg: true,
     });
 
     assert.ok(result.summary.totalProceedsPln > 0);
@@ -203,6 +209,37 @@ void describe('calculateTaxes', () => {
           result.summary.capitalGainAfterLcfPln * 0.19,
       ) < 0.0001,
     );
+    assert.equal(result.pitZg.length, 1);
+    assert.ok((result.pitZg[0]?.proceedsPln ?? 0) > 0);
+  });
+
+  void it('keeps trade-only PIT/ZG empty when includeAllInPitZg is explicitly false', () => {
+    const buy = makeTrade({
+      datetime: new Date(2024, 0, 15),
+      quantity: 50,
+      price: 100,
+      type: 'buy',
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 6, 15),
+      quantity: 50,
+      price: 120,
+      proceeds: 6000,
+      type: 'sell',
+    });
+
+    const result = calculateTaxes({
+      trades: [buy, sell],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      includeAllInPitZg: false,
+    });
+
+    assert.equal(result.pitZg.length, 0);
   });
 
   void it('handles dividends only (no trades)', () => {
@@ -224,6 +261,33 @@ void describe('calculateTaxes', () => {
     assert.equal(result.pit38[35], 0);
     assert.ok(result.summary.totalDividendsPln > 0);
     assert.equal(result.pit38[51], result.pit38[49]);
+    assert.equal(result.pitZg.length, 1);
+    assert.ok((result.pitZg[0]?.dividendIncomePln ?? 0) > 0);
+  });
+
+  void it('includes only foreign-taxed dividends when includeAllInPitZg is explicitly false', () => {
+    const taxedDiv = makeDiv({ symbol: 'AAPL', amount: 100 });
+    const taxedWht = makeTax({ symbol: 'AAPL', amount: -15 });
+    const untaxedDiv = makeDiv({ symbol: 'MSFT', amount: 50, date: new Date(2024, 2, 1) });
+
+    const result = calculateTaxes({
+      trades: [],
+      dividends: [taxedDiv, untaxedDiv],
+      creditInterests: [],
+      withholdingTaxes: [taxedWht],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([
+        ['AAPL', 'US'],
+        ['MSFT', 'US'],
+      ]),
+      includeAllInPitZg: false,
+    });
+
+    assert.equal(result.pitZg.length, 1);
+    assert.equal(result.pitZg[0]?.country, 'US');
+    assert.ok((result.pitZg[0]?.dividendForeignTaxPln ?? 0) > 0);
   });
 
   void it('aggregates only sell trades into summary', () => {
@@ -457,10 +521,9 @@ void describe('calculateTaxes', () => {
       assert.equal(d.country, 'US');
     }
 
-    // PIT/ZG has one entry for US
+    // PIT/ZG has one entry for US (dividends with foreign tax withheld)
     assert.equal(result.pitZg.length, 1);
     assert.equal(result.pitZg[0].country, 'US');
-    assert.ok(result.pitZg[0].proceedsPln > 0);
     assert.ok(result.pitZg[0].dividendIncomePln > 0);
   });
 
@@ -492,8 +555,8 @@ void describe('calculateTaxes', () => {
     for (const t of result.trades) {
       assert.equal(t.country, 'XX');
     }
-    assert.equal(result.pitZg.length, 1);
-    assert.equal(result.pitZg[0].country, 'XX');
+    // No PIT/ZG entries — trades-only, no dividends with foreign tax
+    assert.equal(result.pitZg.length, 0);
   });
 
   void it('includes prior year loss in PIT-38 calculation', () => {

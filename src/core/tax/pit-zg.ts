@@ -3,57 +3,65 @@ import type { DividendResult, PitZgFields, TradeResult } from '../types.js';
 export interface BuildPitZgArgs {
   trades: TradeResult[];
   dividends: DividendResult[];
+  includeAll: boolean;
 }
 
-/** Build per-country PIT/ZG attachment fields from calculated results */
 export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
-  const { trades, dividends } = args;
+  const { trades, dividends, includeAll } = args;
   const countries = new Map<string, PitZgFields>();
 
-  function getOrCreate(country: string): PitZgFields {
-    let entry = countries.get(country);
+  for (const div of dividends) {
+    if (!includeAll && div.withholdingTaxPln <= 0) continue;
+    let entry = countries.get(div.country);
     if (!entry) {
       entry = {
-        country,
-        proceedsPln: 0,
-        costPln: 0,
-        gainPln: 0,
-        lossPln: 0,
+        country: div.country,
         dividendIncomePln: 0,
-        foreignTaxPaidPln: 0,
-        deductibleForeignTaxPln: 0,
+        dividendForeignTaxPln: 0,
+        deductibleDividendTaxPln: 0,
       };
-      countries.set(country, entry);
+      countries.set(div.country, entry);
     }
-    return entry;
+    entry.dividendIncomePln += div.amountPln;
+    entry.dividendForeignTaxPln += div.withholdingTaxPln;
+    entry.deductibleDividendTaxPln += div.deductibleWithholdingPln;
   }
 
-  // Aggregate sell trades by country
   for (const trade of trades) {
     if (trade.type !== 'sell') continue;
-    const entry = getOrCreate(trade.country);
-    entry.proceedsPln += trade.proceedsPln;
-    entry.costPln += trade.costPln;
+    if (!includeAll && trade.foreignTaxPln <= 0) continue;
+
+    let entry = countries.get(trade.country);
+    if (!entry) {
+      entry = {
+        country: trade.country,
+        dividendIncomePln: 0,
+        dividendForeignTaxPln: 0,
+        deductibleDividendTaxPln: 0,
+      };
+      countries.set(trade.country, entry);
+    }
+
+    entry.proceedsPln = (entry.proceedsPln ?? 0) + trade.proceedsPln;
+    entry.costPln = (entry.costPln ?? 0) + trade.costPln;
+    entry.tradeForeignTaxPln =
+      (entry.tradeForeignTaxPln ?? 0) + trade.foreignTaxPln;
   }
 
-  // Compute gain/loss per country
   for (const entry of countries.values()) {
-    const net = entry.proceedsPln - entry.costPln;
-    entry.gainPln = Math.max(net, 0);
-    entry.lossPln = Math.max(-net, 0);
+    if (entry.proceedsPln !== undefined && entry.costPln !== undefined) {
+      const net = entry.proceedsPln - entry.costPln;
+      entry.gainPln = Math.max(net, 0);
+      entry.lossPln = Math.max(-net, 0);
+    }
   }
 
-  // Aggregate dividends by country with per-dividend credit cap.
-  // art. 30a ust. 2 (UPO) + art. 30a ust. 9 (krajowy 19%) ustawy o PIT.
-  for (const div of dividends) {
-    const entry = getOrCreate(div.country);
-    entry.dividendIncomePln += div.amountPln;
-    entry.foreignTaxPaidPln += div.withholdingTaxPln;
-    entry.deductibleForeignTaxPln += div.deductibleWithholdingPln;
-  }
+  const filtered = includeAll
+    ? [...countries.values()]
+    : [...countries.values()].filter(
+        (entry) =>
+          entry.dividendForeignTaxPln > 0 || (entry.tradeForeignTaxPln ?? 0) > 0,
+      );
 
-  // Sort by country code and return
-  return [...countries.values()].sort((a, b) =>
-    a.country.localeCompare(b.country),
-  );
+  return filtered.sort((a, b) => a.country.localeCompare(b.country));
 }

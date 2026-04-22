@@ -44,6 +44,7 @@ export async function updateSession(args: {
       | 'oppConsent'
       | 'dataUpdatedAt'
       | 'calculatedAt'
+      | 'includeAllInPitZg'
     >
   >;
 }): Promise<void> {

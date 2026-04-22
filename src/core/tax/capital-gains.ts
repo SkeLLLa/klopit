@@ -203,6 +203,8 @@ function processAction(args: {
         taxPln: Math.max(proceedsPln - costPln, 0) * TAX_RATE,
         rateUnavailable: action.cashRateUnavailable,
         country: args.symbolCountryMap.get(action.symbol) ?? 'XX',
+        foreignTaxPln: 0,
+        foreignTaxOriginal: 0,
       });
     }
   }
@@ -249,6 +251,8 @@ function processTrade(args: {
         taxPln: 0,
         rateUnavailable: trade.rateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
+        foreignTaxPln: 0,
+        foreignTaxOriginal: 0,
       });
     }
   } else {
@@ -305,6 +309,8 @@ function processTrade(args: {
         taxPln: Math.max(netProceedsPln - totalCostPln, 0) * TAX_RATE,
         rateUnavailable: trade.rateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
+        foreignTaxPln: 0,
+        foreignTaxOriginal: 0,
       });
     }
   }
