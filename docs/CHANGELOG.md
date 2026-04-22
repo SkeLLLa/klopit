@@ -1,3 +1,15 @@
+## [1.16.0](https://github.com/SkeLLLa/klopit/compare/v1.15.0...v1.16.0) (2026-04-22)
+
+### 🛠 Fixes
+
+* review ([4cebedf](https://github.com/SkeLLLa/klopit/commit/4cebedfd2af845de78bed47b7ef82c2dfc75634d))
+* **tax:** dp upgrade and proceeds recalculations ([5922cd2](https://github.com/SkeLLLa/klopit/commit/5922cd24c98a13bcd2bdf827f80883a0ce3cfd0c))
+* **tax:** ISIN lookup & missing pit-38 poz ([8867cca](https://github.com/SkeLLLa/klopit/commit/8867cca68ecc8ad3dd1595ecc23d0544a53075f0))
+
+### 🚀 Features
+
+* **pit-zg:** add reporting option ([fbb076d](https://github.com/SkeLLLa/klopit/commit/fbb076d80b7a24a1e7e3ed5b4e6a29334e0fed6f))
+
 ## [1.15.0](https://github.com/SkeLLLa/klopit/compare/v1.14.1...v1.15.0) (2026-04-22)
 
 ### 🛠 Fixes
