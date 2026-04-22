@@ -1,3 +1,9 @@
+## [1.17.0](https://github.com/SkeLLLa/klopit/compare/v1.16.0...v1.17.0) (2026-04-22)
+
+### 🚀 Features
+
+* **schwab:** trigger release for Schwab parser ([9126808](https://github.com/SkeLLLa/klopit/commit/91268088d43aaa94c4e054ae5208d076df938979))
+
 ## [1.16.0](https://github.com/SkeLLLa/klopit/compare/v1.15.0...v1.16.0) (2026-04-22)
 
 ### 🛠 Fixes
