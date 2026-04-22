@@ -3,6 +3,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import { calculateSessionTaxes } from '$lib/services/tax.js';
   import { sessionState } from '$lib/state/session.svelte.js';
   import { updateSession } from '$lib/services/session.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
@@ -14,6 +15,8 @@
   const session = $derived(bootstrap.activeSession);
   const activeSessionId = $derived(bootstrap.activeSessionId);
   const includeAllInPitZg = $derived(session?.includeAllInPitZg ?? false);
+  let saving = $state(false);
+  let error: string | null = $state(null);
 
   function handleSessionChange(e: Event) {
     const target = e.currentTarget as HTMLSelectElement;
@@ -22,13 +25,24 @@
 
   async function handleToggle() {
     if (!session) return;
-    await updateSession({
-      id: session.id,
-      changes: {
-        includeAllInPitZg: !includeAllInPitZg,
-        dataUpdatedAt: new Date(),
-      },
-    });
+    saving = true;
+    error = null;
+    try {
+      await updateSession({
+        id: session.id,
+        changes: {
+          includeAllInPitZg: !includeAllInPitZg,
+          dataUpdatedAt: new Date(),
+        },
+      });
+      if (session.status === 'calculated') {
+        await calculateSessionTaxes({ sessionId: session.id });
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    } finally {
+      saving = false;
+    }
   }
 </script>
 
@@ -86,6 +100,7 @@
             type="checkbox"
             checked={includeAllInPitZg}
             onchange={handleToggle}
+            disabled={saving}
             class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
           />
           <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
@@ -98,6 +113,16 @@
             ? m.settings_pitzg_description_on()
             : m.settings_pitzg_description_off()}
         </p>
+        {#if error}
+          <p class="text-sm text-red-600 dark:text-red-400">
+            {m.tax_error_calculation({ error })}
+          </p>
+        {/if}
+        {#if saving}
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            {m.tax_calculating()}
+          </p>
+        {/if}
 
         <div
           class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"

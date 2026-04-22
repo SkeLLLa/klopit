@@ -49,6 +49,10 @@
   let quantity = $state(seed?.quantity?.toString() ?? '');
   let price = $state(seed?.price?.toString() ?? '');
   let proceeds = $state(seed?.proceeds?.toString() ?? '');
+  let proceedsManuallyEdited = $state(false);
+  let lastAutoSource = $state(
+    `${seed?.quantity?.toString() ?? ''}|${seed?.price?.toString() ?? ''}`,
+  );
   let commission = $state(seed?.commission?.toString() ?? '0');
   let commissionCurrency = $state(seed?.commissionCurrency ?? '');
   let currency = $state(seed?.currency ?? 'USD');
@@ -62,6 +66,44 @@
       pickerValue = `${defaultYear}-01-01 00:00`;
     }
   });
+
+  function computedProceeds(): number | null {
+    const qty = parseFloat(quantity);
+    const p = parseFloat(price);
+    if (isNaN(qty) || isNaN(p)) return null;
+    return qty * p;
+  }
+
+  function formatAutoProceeds(value: number): string {
+    return String(value);
+  }
+
+  $effect(() => {
+    const source = `${quantity}|${price}`;
+    const auto = computedProceeds();
+    const qtyOrPriceChanged = source !== lastAutoSource;
+
+    if (qtyOrPriceChanged && !proceedsManuallyEdited && auto !== null) {
+      proceeds = formatAutoProceeds(auto);
+    }
+
+    if (qtyOrPriceChanged) {
+      lastAutoSource = source;
+    }
+  });
+
+  function handleProceedsInput() {
+    const auto = computedProceeds();
+    if (proceeds.trim() === '') {
+      proceedsManuallyEdited = false;
+      if (auto !== null) {
+        proceeds = formatAutoProceeds(auto);
+      }
+      return;
+    }
+    proceedsManuallyEdited =
+      auto === null || proceeds.trim() !== formatAutoProceeds(auto);
+  }
 
   function handleDatetimeInput() {
     parsedDatetime = parseDatetime(datetimeText);
@@ -160,7 +202,7 @@
     </div>
     <div>
       <label for="trade-proceeds" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_proceeds()}</label>
-      <input id="trade-proceeds" type="number" step="any" bind:value={proceeds} placeholder="auto" class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+      <input id="trade-proceeds" type="number" step="any" bind:value={proceeds} oninput={handleProceedsInput} placeholder="auto" class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
     </div>
     <div>
       <label for="trade-currency" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_currency()}</label>

@@ -115,13 +115,22 @@
 
   async function handleToggleIncludeAll(value: boolean) {
     if (!sessionId) return;
-    await updateSession({
-      id: sessionId,
-      changes: {
-        includeAllInPitZg: value,
-        dataUpdatedAt: new Date(),
-      },
-    });
+    calculating = true;
+    error = null;
+    try {
+      await updateSession({
+        id: sessionId,
+        changes: {
+          includeAllInPitZg: value,
+          dataUpdatedAt: new Date(),
+        },
+      });
+      await calculateSessionTaxes({ sessionId });
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    } finally {
+      calculating = false;
+    }
   }
 </script>
 
