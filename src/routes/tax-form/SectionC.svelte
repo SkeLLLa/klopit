@@ -18,6 +18,7 @@
     <FormField label={m.tax_c_pit8c_costs()} poz={21} value={pit38[21]} />
     <div class="my-2 border-t border-slate-100 dark:border-slate-700"></div>
     <FormField label={m.tax_c_other_proceeds()} poz={22} value={pit38[22]} />
+    <FormField label={m.tax_c_other_costs()} poz={23} value={pit38[23]} />
     <div class="my-2 border-t border-slate-100 dark:border-slate-700"></div>
     <FormField label={m.tax_c_exempt_proceeds()} poz={24} value={pit38[24]} />
     <FormField label={m.tax_c_exempt_costs()} poz={25} value={pit38[25]} />

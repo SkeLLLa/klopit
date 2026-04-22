@@ -487,6 +487,16 @@ Two distinct rounding functions are used, matching separate legal provisions:
 
 The `buildPit38()` function maps aggregated tax data to the official PIT-38(18) form fields. Here is the exact computation for each populated field:
 
+**Official grounding for field precision and labels:**
+- [PIT-38 (18) form page on podatki.gov.pl](https://www.podatki.gov.pl/podatki-osobiste/pit/formularze/) and the linked [official PIT-38(18) PDF](https://www.gov.pl/attachment/1874d956-4063-4a9c-a65c-ab7b6bc7aa30)
+- [Official PIT-38 brochure for 2025](https://www.podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf)
+
+The official PIT-38(18) form distinguishes between two kinds of amount fields:
+- `zł, gr` fields: for example `poz. 20-30`, `33-34`, `36-40`, `43-44`, `47-49`
+- full-PLN fields: for example `poz. 31`, `35`, `41`, `45`, and monthly fields in section `H`
+
+This matters for UI copy/paste helpers: values copied into e-Urząd Skarbowy should match the precision implied by the official field label, not the internal floating-point representation used during intermediate calculations.
+
 #### Section C — Capital Gains/Losses ([art. 30b ust. 1](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/))
 
 ```
@@ -542,6 +552,12 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 **Implementation:** `pit-zg.ts`
 
 **Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) — PIT/ZG is required for foreign-source income with foreign tax. One attachment per country of income.
+
+**Official grounding for field precision and labels:**
+- [PIT/ZG page on gov.pl](https://www.gov.pl/web/finanse/pitzg)
+- [Official PIT/ZG(8) PDF](https://www.gov.pl/attachment/213803ec-f7e6-4b15-b643-e25dc145e2bd)
+
+The official PIT/ZG(8) form labels the reported income/tax amount boxes as `zł, gr`, so these values should be normalized to grosz precision when displayed or copied for filing.
 
 **Default behavior (toggle OFF):**
 

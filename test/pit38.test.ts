@@ -132,6 +132,7 @@ void describe('buildPit38', () => {
     assert.equal(result[20], 0);
     assert.equal(result[21], 0);
     assert.equal(result[22], 50000);
+    assert.equal(result[23], 30000);
     assert.equal(result[24], 0);
     assert.equal(result[25], 0);
     assert.equal(result[26], 50000);

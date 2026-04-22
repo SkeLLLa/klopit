@@ -9,6 +9,7 @@
     deleteCorporateAction,
   } from '$lib/services/data.js';
   import { formatDatetime, toDatetimeLocal } from '$lib/utils/format-date.js';
+  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
@@ -159,7 +160,13 @@
                   <span class="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{row.type}</span>
                 </td>
                 <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{row.symbol}</td>
-                <td class="px-3 py-2 text-slate-500 dark:text-slate-400">{row.isin ?? ''}</td>
+                <td class="px-3 py-2 text-slate-500 dark:text-slate-400">
+                  {#if row.isin}
+                    {row.isin}
+                  {:else}
+                    <MissingIsinLookup symbol={row.symbol} />
+                  {/if}
+                </td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{formatDatetime(row.datetime)}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">
                   {#if row.type === 'stock-split'}
