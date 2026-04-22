@@ -129,7 +129,7 @@ export function parseIbiConfirmationText(args: {
   // Use local-calendar components (not toISOString/UTC) to avoid an
   // off-by-one date shift in non-UTC timezones.
   const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const lotId = `${fmt(entryDate)}-${fmt(exerciseDate)}`;
 
   trades.push({
