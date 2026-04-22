@@ -270,7 +270,7 @@ export interface CreditInterestResult {
  * Per-country PIT/ZG attachment fields.
  *
  * Capital gains fields are optional — populated only when the session's
- * `includeAllInPitZg` toggle is ON, or when a trade has foreignTaxPln > 0.
+ * `includeAllInPitZg` toggle is ON, or when a trade has foreignTaxPln \> 0.
  *
  * Dividend fields are always present when the entry exists.
  */
@@ -311,7 +311,7 @@ export interface TaxSummary {
 
 /**
  * Valid position numbers on the PIT-38(18) form.
- * Gaps (23, 32, 42) are tax-rate display rows — not stored as fields.
+ * Gaps (32, 42) are tax-rate display rows — not stored as fields.
  */
 export type Pit38Position =
   // Section C — Capital gains/losses (art. 30b ust. 1)

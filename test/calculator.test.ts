@@ -268,7 +268,11 @@ void describe('calculateTaxes', () => {
   void it('includes only foreign-taxed dividends when includeAllInPitZg is explicitly false', () => {
     const taxedDiv = makeDiv({ symbol: 'AAPL', amount: 100 });
     const taxedWht = makeTax({ symbol: 'AAPL', amount: -15 });
-    const untaxedDiv = makeDiv({ symbol: 'MSFT', amount: 50, date: new Date(2024, 2, 1) });
+    const untaxedDiv = makeDiv({
+      symbol: 'MSFT',
+      amount: 50,
+      date: new Date(2024, 2, 1),
+    });
 
     const result = calculateTaxes({
       trades: [],

@@ -75,7 +75,8 @@
   }
 
   function formatAutoProceeds(value: number): string {
-    return String(value);
+    const normalized = Math.round((value + Number.EPSILON) * 100) / 100;
+    return normalized.toFixed(2);
   }
 
   $effect(() => {

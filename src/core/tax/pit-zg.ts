@@ -60,7 +60,8 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     ? [...countries.values()]
     : [...countries.values()].filter(
         (entry) =>
-          entry.dividendForeignTaxPln > 0 || (entry.tradeForeignTaxPln ?? 0) > 0,
+          entry.dividendForeignTaxPln > 0 ||
+          (entry.tradeForeignTaxPln ?? 0) > 0,
       );
 
   return filtered.sort((a, b) => a.country.localeCompare(b.country));
