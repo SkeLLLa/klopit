@@ -127,6 +127,20 @@ void describe('parseIbiText', () => {
     assert.equal(result.trades.length, 0);
   });
 
+  void it('captures multi-word Company names and resolves to ticker', () => {
+    const text = [
+      'Sale Of Stock Activity Statement Order Number: 1234567',
+      'Jane Doe ID / SS # Company: Check Point Software Technologies',
+      'Grant Date: August 31, 2025 Grant No.: ESPP99999 Plan: CHKP ESPP',
+      'Order Date: March 30, 2026 Execution Date: March 30, 2026 Price For Tax: USD 100.00',
+      'Total Amount Due to Order 10 USD 150.00 USD 1,500.00',
+      'Total Fees (THE ABOVE FEES DO NOT INCLUDE TRANSFER FEES) USD 5.00',
+    ].join('\n');
+    const result = parseIbiText({ text });
+    assert.equal(result.warnings.length, 0);
+    assert.equal(result.trades[0].symbol, 'CHECK POINT SOFTWARE TECHNOLOGIES');
+  });
+
   void it('emits distinct lotIds for distinct orders (FIFO partition key)', () => {
     const textA = [
       'Sale Of Stock Activity Statement Order Number: 1000001',
