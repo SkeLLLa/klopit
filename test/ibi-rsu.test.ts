@@ -88,6 +88,22 @@ void describe('parseIbiText — RSU multi-word Company', () => {
   });
 });
 
+void describe('parseIbiText — RSU unknown-company fallback', () => {
+  void it('falls back to uppercased Company when no mapping exists', () => {
+    const text = [
+      'Sale of Trustee Shares Activity Statement Order Number: 9999003',
+      'Jane Doe ID / SS # Company: NewcoLtd',
+      'Grant Date: January 15, 2022 Grant No.: RSU99999 Plan: NewcoLtd RSU',
+      'Execution Date: July 20, 2024 Ex. rate at Sell Date: 0.000',
+      'Total Amount Due to Order 25 USD 125.00 USD 3,125.00',
+      'Total Fees (THE ABOVE FEES DO NOT INCLUDE TRANSFER FEES) USD 4.17',
+    ].join('\n');
+    const result = parseIbiText({ text });
+    assert.equal(result.warnings.length, 0);
+    assert.equal(result.trades[0].symbol, 'NEWCOLTD');
+  });
+});
+
 void describe('parseIbiText — ESPP still works (regression)', () => {
   void it('routes "Sale Of Stock Activity Statement" to ESPP parser', () => {
     const esppText = [
