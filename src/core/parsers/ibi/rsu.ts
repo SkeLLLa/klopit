@@ -4,7 +4,12 @@ import {
   type Trade,
 } from '../../types.js';
 import { resolveIbiTicker } from './companies.js';
-import { buildStatement, parseAmount, parseLongDateStrict } from './shared.js';
+import {
+  buildStatement,
+  formatDateLabel,
+  parseAmount,
+  parseLongDateStrict,
+} from './shared.js';
 
 /**
  * Regexes for "Sale of Trustee Shares Activity Statement" (RSU). Field
@@ -65,18 +70,9 @@ export function parseIbiRsuText(args: { text: string }): ParsedStatement {
   const symbol = companyMatch ? resolveIbiTicker(companyMatch[1]) : undefined;
 
   const missing: string[] = [];
-  if (!grantDate)
-    missing.push(
-      grantDateResult && !grantDateResult.ok
-        ? `Grant Date (unparseable: "${grantDateResult.raw}")`
-        : 'Grant Date',
-    );
+  if (!grantDate) missing.push(formatDateLabel('Grant Date', grantDateResult));
   if (!executionDate)
-    missing.push(
-      executionDateResult && !executionDateResult.ok
-        ? `Execution Date (unparseable: "${executionDateResult.raw}")`
-        : 'Execution Date',
-    );
+    missing.push(formatDateLabel('Execution Date', executionDateResult));
   if (shares === undefined) missing.push('Shares');
   if (salePrice === undefined) missing.push('Sale Price');
   if (totalValue === undefined) missing.push('Total Amount Due to Order');
