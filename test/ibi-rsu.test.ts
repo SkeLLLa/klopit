@@ -72,6 +72,17 @@ void describe('parseIbiText — RSU happy path', () => {
   });
 });
 
+void describe('parseIbiText — RSU no-parenthetical Total Fees', () => {
+  void it('parses Total Fees lines without the parenthetical note', () => {
+    const text = RSU_TEXT.replace(/Total Fees \([^)]*\) USD/, 'Total Fees USD');
+    const result = parseIbiText({ text });
+    assert.equal(result.warnings.length, 0);
+    const sell = result.trades.find((t) => t.type === 'sell');
+    assert.ok(sell);
+    assert.equal(sell.commission, 4.17);
+  });
+});
+
 void describe('parseIbiText — RSU multi-word Company', () => {
   void it('captures multi-word Company names and resolves to ticker', () => {
     const text = [
