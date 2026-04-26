@@ -72,6 +72,22 @@ void describe('parseIbiText — RSU happy path', () => {
   });
 });
 
+void describe('parseIbiText — RSU multi-word Company', () => {
+  void it('captures multi-word Company names', () => {
+    const text = [
+      'Sale of Trustee Shares Activity Statement Order Number: 9999002',
+      'Jane Doe ID / SS # Company: Check Point Software Technologies',
+      'Grant Date: January 15, 2022 Grant No.: RSU99999 Plan: CHKP RSU',
+      'Execution Date: July 20, 2024 Ex. rate at Sell Date: 0.000',
+      'Total Amount Due to Order 25 USD 125.00 USD 3,125.00',
+      'Total Fees (THE ABOVE FEES DO NOT INCLUDE TRANSFER FEES) USD 4.17',
+    ].join('\n');
+    const result = parseIbiText({ text });
+    assert.equal(result.warnings.length, 0);
+    assert.equal(result.trades[0].symbol, 'CHECK POINT SOFTWARE TECHNOLOGIES');
+  });
+});
+
 void describe('parseIbiText — ESPP still works (regression)', () => {
   void it('routes "Sale Of Stock Activity Statement" to ESPP parser', () => {
     const esppText = [

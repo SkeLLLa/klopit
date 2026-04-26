@@ -127,7 +127,7 @@ void describe('parseIbiText', () => {
     assert.equal(result.trades.length, 0);
   });
 
-  void it('captures multi-word Company names and resolves to ticker', () => {
+  void it('captures multi-word Company names', () => {
     const text = [
       'Sale Of Stock Activity Statement Order Number: 1234567',
       'Jane Doe ID / SS # Company: Check Point Software Technologies',
