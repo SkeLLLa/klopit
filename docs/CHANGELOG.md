@@ -1,3 +1,26 @@
+## [1.18.0](https://github.com/SkeLLLa/klopit/compare/v1.17.0...v1.18.0) (2026-04-26)
+
+### 🛠 Fixes
+
+* review ([534366b](https://github.com/SkeLLLa/klopit/commit/534366b39c58de5e31f33ff15d7d0834cac8aeee))
+* **ibi:** accept Total Fees lines without parenthetical note ([0cc0082](https://github.com/SkeLLLa/klopit/commit/0cc00826825ec6f84be83988670f1ba99fbafefb))
+* **ibi:** capture multi-word Company names in ESPP/RSU parsers ([82b2f66](https://github.com/SkeLLLa/klopit/commit/82b2f66f7f1858d4c47445222776de2224bd721f))
+
+### 📔 Docs
+
+* extract attributions to dedicated file ([88ab8ea](https://github.com/SkeLLLa/klopit/commit/88ab8ea207c84a06fef8145cb34197514d27b4ab))
+
+### ✂️ Refactor
+
+* **ibi:** extract formatDateLabel helper, drop test type casts ([6ef38ea](https://github.com/SkeLLLa/klopit/commit/6ef38eab6cfb17602eab6f6a9716ed0f46299880))
+
+### 🚀 Features
+
+* **ibi:** add company-name to ticker mapping ported from pit-38 ([7bb84b2](https://github.com/SkeLLLa/klopit/commit/7bb84b24c7aaa63e31deeca511a14b7922d9e8b0))
+* **ibi:** extract Plan field as audit metadata on IBI trades ([bf47c0a](https://github.com/SkeLLLa/klopit/commit/bf47c0a9ed17a366c208d8ad9663601b2b1d05d1))
+* **ibi:** include bogus date string in unparseable-date warnings ([4ed95a6](https://github.com/SkeLLLa/klopit/commit/4ed95a6948d7f66d9d33cf3ee78019909bf54c12))
+* **ibi:** resolve Company field through name-to-ticker map ([2557967](https://github.com/SkeLLLa/klopit/commit/25579671655ca4a596847599916bc1f99efdd264))
+
 ## [1.17.0](https://github.com/SkeLLLa/klopit/compare/v1.16.0...v1.17.0) (2026-04-22)
 
 ### 🚀 Features
