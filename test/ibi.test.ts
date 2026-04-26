@@ -127,7 +127,7 @@ void describe('parseIbiText', () => {
     assert.equal(result.trades.length, 0);
   });
 
-  void it('captures multi-word Company names', () => {
+  void it('captures multi-word Company names and resolves to ticker', () => {
     const text = [
       'Sale Of Stock Activity Statement Order Number: 1234567',
       'Jane Doe ID / SS # Company: Check Point Software Technologies',
@@ -138,7 +138,17 @@ void describe('parseIbiText', () => {
     ].join('\n');
     const result = parseIbiText({ text });
     assert.equal(result.warnings.length, 0);
-    assert.equal(result.trades[0].symbol, 'CHECK POINT SOFTWARE TECHNOLOGIES');
+    assert.equal(result.trades[0].symbol, 'CHKP');
+  });
+
+  void it('falls back to uppercased Company when no mapping exists', () => {
+    const text = SAMPLE_ORDER_TEXT.replace(
+      'Company: MNDY',
+      'Company: NewcoLtd',
+    );
+    const result = parseIbiText({ text });
+    assert.equal(result.warnings.length, 0);
+    assert.equal(result.trades[0].symbol, 'NEWCOLTD');
   });
 
   void it('emits distinct lotIds for distinct orders (FIFO partition key)', () => {

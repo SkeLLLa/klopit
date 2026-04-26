@@ -73,7 +73,7 @@ void describe('parseIbiText — RSU happy path', () => {
 });
 
 void describe('parseIbiText — RSU multi-word Company', () => {
-  void it('captures multi-word Company names', () => {
+  void it('captures multi-word Company names and resolves to ticker', () => {
     const text = [
       'Sale of Trustee Shares Activity Statement Order Number: 9999002',
       'Jane Doe ID / SS # Company: Check Point Software Technologies',
@@ -84,7 +84,7 @@ void describe('parseIbiText — RSU multi-word Company', () => {
     ].join('\n');
     const result = parseIbiText({ text });
     assert.equal(result.warnings.length, 0);
-    assert.equal(result.trades[0].symbol, 'CHECK POINT SOFTWARE TECHNOLOGIES');
+    assert.equal(result.trades[0].symbol, 'CHKP');
   });
 });
 
