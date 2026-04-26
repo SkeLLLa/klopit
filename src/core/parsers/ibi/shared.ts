@@ -29,7 +29,15 @@ export function parseLongDate(value: string): Date | undefined {
   const day = Number(match[2]);
   const year = Number(match[3]);
   if (!Number.isFinite(day) || !Number.isFinite(year)) return undefined;
-  return new Date(year, month, day);
+  const date = new Date(year, month, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return undefined;
+  }
+  return date;
 }
 
 export type ParsedDate = { ok: true; date: Date } | { ok: false; raw: string };

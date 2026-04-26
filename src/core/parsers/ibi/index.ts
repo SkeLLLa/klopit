@@ -5,13 +5,7 @@ import { parseIbiEsppText } from './espp.js';
 import { extractPdfText } from './pdf-extract.js';
 import { parseIbiRsuText } from './rsu.js';
 
-export {
-  formatDateLabel,
-  parseLongDate,
-  parseLongDateStrict,
-  parseAmount,
-} from './shared.js';
-export type { ParsedDate } from './shared.js';
+export { parseLongDate, parseLongDateStrict, parseAmount } from './shared.js';
 
 const RSU_TITLE_RE = /Sale of Trustee Shares Activity Statement/i;
 const CONFIRMATION_TITLE_RE = /Confirmation of Sale/i;

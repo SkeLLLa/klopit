@@ -50,6 +50,10 @@ void describe('parseLongDate', () => {
   void it('returns undefined for ISO format (wrong format)', () => {
     assert.equal(parseLongDate('2024-03-15'), undefined);
   });
+
+  void it('returns undefined for an out-of-range calendar date', () => {
+    assert.equal(parseLongDate('February 31, 2025'), undefined);
+  });
 });
 
 void describe('parseAmount', () => {
@@ -85,6 +89,14 @@ void describe('parseLongDateStrict', () => {
       assert.fail('Expected ok=false for invalid date');
     }
     assert.equal(result.raw, 'Augustz 31, 2025');
+  });
+
+  void it('returns the raw input for an out-of-range calendar date', () => {
+    const result = parseLongDateStrict('February 31, 2025');
+    if (result.ok) {
+      assert.fail('Expected ok=false for invalid date');
+    }
+    assert.equal(result.raw, 'February 31, 2025');
   });
 
   void it('returns a Date on success', () => {
