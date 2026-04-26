@@ -3,7 +3,12 @@ import {
   type ParseWarning,
   type Trade,
 } from '../../types.js';
-import { buildStatement, parseAmount, parseLongDateStrict } from './shared.js';
+import {
+  buildStatement,
+  formatDateLabel,
+  parseAmount,
+  parseLongDateStrict,
+} from './shared.js';
 
 /**
  * Regexes for IBI Capital "Confirmation of Sale" PDFs (ESPP quick-sell).
@@ -102,24 +107,10 @@ export function parseIbiConfirmationText(args: {
   const symbol = companyMatch ? companyMatch[1].toUpperCase() : undefined;
 
   const missing: string[] = [];
-  if (!entryDate)
-    missing.push(
-      entryDateResult && !entryDateResult.ok
-        ? `Entry Date (unparseable: "${entryDateResult.raw}")`
-        : 'Entry Date',
-    );
+  if (!entryDate) missing.push(formatDateLabel('Entry Date', entryDateResult));
   if (!exerciseDate)
-    missing.push(
-      exerciseDateResult && !exerciseDateResult.ok
-        ? `Exercise Date (unparseable: "${exerciseDateResult.raw}")`
-        : 'Exercise Date',
-    );
-  if (!saleDate)
-    missing.push(
-      saleDateResult && !saleDateResult.ok
-        ? `Sale Date (unparseable: "${saleDateResult.raw}")`
-        : 'Sale Date',
-    );
+    missing.push(formatDateLabel('Exercise Date', exerciseDateResult));
+  if (!saleDate) missing.push(formatDateLabel('Sale Date', saleDateResult));
   if (exercisePrice === undefined) missing.push('Exercise Period Price');
   if (shares === undefined) missing.push('Shares');
   if (salePrice === undefined) missing.push('Sale Price');

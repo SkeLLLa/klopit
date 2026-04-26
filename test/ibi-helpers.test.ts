@@ -81,19 +81,19 @@ void describe('parseAmount', () => {
 void describe('parseLongDateStrict', () => {
   void it('returns the raw input on failure', () => {
     const result = parseLongDateStrict('Augustz 31, 2025');
-    assert.equal(result.ok, false);
-    assert.equal(
-      (result as { ok: false; raw: string }).raw,
-      'Augustz 31, 2025',
-    );
+    if (result.ok) {
+      assert.fail('Expected ok=false for invalid date');
+    }
+    assert.equal(result.raw, 'Augustz 31, 2025');
   });
 
   void it('returns a Date on success', () => {
     const result = parseLongDateStrict('August 31, 2025');
-    assert.equal(result.ok, true);
-    const date = (result as { ok: true; date: Date }).date;
-    assert.equal(date.getFullYear(), 2025);
-    assert.equal(date.getMonth(), 7);
-    assert.equal(date.getDate(), 31);
+    if (!result.ok) {
+      assert.fail(`Expected ok=true, got raw=${result.raw}`);
+    }
+    assert.equal(result.date.getFullYear(), 2025);
+    assert.equal(result.date.getMonth(), 7);
+    assert.equal(result.date.getDate(), 31);
   });
 });

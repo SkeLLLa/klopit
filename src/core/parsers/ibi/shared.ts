@@ -35,6 +35,15 @@ export function parseLongDateStrict(value: string): ParsedDate {
   return { ok: false, raw: value.trim() };
 }
 
+export function formatDateLabel(
+  label: string,
+  result: ParsedDate | undefined,
+): string {
+  return result && !result.ok
+    ? `${label} (unparseable: "${result.raw}")`
+    : label;
+}
+
 export function parseAmount(raw: string): number {
   return Number(raw.replace(/,/g, ''));
 }
