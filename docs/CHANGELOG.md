@@ -1,3 +1,9 @@
+## [1.18.1](https://github.com/SkeLLLa/klopit/compare/v1.18.0...v1.18.1) (2026-04-26)
+
+### 🛠 Fixes
+
+* **security:** bump deps ([87b37d7](https://github.com/SkeLLLa/klopit/commit/87b37d75525fa26164da6489611e16deb3f206fc))
+
 ## [1.18.0](https://github.com/SkeLLLa/klopit/compare/v1.17.0...v1.18.0) (2026-04-26)
 
 ### 🛠 Fixes
