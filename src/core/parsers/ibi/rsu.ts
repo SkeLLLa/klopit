@@ -22,6 +22,7 @@ const ORDER_LINE_RE =
 // also handles the no-parenthetical case.
 const TOTAL_FEES_RE = /Total Fees\s+(?:\([^)]*\)\s+)?USD\s+([\d,]+\.\d+|\d+)/;
 const COMPANY_RE = /Company:\s*(.+?)\s*(?:\r?\n|Grant Date:|Plan:|$)/;
+const PLAN_RE = /Plan:\s*(.+?)\s*(?:\r?\n|Letter Date:|Order Date:|$)/;
 
 /**
  * Parse the flat text of a single IBI Capital "Sale of Trustee Shares
@@ -40,6 +41,8 @@ export function parseIbiRsuText(args: { text: string }): ParsedStatement {
   const totalFeesMatch = TOTAL_FEES_RE.exec(args.text);
   const companyMatch = COMPANY_RE.exec(args.text);
   const orderNumberMatch = ORDER_NUMBER_RE.exec(args.text);
+  const planMatch = PLAN_RE.exec(args.text);
+  const plan = planMatch ? planMatch[1].trim() : undefined;
 
   const grantDate = grantDateMatch
     ? parseLongDate(grantDateMatch[1])
@@ -97,6 +100,7 @@ export function parseIbiRsuText(args: { text: string }): ParsedStatement {
     type: 'buy',
     source: 'rsu',
     lotId,
+    plan,
   });
 
   trades.push({
@@ -111,6 +115,7 @@ export function parseIbiRsuText(args: { text: string }): ParsedStatement {
     type: 'sell',
     source: 'rsu',
     lotId,
+    plan,
   });
 
   return buildStatement({
