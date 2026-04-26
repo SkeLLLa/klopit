@@ -18,4 +18,9 @@ void describe('resolveIbiTicker', () => {
     assert.equal(resolveIbiTicker('  Mobileye  '), 'MBLY');
     assert.equal(resolveIbiTicker('TEVA PHARMACEUTICAL INDUSTRIES'), 'TEVA');
   });
+
+  void it('returns empty string for empty or whitespace-only input', () => {
+    assert.equal(resolveIbiTicker(''), '');
+    assert.equal(resolveIbiTicker('   '), '');
+  });
 });
