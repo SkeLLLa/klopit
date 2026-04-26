@@ -17,7 +17,7 @@ const GRANT_DATE_RE = /Grant Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const EXECUTION_DATE_RE = /Execution Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const ORDER_LINE_RE =
   /Total Amount Due to Order\s+(\d+(?:\.\d+)?)\s+USD\s+([\d,]+\.\d+|\d+)\s+USD\s+([\d,]+\.\d+|\d+)/;
-const TOTAL_FEES_RE = /Total Fees\s+\([^)]+\)\s+USD\s+([\d,]+\.\d+|\d+)/;
+const TOTAL_FEES_RE = /Total Fees\s+(?:\([^)]*\)\s+)?USD\s+([\d,]+\.\d+|\d+)/;
 const COMPANY_RE = /Company:\s*(.+?)\s*(?:\r?\n|Grant Date:|Plan:|$)/;
 
 /**

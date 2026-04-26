@@ -151,6 +151,17 @@ void describe('parseIbiText', () => {
     assert.equal(result.trades[0].symbol, 'NEWCOLTD');
   });
 
+  void it('parses Total Fees lines without the parenthetical note', () => {
+    const text = SAMPLE_ORDER_TEXT.replace(
+      'Total Fees (THE ABOVE FEES DO NOT INCLUDE TRANSFER FEES) USD 8.25',
+      'Total Fees USD 8.25',
+    );
+    const result = parseIbiText({ text });
+    assert.equal(result.warnings.length, 0);
+    const sell = result.trades.find((t) => t.type === 'sell');
+    assert.equal(sell?.commission, 8.25);
+  });
+
   void it('emits distinct lotIds for distinct orders (FIFO partition key)', () => {
     const textA = [
       'Sale Of Stock Activity Statement Order Number: 1000001',
