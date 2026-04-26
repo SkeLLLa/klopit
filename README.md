@@ -85,10 +85,6 @@ The parser system is plugin-based. Each broker is a separate module implementing
 
 See [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) for the full directory map and [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) for algorithm details.
 
-## Credits
-
-kloPIT was heavily inspired by [**Pitly**](https://github.com/volodymyr-kovtun/Pitly) — a PIT-38 calculator with a .NET backend by [Volodymyr Kovtun](https://github.com/volodymyr-kovtun). The sample broker activity statements bundled in `examples/` were extracted from that repository.
-
 ## Contributing
 
 Bug reports and pull requests are welcome at [github.com/SkeLLLa/klopit](https://github.com/SkeLLLa/klopit).
@@ -102,4 +98,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines, legal references for
 
 ## License
 
-[AGPL-3.0-only](LICENSE)
+[AGPL-3.0-only](LICENSE). Additional notices are in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,3 +1,8 @@
+/*
+ * Selected IBI Capital field-extraction details adapted from pbialon/pit-38.
+ * Original license: MIT, Copyright (c) 2025 Przemek Białoń.
+ * See THIRD_PARTY_NOTICES.md for the preserved MIT notice.
+ */
 import {
   type ParsedStatement,
   type ParseWarning,
@@ -23,9 +28,8 @@ const EXECUTION_DATE_RE = /Execution Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const PRICE_FOR_TAX_RE = /Price For Tax:\s*USD\s+([\d,]+\.\d+|\d+)/;
 const ORDER_LINE_RE =
   /Total Amount Due to Order\s+(\d+(?:\.\d+)?)\s+USD\s+([\d,]+\.\d+|\d+)\s+USD\s+([\d,]+\.\d+|\d+)/;
-// Inner `[^)]*` (zero-or-more) mirrors upstream pit-38's regex shape,
-// covering both "(NOTE)" and "()" parenthetical forms; outer `(?:...)?`
-// also handles the no-parenthetical case.
+// Inner `[^)]*` covers both "(NOTE)" and "()" parenthetical forms;
+// outer `(?:...)?` also handles the no-parenthetical case.
 const TOTAL_FEES_RE = /Total Fees\s+(?:\([^)]*\)\s+)?USD\s+([\d,]+\.\d+|\d+)/;
 const COMPANY_RE = /Company:\s*(.+?)\s*(?:\r?\n|Grant Date:|Plan:|$)/;
 const PLAN_RE = /Plan:\s*(.+?)\s*(?:\r?\n|Order Date:|Price For Tax:|$)/;
