@@ -27,6 +27,14 @@ export function parseLongDate(value: string): Date | undefined {
   return new Date(year, month, day);
 }
 
+export type ParsedDate = { ok: true; date: Date } | { ok: false; raw: string };
+
+export function parseLongDateStrict(value: string): ParsedDate {
+  const date = parseLongDate(value);
+  if (date) return { ok: true, date };
+  return { ok: false, raw: value.trim() };
+}
+
 export function parseAmount(raw: string): number {
   return Number(raw.replace(/,/g, ''));
 }

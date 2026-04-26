@@ -4,7 +4,7 @@ import {
   type Trade,
 } from '../../types.js';
 import { resolveIbiTicker } from './companies.js';
-import { buildStatement, parseAmount, parseLongDate } from './shared.js';
+import { buildStatement, parseAmount, parseLongDateStrict } from './shared.js';
 
 /**
  * Regexes for "Sale of Trustee Shares Activity Statement" (RSU). Field
@@ -44,11 +44,16 @@ export function parseIbiRsuText(args: { text: string }): ParsedStatement {
   const planMatch = PLAN_RE.exec(args.text);
   const plan = planMatch ? planMatch[1].trim() : undefined;
 
-  const grantDate = grantDateMatch
-    ? parseLongDate(grantDateMatch[1])
+  const grantDateResult = grantDateMatch
+    ? parseLongDateStrict(grantDateMatch[1])
     : undefined;
-  const executionDate = executionDateMatch
-    ? parseLongDate(executionDateMatch[1])
+  const executionDateResult = executionDateMatch
+    ? parseLongDateStrict(executionDateMatch[1])
+    : undefined;
+
+  const grantDate = grantDateResult?.ok ? grantDateResult.date : undefined;
+  const executionDate = executionDateResult?.ok
+    ? executionDateResult.date
     : undefined;
 
   const shares = orderLineMatch ? Number(orderLineMatch[1]) : undefined;
@@ -60,8 +65,18 @@ export function parseIbiRsuText(args: { text: string }): ParsedStatement {
   const symbol = companyMatch ? resolveIbiTicker(companyMatch[1]) : undefined;
 
   const missing: string[] = [];
-  if (!grantDate) missing.push('Grant Date');
-  if (!executionDate) missing.push('Execution Date');
+  if (!grantDate)
+    missing.push(
+      grantDateResult && !grantDateResult.ok
+        ? `Grant Date (unparseable: "${grantDateResult.raw}")`
+        : 'Grant Date',
+    );
+  if (!executionDate)
+    missing.push(
+      executionDateResult && !executionDateResult.ok
+        ? `Execution Date (unparseable: "${executionDateResult.raw}")`
+        : 'Execution Date',
+    );
   if (shares === undefined) missing.push('Shares');
   if (salePrice === undefined) missing.push('Sale Price');
   if (totalValue === undefined) missing.push('Total Amount Due to Order');

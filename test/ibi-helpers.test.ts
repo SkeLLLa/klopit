@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseAmount, parseLongDate } from '../src/core/parsers/ibi/index.js';
+import {
+  parseAmount,
+  parseLongDate,
+  parseLongDateStrict,
+} from '../src/core/parsers/ibi/index.js';
 
 void describe('parseLongDate', () => {
   void it('parses "August 31, 2025" (IBI long date format)', () => {
@@ -71,5 +75,25 @@ void describe('parseAmount', () => {
 
   void it('returns NaN for non-numeric input', () => {
     assert.ok(Number.isNaN(parseAmount('abc')));
+  });
+});
+
+void describe('parseLongDateStrict', () => {
+  void it('returns the raw input on failure', () => {
+    const result = parseLongDateStrict('Augustz 31, 2025');
+    assert.equal(result.ok, false);
+    assert.equal(
+      (result as { ok: false; raw: string }).raw,
+      'Augustz 31, 2025',
+    );
+  });
+
+  void it('returns a Date on success', () => {
+    const result = parseLongDateStrict('August 31, 2025');
+    assert.equal(result.ok, true);
+    const date = (result as { ok: true; date: Date }).date;
+    assert.equal(date.getFullYear(), 2025);
+    assert.equal(date.getMonth(), 7);
+    assert.equal(date.getDate(), 31);
   });
 });

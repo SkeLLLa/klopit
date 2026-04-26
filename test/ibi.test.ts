@@ -170,6 +170,17 @@ void describe('parseIbiText', () => {
     assert.equal(sell?.plan, 'MNDY ESPP');
   });
 
+  void it('warning message includes the bogus date string when unparseable', () => {
+    const text = SAMPLE_ORDER_TEXT.replace(
+      'Grant Date: August 31, 2025',
+      'Grant Date: Augustz 31, 2025',
+    );
+    const result = parseIbiText({ text });
+    assert.equal(result.trades.length, 0);
+    assert.equal(result.warnings.length, 1);
+    assert.match(result.warnings[0].message, /Augustz 31, 2025/);
+  });
+
   void it('emits distinct lotIds for distinct orders (FIFO partition key)', () => {
     const textA = [
       'Sale Of Stock Activity Statement Order Number: 1000001',

@@ -3,7 +3,7 @@ import {
   type ParseWarning,
   type Trade,
 } from '../../types.js';
-import { buildStatement, parseAmount, parseLongDate } from './shared.js';
+import { buildStatement, parseAmount, parseLongDateStrict } from './shared.js';
 
 /**
  * Regexes for IBI Capital "Confirmation of Sale" PDFs (ESPP quick-sell).
@@ -75,13 +75,21 @@ export function parseIbiConfirmationText(args: {
   const totalFeesMatch = TOTAL_FEES_RE.exec(args.text);
   const companyMatch = COMPANY_RE.exec(args.text);
 
-  const entryDate = entryDateMatch
-    ? parseLongDate(entryDateMatch[1])
+  const entryDateResult = entryDateMatch
+    ? parseLongDateStrict(entryDateMatch[1])
     : undefined;
-  const exerciseDate = exerciseDateMatch
-    ? parseLongDate(exerciseDateMatch[1])
+  const exerciseDateResult = exerciseDateMatch
+    ? parseLongDateStrict(exerciseDateMatch[1])
     : undefined;
-  const saleDate = saleDateMatch ? parseLongDate(saleDateMatch[1]) : undefined;
+  const saleDateResult = saleDateMatch
+    ? parseLongDateStrict(saleDateMatch[1])
+    : undefined;
+
+  const entryDate = entryDateResult?.ok ? entryDateResult.date : undefined;
+  const exerciseDate = exerciseDateResult?.ok
+    ? exerciseDateResult.date
+    : undefined;
+  const saleDate = saleDateResult?.ok ? saleDateResult.date : undefined;
   const exercisePrice = exercisePriceMatch
     ? parseAmount(exercisePriceMatch[1])
     : undefined;
@@ -94,9 +102,24 @@ export function parseIbiConfirmationText(args: {
   const symbol = companyMatch ? companyMatch[1].toUpperCase() : undefined;
 
   const missing: string[] = [];
-  if (!entryDate) missing.push('Entry Date');
-  if (!exerciseDate) missing.push('Exercise Date');
-  if (!saleDate) missing.push('Sale Date');
+  if (!entryDate)
+    missing.push(
+      entryDateResult && !entryDateResult.ok
+        ? `Entry Date (unparseable: "${entryDateResult.raw}")`
+        : 'Entry Date',
+    );
+  if (!exerciseDate)
+    missing.push(
+      exerciseDateResult && !exerciseDateResult.ok
+        ? `Exercise Date (unparseable: "${exerciseDateResult.raw}")`
+        : 'Exercise Date',
+    );
+  if (!saleDate)
+    missing.push(
+      saleDateResult && !saleDateResult.ok
+        ? `Sale Date (unparseable: "${saleDateResult.raw}")`
+        : 'Sale Date',
+    );
   if (exercisePrice === undefined) missing.push('Exercise Period Price');
   if (shares === undefined) missing.push('Shares');
   if (salePrice === undefined) missing.push('Sale Price');
