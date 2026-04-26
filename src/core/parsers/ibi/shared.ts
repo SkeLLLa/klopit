@@ -1,3 +1,8 @@
+/*
+ * Selected IBI Capital helper details adapted from pbialon/pit-38.
+ * Original license: MIT, Copyright (c) 2025 Przemek Białoń.
+ * See THIRD_PARTY_NOTICES.md for the preserved MIT notice.
+ */
 import type { ParsedStatement, ParseWarning, Trade } from '../../types.js';
 
 export const MONTHS: Record<string, number> = {
