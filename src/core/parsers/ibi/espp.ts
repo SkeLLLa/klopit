@@ -3,6 +3,7 @@ import {
   type ParseWarning,
   type Trade,
 } from '../../types.js';
+import { resolveIbiTicker } from './companies.js';
 import { buildStatement, parseAmount, parseLongDate } from './shared.js';
 
 /**
@@ -52,7 +53,7 @@ export function parseIbiEsppText(args: { text: string }): ParsedStatement {
     ? parseAmount(orderLineMatch[3])
     : undefined;
   const totalFees = totalFeesMatch ? parseAmount(totalFeesMatch[1]) : undefined;
-  const symbol = companyMatch ? companyMatch[1].toUpperCase() : undefined;
+  const symbol = companyMatch ? resolveIbiTicker(companyMatch[1]) : undefined;
 
   const missing: string[] = [];
   if (!grantDate) missing.push('Grant Date');
