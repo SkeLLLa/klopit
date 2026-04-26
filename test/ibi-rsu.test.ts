@@ -53,6 +53,14 @@ void describe('parseIbiText — RSU happy path', () => {
     assert.equal(sell.datetime.getDate(), 20);
   });
 
+  void it('attaches the Plan field to both buy and sell trades', () => {
+    const result = parseIbiText({ text: RSU_TEXT });
+    const buy = result.trades.find((t) => t.type === 'buy');
+    const sell = result.trades.find((t) => t.type === 'sell');
+    assert.equal(buy?.plan, 'ACME INC. 2020- RSU');
+    assert.equal(sell?.plan, 'ACME INC. 2020- RSU');
+  });
+
   void it('infers year from Execution Date and sets broker metadata', () => {
     const result = parseIbiText({ text: RSU_TEXT });
     assert.equal(result.year, 2024);

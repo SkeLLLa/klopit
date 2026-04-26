@@ -51,6 +51,11 @@ export interface Trade {
    * default symbol/ISIN value.
    */
   lotId?: string;
+  /**
+   * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no
+   * effect on tax computation. Currently set only by the IBI parsers.
+   */
+  plan?: string;
 }
 
 /** Raw dividend income */

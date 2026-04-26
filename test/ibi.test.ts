@@ -162,6 +162,14 @@ void describe('parseIbiText', () => {
     assert.equal(sell?.commission, 8.25);
   });
 
+  void it('attaches the Plan field to both buy and sell trades', () => {
+    const result = parseIbiText({ text: SAMPLE_ORDER_TEXT });
+    const buy = result.trades.find((t) => t.type === 'buy');
+    const sell = result.trades.find((t) => t.type === 'sell');
+    assert.equal(buy?.plan, 'MNDY ESPP');
+    assert.equal(sell?.plan, 'MNDY ESPP');
+  });
+
   void it('emits distinct lotIds for distinct orders (FIFO partition key)', () => {
     const textA = [
       'Sale Of Stock Activity Statement Order Number: 1000001',
