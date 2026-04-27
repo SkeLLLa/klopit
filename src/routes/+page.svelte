@@ -120,7 +120,7 @@
 
       <div class="flex flex-col items-start gap-2 sm:items-end">
         <a
-          href="/data"
+          href={localizeHref('/data')}
           class="group inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600 hover:shadow-emerald-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:shadow-emerald-500/10 dark:focus-visible:ring-offset-slate-900"
         >
           {m.home_cta_primary()}
@@ -153,7 +153,7 @@
       {#each featureCards as card (card.title)}
       {#if card.href !== null}
         <a
-          href={card.href}
+          href={card.href.startsWith('http') ? card.href : localizeHref(card.href)}
           target={card.href.startsWith('http') ? '_blank' : undefined}
           rel={card.href.startsWith('http') ? 'noopener noreferrer' : undefined}
           class="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-emerald-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-slate-800 dark:bg-white/[0.03] dark:hover:border-emerald-500/45"

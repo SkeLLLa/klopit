@@ -1,0 +1,34 @@
+# kloPIT
+
+> Darmowy, open-source kalkulator PIT-38 online dla polskich inwestorów korzystających z zagranicznych brokerów.
+
+kloPIT pomaga obliczyć polski PIT-38 i PIT/ZG z transakcji giełdowych, dywidend zagranicznych, kursów NBP i metody FIFO. Aplikacja działa w przeglądarce: importowane dane pozostają lokalnie w IndexedDB i nie są wysyłane na serwer.
+
+## Najważniejsze adresy
+
+- Strona główna: https://klopit.co.pl/
+- Dokumentacja: https://klopit.co.pl/docs/
+- Przewodnik PIT-38: https://klopit.co.pl/docs/pit-38/
+- Przewodnik PIT/ZG: https://klopit.co.pl/docs/pit-zg/
+- Interactive Brokers: https://klopit.co.pl/docs/ibkr/
+- W-8BEN i dywidendy USA: https://klopit.co.pl/docs/ibkr/w8ben/
+- Obsługiwani brokerzy i funkcje: https://klopit.co.pl/docs/brokers/
+- Dywidendy USA 15% czy 19%: https://klopit.co.pl/docs/dividends/us-15-or-19/
+- FAQ: https://klopit.co.pl/docs/faq/
+- Kod źródłowy: https://github.com/SkeLLLa/klopit
+
+## Obsługiwane obszary
+
+- Import CSV z Interactive Brokers Activity Statement.
+- Import PDF z IBI Capital dla ESPP i RSU.
+- Import CSV z Charles Schwab.
+- Ręczne dodawanie transakcji, dywidend i podatku u źródła dla pozostałych brokerów.
+- Zyski kapitałowe liczone metodą FIFO.
+- Kursy średnie NBP tabela A z dnia roboczego poprzedzającego transakcję lub dywidendę.
+- Dywidendy zagraniczne z limitem odliczenia podatku u źródła według UPO.
+- Wartości do sekcji C, D i G formularza PIT-38 oraz załącznika PIT/ZG.
+- Straty z lat ubiegłych z limitem pięciu lat i 50% rocznie.
+
+## Zastrzeżenie
+
+kloPIT nie jest oficjalnym narzędziem administracji skarbowej i nie stanowi porady prawnej ani podatkowej. Wyniki należy zweryfikować przed złożeniem deklaracji.

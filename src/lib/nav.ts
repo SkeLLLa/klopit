@@ -31,6 +31,16 @@ export const navigation: NavSection[] = [
             icon: 'BookOpen',
           },
           {
+            labelKey: 'nav_docs_brokers',
+            href: '/docs/brokers',
+            icon: 'FileText',
+          },
+          {
+            labelKey: 'nav_docs_div_usa',
+            href: '/docs/dividends/us-15-or-19',
+            icon: 'FileText',
+          },
+          {
             labelKey: 'nav_docs_ib',
             href: '/docs/ibkr',
             icon: 'FileText',

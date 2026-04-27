@@ -17,6 +17,13 @@
     '/support': { label: () => m.nav_support(), linkable: true },
     '/about': { label: () => m.nav_about(), linkable: true },
     '/docs': { label: () => m.nav_docs(), linkable: true },
+    '/docs/pit-38': { label: () => m.nav_docs_pit38(), linkable: true },
+    '/docs/pit-zg': { label: () => m.nav_docs_pitzg(), linkable: true },
+    '/docs/brokers': { label: () => m.nav_docs_brokers(), linkable: true },
+    '/docs/dividends/us-15-or-19': {
+      label: () => m.nav_docs_div_usa(),
+      linkable: true,
+    },
     '/docs/faq': { label: () => m.nav_faq(), linkable: true },
     '/docs/ibkr': { label: () => m.nav_docs_ib(), linkable: true },
     '/docs/ibkr/w8ben': { label: () => m.nav_docs_ibkr_w8ben(), linkable: true },
@@ -29,6 +36,10 @@
     label: string;
     href: string;
     linkable: boolean;
+  }
+
+  function withTrailingSlash(pathname: string): string {
+    return pathname.endsWith('/') ? pathname : `${pathname}/`;
   }
 
   const crumbs: Crumb[] = $derived.by(() => {
@@ -61,7 +72,7 @@
       '@type': 'ListItem',
       position: i + 1,
       name: crumb.label,
-      item: `${BASE_URL}${localizeHref(crumb.href, { locale })}`,
+      item: `${BASE_URL}${withTrailingSlash(localizeHref(crumb.href, { locale }))}`,
     }));
     return `<script type="application/ld+json">${JSON.stringify({
       '@context': 'https://schema.org',
