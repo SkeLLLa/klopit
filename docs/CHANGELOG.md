@@ -1,3 +1,13 @@
+## [1.21.0](https://github.com/SkeLLLa/klopit/compare/v1.20.1...v1.21.0) (2026-04-27)
+
+### 🚀 Features
+
+* seo & meta info ([73e62e3](https://github.com/SkeLLLa/klopit/commit/73e62e328b4b919906f48e42fd8babdc65ca350e))
+
+### 🧾 Other
+
+* **deps-dev:** bump the all-minor-patch group across 1 directory with 11 updates ([5368c35](https://github.com/SkeLLLa/klopit/commit/5368c357524ad5ffbebb30b6b86161efccf99579))
+
 ## [1.20.1](https://github.com/SkeLLLa/klopit/compare/v1.20.0...v1.20.1) (2026-04-27)
 
 ### 🛠 Fixes
