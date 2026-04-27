@@ -506,7 +506,7 @@
   "tax_f_tax_due": "Tax due",
   "tax_f_tax_rate": "Tax rate",
   "tax_g_advance_payments": "Advance payments by payers",
-  "tax_g_difference": "Difference (rounded to full PLN)",
+  "tax_g_difference": "Difference between flat-rate tax and foreign tax",
   "tax_g_dividend_tax": "Flat-rate tax on foreign dividends (art. 30a.1.1-5)",
   "tax_g_flat_rate_tax": "Flat-rate tax (art. 29, 30, 30a)",
   "tax_g_foreign_withholding": "Tax paid abroad (converted to PLN)",

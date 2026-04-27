@@ -344,6 +344,8 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 - [Art. 30a ust. 1 pkt 4 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign dividends are taxed at a flat 19% (zryczałtowany podatek dochodowy).
 - [Art. 30a ust. 2 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — the rate is applied with regard to applicable double-tax treaties (UPO).
 - [Art. 30a ust. 9 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — domestic cap: the credit cannot exceed the 19% rate applied to gross income.
+- [Art. 30a ust. 11 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign flat-rate tax under art. 30a ust. 1 pkt 1-5 and the foreign tax paid under ust. 9 are reported in the tax return.
+- [Official PIT-38 guidance on podatki.gov.pl](https://www.podatki.gov.pl/pit/twoj-e-pit/pit-38-za-2024) — identifies foreign art. 30a ust. 1 pkt 1-5 income, including dividends, as the source for the PIT-38 flat-rate tax and foreign-tax-credit fields.
 
 **Exact algorithm** (`dividends.ts` + `calculator.ts` + `treaty-rates.ts`):
 
@@ -481,6 +483,8 @@ Two distinct rounding functions are used, matching separate legal provisions:
 
 **`roundToGroszUp` precision handling:** Uses `+(amount * 100).toFixed(10)` before `Math.ceil` to avoid floating-point artifacts (e.g., `0.1 + 0.2 = 0.30000000000000004`).
 
+**PIT-38 Section G precision note:** PIT-38(18) labels `poz. 49` as a difference "po zaokrągleniu do pełnych złotych", while the official e-PIT examples and the form amount cells for `poz. 47-49` and `poz. 51-52` use `zł, gr` precision. kloPIT follows the filing UI precision for copy/paste values: `poz. 47` and `poz. 49` are rounded up to full groszy, `poz. 48` and `poz. 51-52` are rounded to nearest grosz.
+
 ---
 
 ### 8. PIT-38 Form Mapping (PIT-38(18))
@@ -531,6 +535,14 @@ poz35 = roundToFullPln(max(poz33 − poz34, 0))  // Tax due (podatek należny)
 Not yet implemented. Fields poz36–poz45 are set to 0.
 
 #### Section G — Payment Summary (Dividends + Credit Interest)
+
+**Grounding:**
+
+- PIT-38(18) `poz. 46` is for art. 29, 30, and 30a flat-rate tax not collected by a payer, excluding the tax shown separately in `poz. 47`, `poz. 48`, and section H. kloPIT currently leaves this at `0` because supported dividends and credit interest are routed to `poz. 47-49`.
+- PIT-38(18) `poz. 47` is the flat-rate tax from foreign art. 30a ust. 1 pkt 1-5 income. This includes dividends under art. 30a ust. 1 pkt 4 and supported broker credit interest under art. 30a ust. 1 pkt 3.
+- PIT-38(18) `poz. 48` is foreign tax paid under art. 30a ust. 9, converted to PLN and capped so it cannot exceed `poz. 47`.
+- PIT-38(18) `poz. 49` is the difference `poz. 47 - poz. 48`.
+- PIT-38(18) `poz. 51` is `max(poz35 + poz45 + poz46 + poz49 - poz50, 0)`.
 
 ```
 poz46 = 0                                                        // Other flat-rate tax (not applicable)

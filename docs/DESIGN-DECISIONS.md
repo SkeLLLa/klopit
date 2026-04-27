@@ -475,6 +475,12 @@ Rounding follows both legal tax rounding rules and the precision printed on the 
 | Dividend tax (groszy amounts) | Round **up** to full groszy            | Art. 63 § 1a — taxes in groszy are rounded up                        |
 | PIT-38 fields marked `zł, gr` | Round to nearest grosz                 | Official form field precision                                        |
 
+PIT-38 Section G has one awkward official-form detail: the label for `poz. 49`
+mentions full-złoty rounding, but the PIT-38(18) amount cells and official
+e-PIT examples use `zł, gr` precision for `poz. 47-49` and `poz. 51-52`.
+kloPIT follows the filing UI precision for copy/paste values while still using
+Art. 30a and Art. 63 as the legal grounding for the calculation itself.
+
 **Implementation:**
 
 - `roundToFullPln()` for tax base and full-PLN tax fields such as PIT-38 poz. 31 and 35

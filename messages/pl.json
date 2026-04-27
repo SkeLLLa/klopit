@@ -500,7 +500,7 @@
   "tax_f_tax_due": "Podatek należny",
   "tax_f_tax_rate": "Stawka podatku",
   "tax_g_advance_payments": "Suma zaliczek przekazanych płatników",
-  "tax_g_difference": "Różnica (po zaokrągleniu do pełnych zł)",
+  "tax_g_difference": "Różnica między zryczałtowanym podatkiem a podatkiem zapłaconym za granicą",
   "tax_g_dividend_tax": "Zryczałtowany podatek od dywidend zagranicznych (art. 30a ust. 1 pkt 1-5)",
   "tax_g_flat_rate_tax": "Zryczałtowany podatek dochodowy (art. 29, 30, 30a)",
   "tax_g_foreign_withholding": "Podatek zapłacony za granicą (przeliczony na złote)",
