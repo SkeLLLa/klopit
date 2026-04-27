@@ -71,6 +71,7 @@ export async function calculateSessionTaxes(args: {
     dividends,
     creditInterests,
     withholdingTaxes,
+    transactionFees,
     corporateActions,
     carryInPositions,
   ] = await Promise.all([
@@ -78,6 +79,7 @@ export async function calculateSessionTaxes(args: {
     db.dividends.where('sessionId').equals(args.sessionId).toArray(),
     db.creditInterests.where('sessionId').equals(args.sessionId).toArray(),
     db.withholdingTaxes.where('sessionId').equals(args.sessionId).toArray(),
+    db.transactionFees.where('sessionId').equals(args.sessionId).toArray(),
     db.corporateActions.where('sessionId').equals(args.sessionId).toArray(),
     db.carryInPositions.where('sessionId').equals(args.sessionId).toArray(),
   ]);
@@ -87,6 +89,7 @@ export async function calculateSessionTaxes(args: {
     dividends: dividends.length,
     creditInterests: creditInterests.length,
     withholdingTaxes: withholdingTaxes.length,
+    transactionFees: transactionFees.length,
     corporateActions: corporateActions.length,
     carryInPositions: carryInPositions.length,
   });
@@ -229,6 +232,7 @@ export async function calculateSessionTaxes(args: {
     result = calculateTaxes({
       trades: enrichedTrades,
       dividends: enrichedDividends,
+      transactionFees,
       creditInterests: enrichedCreditInterests,
       withholdingTaxes: enrichedWithholding,
       corporateActions: enrichedCorporateActions,
@@ -241,6 +245,7 @@ export async function calculateSessionTaxes(args: {
       taxPeriod,
       symbolCountryMap,
       showDividendsInPitZg: session.showDividendsInPitZg ?? false,
+      reduceAdrFeesFromDividends: session.reduceAdrFeesFromDividends ?? false,
     });
   } catch (e) {
     log.error('calculateSessionTaxes: calculator threw', e);

@@ -14,6 +14,7 @@ import {
   type TaxPeriod,
   type TaxSummary,
   type TradeResult,
+  type TransactionFee,
 } from '../types.js';
 import {
   sumCost,
@@ -37,6 +38,7 @@ import { buildPit38 } from './pit38.js';
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
   dividends: EnrichedRawDividend[];
+  transactionFees?: TransactionFee[];
   creditInterests?: EnrichedCreditInterest[];
   withholdingTaxes: EnrichedWithholdingTax[];
   corporateActions: EnrichedCorporateAction[];
@@ -50,6 +52,7 @@ export interface CalculateTaxesArgs {
   taxPeriod: TaxPeriod;
   symbolCountryMap?: Map<string, string>;
   showDividendsInPitZg?: boolean;
+  reduceAdrFeesFromDividends?: boolean;
 }
 
 export interface TaxCalculationResult {
@@ -68,6 +71,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   const {
     trades,
     dividends,
+    transactionFees = [],
     creditInterests = [],
     withholdingTaxes,
     corporateActions,
@@ -75,6 +79,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     priorLosses,
     taxPeriod,
     showDividendsInPitZg,
+    reduceAdrFeesFromDividends,
   } = args;
 
   const countryMap = args.symbolCountryMap ?? new Map<string, string>();
@@ -90,6 +95,8 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   const dividendResults = calculateDividends({
     dividends,
     withholdingTaxes,
+    transactionFees,
+    reduceAdrFeesFromDividends: reduceAdrFeesFromDividends ?? false,
     taxPeriod,
     symbolCountryMap: countryMap,
   });

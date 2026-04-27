@@ -11,6 +11,7 @@ import {
   applyStockSplit,
   type FifoLot,
 } from './corporate-actions.js';
+import { isInTaxPeriod } from './period.js';
 
 export interface CalculateCapitalGainsArgs {
   trades: EnrichedTrade[];
@@ -34,9 +35,7 @@ function lotKey(args: {
 }
 
 function isInPeriod(args: { datetime: Date; taxPeriod: TaxPeriod }): boolean {
-  return (
-    args.datetime >= args.taxPeriod.from && args.datetime <= args.taxPeriod.to
-  );
+  return isInTaxPeriod({ date: args.datetime, taxPeriod: args.taxPeriod });
 }
 
 function getOrCreateLots(

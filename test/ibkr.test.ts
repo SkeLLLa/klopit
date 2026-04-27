@@ -339,6 +339,52 @@ void describe('InteractiveBrokersParser', () => {
       );
     });
 
+    void it('parses ADR/GDR fee accrual rows as transaction fees', () => {
+      const result = parseFixture('adr-fees.csv');
+      const rows = result.transactionFees.filter(
+        (row) => row.description === 'ADR/GDR Fee Accrual',
+      );
+
+      assert.equal(rows.length, 2);
+      assert.deepEqual(
+        rows.map((row) => ({
+          symbol: row.symbol,
+          amount: row.amount,
+          day: row.datetime.getDate(),
+          isin: row.isin,
+        })),
+        [
+          { symbol: 'MHPC', amount: 4, day: 22, isin: 'US55302T2042' },
+          { symbol: 'BP', amount: 2.5, day: 15, isin: 'US0556221044' },
+        ],
+      );
+      assert.equal(
+        result.skippedRows.filter(
+          (row) => row.section === 'Change in Dividend Accruals',
+        ).length,
+        0,
+      );
+    });
+
+    void it('keeps non-ADR dividend accrual rows visible as not-yet-supported', () => {
+      const parser = ibkrDefinition.createParser();
+      for (const line of [
+        'Statement,Header,Field Name,Field Value',
+        'Statement,Data,Period,"January 1, 2025 - December 31, 2025"',
+        'Change in Dividend Accruals,Header,Asset Category,Currency,Symbol,Date,Ex Date,Pay Date,Quantity,Tax,Fee,Gross Rate,Gross Amount,Net Amount,Code',
+        'Change in Dividend Accruals,Data,Stocks,USD,BP,2025-03-10,2025-02-20,2025-03-15,100,0,0,0.42,42,42,Re',
+      ]) {
+        parser.feed({ line });
+      }
+      const result = parser.finish();
+      const rows = result.skippedRows.filter(
+        (row) => row.section === 'Change in Dividend Accruals',
+      );
+
+      assert.equal(rows.length, 1);
+      assert.ok(rows.every((row) => row.kind === 'known-unsupported'));
+    });
+
     void it('ignores unknown sections silently', () => {
       const result = parseFixture('full-statement.csv');
       assert.equal(

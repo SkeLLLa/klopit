@@ -15,6 +15,7 @@ export const SUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
   'Corporate Actions',
   'Mark-to-Market Performance Summary',
   'Interest',
+  'Change in Dividend Accruals',
 ]);
 
 export const IGNORABLE_SECTIONS: ReadonlySet<string> = new Set([
@@ -24,7 +25,6 @@ export const IGNORABLE_SECTIONS: ReadonlySet<string> = new Set([
   'Cash Report',
   'Open Positions',
   'Closed Lot Performance Summary',
-  'Change in Dividend Accruals',
   'Codes',
   'Disclaimer',
   // IBKR emits notes as the combined header `Notes/Legal Notes`; the split

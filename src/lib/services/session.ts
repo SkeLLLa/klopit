@@ -14,6 +14,8 @@ export async function createSession(args: {
     updatedAt: new Date(),
     files: [],
     status: 'draft',
+    showDividendsInPitZg: false,
+    reduceAdrFeesFromDividends: false,
   };
   await db.sessions.add(session);
   return session;
@@ -45,6 +47,7 @@ export async function updateSession(args: {
       | 'dataUpdatedAt'
       | 'calculatedAt'
       | 'showDividendsInPitZg'
+      | 'reduceAdrFeesFromDividends'
     >
   >;
 }): Promise<void> {

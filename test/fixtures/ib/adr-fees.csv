@@ -1,0 +1,20 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Period,"January 1, 2025 - December 31, 2025"
+Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code
+Financial Instrument Information,Data,Stocks,MHPC,MHP SE,80626811,US55302T2042,MHPC,LSEIOB1,1,GDR,
+Financial Instrument Information,Data,Stocks,BP,BP PLC,5350,US0556221044,BP,NYSE,1,ADR,
+Dividends,Header,Currency,Date,Description,Amount
+Dividends,Data,USD,2025-03-15,BP(US0556221044) Cash Dividend USD 0.42 per Share (Ordinary Dividend),42.00
+Dividends,Data,Total,,,42.00
+Withholding Tax,Header,Currency,Date,Description,Amount,Code
+Withholding Tax,Data,USD,2025-03-15,BP(US0556221044) Cash Dividend USD 0.42 per Share - GB Tax,0.00,
+Withholding Tax,Data,Total,,,0.00,
+Change in Dividend Accruals,Header,Asset Category,Currency,Symbol,Date,Ex Date,Pay Date,Quantity,Tax,Fee,Gross Rate,Gross Amount,Net Amount,Code
+Change in Dividend Accruals,Data,Stocks,USD,MHPC,2025-12-25,2025-12-26,2026-01-22,200,0,4,0.02,0,-4,ADR;Po
+Change in Dividend Accruals,Data,Stocks,USD,BP,2025-03-10,2025-02-20,2025-03-15,100,0,2.5,0.42,42,39.5,ADR;Re
+Change in Dividend Accruals,Data,Total,,,,,,,0,6.5,,42,35.5,
+Codes,Header,Code,Meaning
+Codes,Data,ADR,ADR Fee Accrual
+Codes,Data,Po,Posting
+Codes,Data,Re,Reversal

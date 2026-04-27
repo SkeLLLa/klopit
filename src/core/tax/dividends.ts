@@ -5,12 +5,16 @@ import {
   type EnrichedRawDividend,
   type EnrichedWithholdingTax,
   type TaxPeriod,
+  type TransactionFee,
 } from '../types.js';
+import { isInTaxPeriod } from './period.js';
 import { getDividendCreditCapRate } from './treaty-rates.js';
 
 export interface CalculateDividendsArgs {
   dividends: EnrichedRawDividend[];
   withholdingTaxes: EnrichedWithholdingTax[];
+  transactionFees?: TransactionFee[];
+  reduceAdrFeesFromDividends?: boolean;
   taxPeriod: TaxPeriod;
   symbolCountryMap?: Map<string, string>;
 }
@@ -27,6 +31,27 @@ function matchKey(args: { isin?: string; symbol: string; date: Date }): string {
   return `${toDateString({ date: args.date })}:${id}`;
 }
 
+function feeMatchKey(args: {
+  isin?: string;
+  symbol: string;
+  datetime: Date;
+}): string {
+  return matchKey({
+    isin: args.isin,
+    symbol: args.symbol,
+    date: args.datetime,
+  });
+}
+
+function isAdrFee(fee: TransactionFee): boolean {
+  const normalized = fee.description.toUpperCase().replace(/[-_/]+/g, ' ');
+  return (
+    normalized.includes('ADR') ||
+    normalized.includes('GDR') ||
+    normalized.includes('CDI')
+  );
+}
+
 /** Match dividends with withholding taxes and convert to PLN */
 export function calculateDividends(
   args: CalculateDividendsArgs,
@@ -37,6 +62,7 @@ export function calculateDividends(
   // Group withholding taxes by match key
   const taxMap = new Map<string, EnrichedWithholdingTax[]>();
   for (const tax of withholdingTaxes) {
+    if (!isInTaxPeriod({ date: tax.date, taxPeriod })) continue;
     const key = matchKey(tax);
     let group = taxMap.get(key);
     if (!group) {
@@ -46,16 +72,40 @@ export function calculateDividends(
     group.push(tax);
   }
 
+  const adrFeeMap = new Map<string, TransactionFee[]>();
+  if (args.reduceAdrFeesFromDividends) {
+    for (const fee of args.transactionFees ?? []) {
+      if (!isAdrFee(fee) || !isInTaxPeriod({ date: fee.datetime, taxPeriod })) {
+        continue;
+      }
+      const key = feeMatchKey(fee);
+      let group = adrFeeMap.get(key);
+      if (!group) {
+        group = [];
+        adrFeeMap.set(key, group);
+      }
+      group.push(fee);
+    }
+  }
+
   const results: DividendResult[] = [];
 
   for (const div of dividends) {
     // Filter by tax period
-    if (div.date < taxPeriod.from || div.date > taxPeriod.to) {
+    if (!isInTaxPeriod({ date: div.date, taxPeriod })) {
       continue;
     }
 
     const key = matchKey(div);
     const matchedTaxes = taxMap.get(key) ?? [];
+    const matchedAdrFees = (adrFeeMap.get(key) ?? []).filter(
+      (fee) => fee.currency === div.currency,
+    );
+    const adrFeeOriginal = matchedAdrFees.reduce(
+      (sum, fee) => sum + fee.amount,
+      0,
+    );
+    const taxableAmountOriginal = Math.max(div.amount - adrFeeOriginal, 0);
 
     // Sum withholding amounts (IB stores as negative — use Math.abs)
     const withholdingTaxOriginal = matchedTaxes.reduce(
@@ -64,7 +114,8 @@ export function calculateDividends(
     );
 
     // Convert dividend to PLN
-    const amountPln = div.amount * div.exchangeRate;
+    const amountPln = taxableAmountOriginal * div.exchangeRate;
+    const adrFeePln = adrFeeOriginal * div.exchangeRate;
 
     // Convert withholding to PLN (each entry may have its own rate)
     const withholdingTaxPln = matchedTaxes.reduce(
@@ -83,8 +134,8 @@ export function calculateDividends(
     }
 
     // Check for W-8BEN lapse: withheld rate exceeds treaty rate
-    if (div.amount > 0 && withholdingTaxOriginal > 0) {
-      const withheldRate = withholdingTaxOriginal / div.amount;
+    if (taxableAmountOriginal > 0 && withholdingTaxOriginal > 0) {
+      const withheldRate = withholdingTaxOriginal / taxableAmountOriginal;
       const treatyRate = getDividendCreditCapRate({ country });
       const tolerance = 0.005; // ±0.5% tolerance for rounding
 
@@ -107,8 +158,10 @@ export function calculateDividends(
       symbol: div.symbol,
       currency: div.currency,
       date: div.date,
-      amountOriginal: div.amount,
+      amountOriginal: taxableAmountOriginal,
       withholdingTaxOriginal,
+      adrFeeOriginal,
+      adrFeePln,
       amountPln,
       withholdingTaxPln,
       exchangeRate: div.exchangeRate,

@@ -5,6 +5,7 @@ import type {
   EnrichedRawDividend,
   EnrichedWithholdingTax,
   TaxPeriod,
+  TransactionFee,
 } from '../src/core/types.js';
 
 const taxPeriod2024: TaxPeriod = {
@@ -35,6 +36,17 @@ function makeTax(
     amount: -0.36,
     exchangeRate: 4.0,
     rateUnavailable: false,
+    ...overrides,
+  };
+}
+
+function makeFee(overrides: Partial<TransactionFee>): TransactionFee {
+  return {
+    symbol: 'AAPL',
+    currency: 'USD',
+    datetime: new Date(2024, 1, 15),
+    amount: 2.5,
+    description: 'ADR/GDR Fee Accrual',
     ...overrides,
   };
 }
@@ -93,6 +105,48 @@ void describe('calculateDividends', () => {
     assert.equal(result.length, 1);
     assert.equal(result[0].withholdingTaxOriginal, 0);
     assert.equal(result[0].withholdingTaxPln, 0);
+  });
+
+  void it('does not reduce dividends by ADR fees by default', () => {
+    const div = makeDiv({ symbol: 'BP', amount: 42 });
+    const fee = makeFee({ symbol: 'BP', amount: 2.5 });
+
+    const result = calculateDividends({
+      dividends: [div],
+      withholdingTaxes: [],
+      transactionFees: [fee],
+      taxPeriod: taxPeriod2024,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].amountOriginal, 42);
+    assert.equal(result[0].amountPln, 168);
+    assert.equal(result[0].adrFeeOriginal, 0);
+  });
+
+  void it('reduces matched dividends by ADR fees when enabled', () => {
+    const div = makeDiv({ symbol: 'BP', amount: 42 });
+    const matchedFee = makeFee({ symbol: 'BP', amount: 2.5 });
+    const unmatchedFee = makeFee({
+      symbol: 'MHPC',
+      amount: 4,
+      datetime: new Date(2024, 1, 16),
+    });
+
+    const result = calculateDividends({
+      dividends: [div],
+      withholdingTaxes: [],
+      transactionFees: [matchedFee, unmatchedFee],
+      reduceAdrFeesFromDividends: true,
+      taxPeriod: taxPeriod2024,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].amountOriginal, 39.5);
+    assert.equal(result[0].adrFeeOriginal, 2.5);
+    assert.equal(result[0].adrFeePln, 10);
+    assert.equal(result[0].amountPln, 158);
+    assert.ok(Math.abs(result[0].taxPlnGross - 30.02) < 0.001);
   });
 
   void it('sums multiple withholding entries for one dividend', () => {

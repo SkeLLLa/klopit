@@ -257,6 +257,39 @@ void describe('calculateCapitalGains', () => {
     );
   });
 
+  void it('includes sell trades on the tax-period end date after midnight', () => {
+    const buy = makeTrade({
+      datetime: new Date(2025, 11, 30, 10, 0, 0),
+      quantity: 10,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2025, 11, 31, 15, 30, 0),
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+      type: 'sell',
+      commission: 0,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: {
+        year: 2025,
+        from: new Date(2025, 0, 1),
+        to: new Date(2025, 11, 31),
+      },
+    });
+
+    const sells = result.filter((row) => row.type === 'sell');
+    assert.equal(sells.length, 1);
+    assert.equal(sells[0].datetime.getDate(), 31);
+  });
+
   void it('uses carry-in positions with zero cost', () => {
     const sell = makeTrade({
       datetime: new Date(2024, 5, 10),

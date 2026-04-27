@@ -238,8 +238,12 @@ export interface DividendResult {
   symbol: string;
   currency: string;
   date: Date;
+  /** Dividend amount used as the Polish tax base after optional adjustments. */
   amountOriginal: number;
   withholdingTaxOriginal: number;
+  /** ADR/GDR fees subtracted from the dividend base when the compatibility setting is enabled. */
+  adrFeeOriginal?: number;
+  adrFeePln?: number;
   amountPln: number;
   withholdingTaxPln: number;
   exchangeRate: number;

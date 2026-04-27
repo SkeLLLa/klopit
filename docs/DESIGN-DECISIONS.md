@@ -140,6 +140,34 @@ Polish tax law **requires FIFO** when specific lot identification is not possibl
 
 ---
 
+## Design Decision: Conservative ADR/GDR Fee Treatment
+
+### The Problem
+
+Interactive Brokers can report ADR/GDR/CDI depositary fees in `Change in Dividend Accruals`. Some rows correspond to a dividend payment, while other rows can be a standalone account debit for a receipt that did not pay a periodic dividend.
+
+### The Decision
+
+kloPIT imports ADR/GDR/CDI accrual rows as transaction fees, but the default tax calculation **does not** reduce the art. 30a dividend base by those fees. A disabled-by-default setting lets a user reduce matched dividends by ADR/GDR/CDI fees when they have their own tax-advisor, prospectus, or individual-ruling basis for that treatment.
+
+### Grounding
+
+| Decision / assumption | Grounding link |
+| --------------------- | -------------- |
+| These rows should be imported because they represent actual ADR/GDR/CDI account fees. | [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php) |
+| Separate cash-account debits should not be silently netted against dividend income. | [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php) |
+| The safest Polish PIT default is no cost reduction for art. 30a dividend income. | [PIT Act art. 30a, especially ust. 1 pkt 4 and ust. 6](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
+| PIT-38 section G remains the reporting target for foreign art. 30a dividend tax and the art. 30a ust. 9 foreign-tax credit. | [Ministry of Finance PIT-38 guidance for 2025](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/) |
+| The optional setting exists because public sources do not directly resolve every broker-reporting pattern for ADR/GDR/CDI fees. | [IBKR says to consult the ADR/GDR/CDI prospectus for fee details](https://www.interactivebrokers.com/en/pricing/other-fees.php), while Polish PIT art. 30a does not mention this broker-specific fee form. |
+
+### Why This Is Better
+
+- Users can see the fee instead of losing it in skipped rows.
+- The default avoids making an aggressive tax-base reduction.
+- Any different treatment is an explicit session setting, so exported/reviewed results can be traced back to a user decision.
+
+---
+
 ## Design Decision: Rate Caching
 
 ### The Problem

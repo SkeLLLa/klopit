@@ -49,6 +49,8 @@ export interface SessionRecord {
   includeAllInPitZg?: boolean;
   /** Show dividend compatibility rows in PIT/ZG. Disabled by default. */
   showDividendsInPitZg?: boolean;
+  /** Subtract parsed ADR/GDR fees from matched dividend income. Disabled by default. */
+  reduceAdrFeesFromDividends?: boolean;
 }
 
 export interface ImportedFileRecord {

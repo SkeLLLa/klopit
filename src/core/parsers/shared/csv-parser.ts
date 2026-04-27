@@ -102,6 +102,9 @@ export abstract class CsvStatementParser implements StatementParser {
     for (const ca of this.corporateActions) {
       ca.isin ??= this.symbolToIsin.get(ca.symbol);
     }
+    for (const fee of this.transactionFees) {
+      fee.isin ??= this.symbolToIsin.get(fee.symbol);
+    }
 
     // Year inference fallback — max year from all parsed dates
     if (this.year === 0) {

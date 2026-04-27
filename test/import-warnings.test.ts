@@ -44,7 +44,7 @@ void describe('mergeImportWarnings', () => {
         section: 'Interest',
         kind: 'known-unsupported',
         rowCount: 14,
-        message: 'Interest: 14 rows skipped (known unsupported section)',
+        message: 'Interest: 14 rows skipped (section not yet supported)',
       },
     ];
     const incoming: ImportWarning[] = [
@@ -52,13 +52,13 @@ void describe('mergeImportWarnings', () => {
         section: 'Interest',
         kind: 'known-unsupported',
         rowCount: 8,
-        message: 'Interest: 8 rows skipped (known unsupported section)',
+        message: 'Interest: 8 rows skipped (section not yet supported)',
       },
       {
         section: 'Transaction Fees',
         kind: 'known-unsupported',
         rowCount: 3,
-        message: 'Transaction Fees: 3 rows skipped (known unsupported section)',
+        message: 'Transaction Fees: 3 rows skipped (section not yet supported)',
       },
     ];
 
@@ -72,7 +72,7 @@ void describe('mergeImportWarnings', () => {
     assert.equal(interest.rowCount, 22);
     assert.equal(
       interest.message,
-      'Interest: 22 rows skipped (known unsupported section)',
+      'Interest: 22 rows skipped (section not yet supported)',
     );
     const fees = merged.find((w) => w.section === 'Transaction Fees');
     assert.ok(fees);
@@ -92,7 +92,7 @@ void describe('mergeImportWarnings', () => {
           section: 'Trades',
           kind: 'known-unsupported',
           rowCount: 2,
-          message: 'Trades: 2 rows skipped (known unsupported section)',
+          message: 'Trades: 2 rows skipped (section not yet supported)',
         },
       ],
     });
@@ -110,7 +110,7 @@ void describe('mergeImportWarnings', () => {
         section: 'Interest',
         kind: 'known-unsupported',
         rowCount: 14,
-        message: 'Interest: 14 rows skipped (known unsupported section)',
+        message: 'Interest: 14 rows skipped (section not yet supported)',
       },
     ];
     assert.deepEqual(mergeImportWarnings({ warnings: input }), input);

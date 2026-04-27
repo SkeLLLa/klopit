@@ -2,7 +2,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight } from 'lucide-svelte';
+  import { ArrowRight, ExternalLink } from 'lucide-svelte';
 
   pageTitle.set(m.page_docs_ib());
 </script>
@@ -34,6 +34,53 @@
     <ul class="list-disc space-y-2 pl-6 text-slate-700 dark:text-slate-300">
       <li>{m.docs_ib_tip1()}</li>
       <li>{m.docs_ib_tip2()}</li>
+    </ul>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
+      {m.docs_ib_adr_title()}
+    </h2>
+    <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+      {m.docs_ib_adr_body()}
+    </p>
+    <ul class="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+      <li>
+        <a
+          href="https://www.interactivebrokers.com/en/pricing/other-fees.php"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-emerald-700 hover:underline dark:text-emerald-300"
+        >
+          {m.docs_ib_adr_source_ibkr()}
+          <ExternalLink size={13} />
+        </a>
+        <span class="ml-1">{m.docs_ib_adr_source_ibkr_note()}</span>
+      </li>
+      <li>
+        <a
+          href="https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-emerald-700 hover:underline dark:text-emerald-300"
+        >
+          {m.docs_ib_adr_source_pit()}
+          <ExternalLink size={13} />
+        </a>
+        <span class="ml-1">{m.docs_ib_adr_source_pit_note()}</span>
+      </li>
+      <li>
+        <a
+          href="https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-emerald-700 hover:underline dark:text-emerald-300"
+        >
+          {m.docs_ib_adr_source_pit38()}
+          <ExternalLink size={13} />
+        </a>
+        <span class="ml-1">{m.docs_ib_adr_source_pit38_note()}</span>
+      </li>
     </ul>
   </section>
 

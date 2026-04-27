@@ -4,6 +4,7 @@ import {
   type EnrichedCreditInterest,
   type TaxPeriod,
 } from '../types.js';
+import { isInTaxPeriod } from './period.js';
 
 /**
  * Convert credit-interest rows into tax results for PIT-38 Section G.
@@ -19,7 +20,7 @@ export function calculateCreditInterest(args: {
   const results: CreditInterestResult[] = [];
 
   for (const row of args.creditInterests) {
-    if (row.date < args.taxPeriod.from || row.date > args.taxPeriod.to) {
+    if (!isInTaxPeriod({ date: row.date, taxPeriod: args.taxPeriod })) {
       continue;
     }
 

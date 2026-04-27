@@ -422,6 +422,22 @@ The per-dividend cap ensures that excess foreign tax on one dividend **cannot** 
 
 **Mathematical equivalence note:** Since `min(w, d × capRate) ≤ d × 0.19` for every dividend, the per-dividend owed amount is always ≥ 0, making the aggregate formula equivalent to summing per-dividend results.
 
+#### ADR/GDR/CDI fee handling
+
+Interactive Brokers Activity Statements may include depositary-receipt fees in the `Change in Dividend Accruals` section with `ADR` codes. kloPIT imports those rows as transaction fees when they relate to ADR/GDR/CDI instruments, but **does not reduce the dividend tax base by default**.
+
+Why kloPIT handles them this way:
+
+| Decision / assumption | Grounding |
+| --------------------- | --------- |
+| ADR/GDR/CDI accrual rows are real broker-account fees, not parser noise. | IBKR documents ADR/GDR/CDI fees as pass-through custody/depository charges assessed to accounts holding the receipt on the record date: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php). |
+| A fee that IBKR reports as a separate cash-account debit is treated separately from the dividend payment unless the user chooses otherwise. | IBKR's fee page describes separate pass-through charges and recommends checking the instrument prospectus, so the statement row is imported as a fee instead of silently folding it into a dividend amount: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php). |
+| Default behavior is conservative: do not reduce the Polish art. 30a dividend base by ADR/GDR/CDI fees. | Polish PIT art. 30a ust. 1 pkt 4 covers dividends, and art. 30a ust. 6 states that the flat-rate tax for the listed income types is collected without reducing revenue by tax-deductible costs: [PIT Act art. 30a](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/). |
+| Foreign dividend tax and foreign tax credit remain in PIT-38 section G. | The Ministry of Finance PIT-38 guidance for 2025 describes foreign art. 30a income, including dividends, and the art. 30a ust. 9 foreign-tax-credit cap: [podatki.gov.pl — PIT-38 za 2025 rok](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/). |
+| An opt-in setting exists because a user may have broker/prospectus/tax-advisor evidence that the fee should be treated as reducing a specific dividend rather than as a separate cost. | IBKR points users to the ADR/GDR/CDI prospectus for fee details, while the Polish sources above do not directly resolve every broker-reporting pattern. The setting keeps this judgment explicit and auditable. |
+
+When the setting **Reduce dividends by matched ADR/GDR fees** is enabled, kloPIT matches an ADR/GDR/CDI fee to a dividend only by the same payment date and the same ISIN or symbol, and only in the same currency. The reduction is capped at the dividend amount, so it cannot create a negative dividend base.
+
 **Example with US dividend (treaty cap at 15%):**
 
 - Dividend: 100 PLN gross, broker withheld 19 PLN (≈19%, over the treaty rate).

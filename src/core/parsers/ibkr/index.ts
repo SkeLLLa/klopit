@@ -84,6 +84,9 @@ class InteractiveBrokersParser extends CsvStatementParser {
           case 'Interest':
             this.parseInterest({ fields, rawLine });
             break;
+          case 'Change in Dividend Accruals':
+            this.parseDividendAccrual({ fields, rawLine });
+            break;
         }
         break;
       case 'ignorable':
@@ -519,6 +522,59 @@ class InteractiveBrokersParser extends CsvStatementParser {
         description: description || undefined,
       });
     }
+  }
+
+  private parseDividendAccrual(args: {
+    fields: string[];
+    rawLine: string;
+  }): void {
+    const { fields, rawLine } = args;
+    const assetCategory = cleanField({ value: fields[2] ?? '' });
+    const currency = cleanField({ value: fields[3] ?? '' });
+    const symbol = cleanField({ value: fields[4] ?? '' });
+    const rawDate = cleanField({ value: fields[5] ?? '' });
+    const rawPayDate = cleanField({ value: fields[7] ?? '' });
+    const code = cleanField({ value: fields[14] ?? '' });
+
+    if (assetCategory !== 'Stocks' || !code.split(';').includes('ADR')) {
+      this.addSkippedRow({
+        section: 'Change in Dividend Accruals',
+        kind: 'known-unsupported',
+        rawLine,
+        assetCategory: assetCategory || undefined,
+        currency: currency || undefined,
+        symbol: symbol || undefined,
+        datetime: rawDate || undefined,
+        description: code || undefined,
+      });
+      return;
+    }
+
+    const fee = parseDecimal({ value: fields[10] ?? '' });
+    const datetime = parseDateTime({ value: rawPayDate || rawDate });
+
+    if (!datetime || fee === undefined || fee <= 0) {
+      this.reportParseFailure({
+        section: 'Change in Dividend Accruals',
+        rawLine,
+        message: 'Could not parse ADR/GDR fee accrual: missing pay date or fee',
+        assetCategory,
+        currency: currency || undefined,
+        symbol: symbol || undefined,
+        datetime: rawPayDate || rawDate || undefined,
+        description: code || undefined,
+      });
+      return;
+    }
+
+    this.transactionFees.push({
+      symbol,
+      isin: this.symbolToIsin.get(symbol),
+      currency,
+      datetime,
+      amount: fee,
+      description: 'ADR/GDR Fee Accrual',
+    });
   }
 
   private reportParseFailure(args: {

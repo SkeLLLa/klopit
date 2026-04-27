@@ -12,6 +12,7 @@ import {
   type CreditInterestRecord,
   type DividendRecord,
   type TradeRecord,
+  type TransactionFeeRecord,
   type WithholdingTaxRecord,
 } from '../db.js';
 import { addImportedFile, appendImportWarnings } from './session.js';
@@ -69,6 +70,13 @@ export async function importFile(args: ImportFileArgs): Promise<{
     }),
   );
 
+  const transactionFees: TransactionFeeRecord[] = result.transactionFees.map(
+    (fee) => ({
+      ...fee,
+      sessionId: args.sessionId,
+    }),
+  );
+
   // Store corporate actions
   const corporateActions: CorporateActionRecord[] = result.corporateActions.map(
     (ca) => ({
@@ -92,6 +100,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
       db.dividends,
       db.creditInterests,
       db.withholdingTaxes,
+      db.transactionFees,
       db.corporateActions,
       db.carryInPositions,
     ],
@@ -100,6 +109,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
       await db.dividends.bulkAdd(dividends);
       await db.creditInterests.bulkAdd(creditInterests);
       await db.withholdingTaxes.bulkAdd(withholdingTaxes);
+      await db.transactionFees.bulkAdd(transactionFees);
       await db.corporateActions.bulkAdd(corporateActions);
       await db.carryInPositions.bulkAdd(carryInPositions);
     },
@@ -227,7 +237,7 @@ function formatImportWarningMessage(args: {
   const count = String(args.rowCount);
   switch (args.kind) {
     case 'known-unsupported':
-      return `${args.section}: ${count} rows skipped (known unsupported section)`;
+      return `${args.section}: ${count} rows skipped (section not yet supported)`;
     case 'unknown':
       return `Unknown section '${args.section}': ${count} rows skipped`;
     case 'parse-failure':

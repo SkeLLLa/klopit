@@ -20,6 +20,10 @@ void describe('classifySection', () => {
       classifySection({ section: 'Mark-to-Market Performance Summary' }),
       'supported',
     );
+    assert.equal(
+      classifySection({ section: 'Change in Dividend Accruals' }),
+      'supported',
+    );
   });
 
   void it('classifies ignorable sections', () => {

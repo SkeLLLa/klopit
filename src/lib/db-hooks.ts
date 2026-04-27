@@ -41,6 +41,7 @@ export function installStaleHooks(db: KlopitDB): void {
     db.dividends,
     db.creditInterests,
     db.withholdingTaxes,
+    db.transactionFees,
     db.carryInPositions,
     db.corporateActions,
     db.symbolCountryOverrides,
