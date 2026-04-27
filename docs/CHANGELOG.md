@@ -1,3 +1,13 @@
+## [1.20.0](https://github.com/SkeLLLa/klopit/compare/v1.19.0...v1.20.0) (2026-04-27)
+
+### 🛠 Fixes
+
+* align translations with pit-38 form ([4470ac9](https://github.com/SkeLLLa/klopit/commit/4470ac991931557730de703e7c74dc844a1f98d6))
+
+### 🚀 Features
+
+* **tax:** improve PIT/ZG, align docs, UX tax form improvements ([ebc3fdf](https://github.com/SkeLLLa/klopit/commit/ebc3fdf31512b9e7fa99b61cb10733c5ba8cf3f3))
+
 ## [1.19.0](https://github.com/SkeLLLa/klopit/compare/v1.18.1...v1.19.0) (2026-04-27)
 
 ### 🚀 Features
