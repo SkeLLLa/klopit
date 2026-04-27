@@ -1,3 +1,13 @@
+## [1.22.1](https://github.com/SkeLLLa/klopit/compare/v1.22.0...v1.22.1) (2026-04-27)
+
+### 🛠 Fixes
+
+* republish pages ([78dc333](https://github.com/SkeLLLa/klopit/commit/78dc333b43e76636c35be34fa047aa6640b95aff))
+
+### 📔 Docs
+
+* add contributors links to docs ([6d686bb](https://github.com/SkeLLLa/klopit/commit/6d686bb037966ebdd3eaa6755c765029f694afa4))
+
 ## [1.22.0](https://github.com/SkeLLLa/klopit/compare/v1.21.0...v1.22.0) (2026-04-27)
 
 ### 🚀 Features
