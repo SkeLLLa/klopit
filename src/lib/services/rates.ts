@@ -1,5 +1,8 @@
 import { fetchRates, type NbpRate, type NbpRateMap } from '../../core/nbp.js';
 import { db, type NbpRateRecord } from '../db.js';
+import { createLogger } from '../state/logger.svelte.js';
+
+const log = createLogger('rates');
 
 const PREFETCH_DAYS_BEFORE = 14;
 const PREFETCH_DAYS_AFTER = 78; // 14 + 78 + 1 = 93 (max NBP range)
@@ -95,17 +98,16 @@ function findUncachedSpans(args: {
 }): { start: string; end: string }[] {
   const spans: { start: string; end: string }[] = [];
   let spanStart: string | null = null;
+  let prev: string | null = null;
 
   for (const date of args.dates) {
     if (!args.cached.has(date)) {
       spanStart ??= date;
-    } else {
-      if (spanStart !== null) {
-        const prevIdx = args.dates.indexOf(date) - 1;
-        spans.push({ start: spanStart, end: args.dates[prevIdx] });
-        spanStart = null;
-      }
+    } else if (spanStart !== null && prev !== null) {
+      spans.push({ start: spanStart, end: prev });
+      spanStart = null;
     }
+    prev = date;
   }
 
   if (spanStart !== null) {
@@ -146,7 +148,16 @@ export async function getCachedRates(args: {
 
   const uncachedSpans = findUncachedSpans({ dates: allDates, cached });
 
+  if (uncachedSpans.length > 0) {
+    log.debug(
+      `getCachedRates(${upperCurrency}): ${String(uncachedSpans.length)} uncached span(s) over ${String(allDates.length)} days`,
+    );
+  }
+
   for (const span of uncachedSpans) {
+    log.debug(
+      `getCachedRates(${upperCurrency}): fetching ${span.start}..${span.end}`,
+    );
     const fetched = await fetchRates({
       currency: upperCurrency,
       startDate: span.start,
@@ -269,6 +280,9 @@ export async function getFixingRate(args: {
     candidate = addDays(candidate, -1);
   }
 
+  log.warn(
+    `getFixingRate: gave up walking back ${String(MAX_WALK_BACK_DAYS)} days for ${upperCurrency} before ${args.date}`,
+  );
   throw new Error(
     `Could not find NBP fixing rate for ${upperCurrency} within ${String(MAX_WALK_BACK_DAYS)} days before ${args.date}`,
   );
@@ -309,7 +323,10 @@ export async function fetchRatesForSession(args: {
     }
   }
 
-  if (currencies.size === 0) return;
+  if (currencies.size === 0) {
+    log.debug('fetchRatesForSession: no foreign currencies, skipping');
+    return;
+  }
 
   // Find the overall date range across all transactions
   const allDates: Date[] = [];
@@ -331,6 +348,9 @@ export async function fetchRatesForSession(args: {
   const endDate = toDateString(latest);
 
   // Prefetch rates for each currency in parallel
+  log.info(
+    `fetchRatesForSession: prefetching ${[...currencies].join(',')} from ${startDate} to ${endDate}`,
+  );
   await Promise.all(
     [...currencies].map((currency) =>
       getCachedRates({ currency, startDate, endDate }),

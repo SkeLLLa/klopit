@@ -12,8 +12,11 @@ import type {
   TaxPeriod,
 } from '../../core/types.js';
 import { db } from '../db.js';
+import { createLogger } from '../state/logger.svelte.js';
 import { fetchRatesForSession, getFixingRate } from './rates.js';
 import { updateSession } from './session.js';
+
+const log = createLogger('tax');
 
 /** Format a Date as YYYY-MM-DD for rate lookups */
 function toDateString(d: Date): string {
@@ -23,13 +26,42 @@ function toDateString(d: Date): string {
   return `${String(year)}-${month}-${day}`;
 }
 
+/**
+ * Resolve NBP fixing rate for a given currency/date, logging any error
+ * before returning a sentinel. Centralizes the `rateUnavailable` fallback
+ * so failures show up in the console instead of silently producing 0 PLN.
+ */
+async function tryGetFixingRate(args: {
+  currency: string;
+  date: string;
+  scope: string;
+}): Promise<{ rate: number; date: string } | undefined> {
+  try {
+    const rate = await getFixingRate({
+      currency: args.currency,
+      date: args.date,
+    });
+    return { rate: rate.rate, date: rate.date };
+  } catch (e) {
+    log.warn(
+      `tryGetFixingRate(${args.scope}): no rate for ${args.currency} on ${args.date}`,
+      e,
+    );
+    return undefined;
+  }
+}
+
 /** Run tax calculation for a session and persist results */
 export async function calculateSessionTaxes(args: {
   sessionId: string;
 }): Promise<TaxCalculationResult> {
+  const startedAt = performance.now();
+  log.info('calculateSessionTaxes:start', { sessionId: args.sessionId });
+
   // 1. Load session
   const session = await db.sessions.get(args.sessionId);
   if (!session) {
+    log.error('calculateSessionTaxes: session not found', args.sessionId);
     throw new Error(`Session ${args.sessionId} not found`);
   }
 
@@ -49,6 +81,15 @@ export async function calculateSessionTaxes(args: {
     db.corporateActions.where('sessionId').equals(args.sessionId).toArray(),
     db.carryInPositions.where('sessionId').equals(args.sessionId).toArray(),
   ]);
+
+  log.debug('calculateSessionTaxes: loaded', {
+    trades: trades.length,
+    dividends: dividends.length,
+    creditInterests: creditInterests.length,
+    withholdingTaxes: withholdingTaxes.length,
+    corporateActions: corporateActions.length,
+    carryInPositions: carryInPositions.length,
+  });
 
   // 3. Build symbol → country map
   const overrides = await db.symbolCountryOverrides
@@ -78,41 +119,32 @@ export async function calculateSessionTaxes(args: {
   }
 
   // 4. Prefetch and cache NBP rates
+  log.info('calculateSessionTaxes: prefetching NBP rates');
+  const ratesStart = performance.now();
   await fetchRatesForSession({ sessionId: args.sessionId });
+  log.debug(
+    `calculateSessionTaxes: NBP prefetch done in ${String(Math.round(performance.now() - ratesStart))}ms`,
+  );
 
   // 5. Enrich trades with fixing rates
   const enrichedTrades: EnrichedTrade[] = await Promise.all(
     trades.map(async (trade) => {
       const dateStr = toDateString(trade.datetime);
-      let exchangeRate = 0;
-      let commissionExchangeRate = 0;
-      let rateUnavailable = false;
-
-      try {
-        const rate = await getFixingRate({
-          currency: trade.currency,
-          date: dateStr,
-        });
-        exchangeRate = rate.rate;
-      } catch {
-        rateUnavailable = true;
-      }
-
-      try {
-        const comRate = await getFixingRate({
-          currency: trade.commissionCurrency,
-          date: dateStr,
-        });
-        commissionExchangeRate = comRate.rate;
-      } catch {
-        rateUnavailable = true;
-      }
-
+      const rate = await tryGetFixingRate({
+        currency: trade.currency,
+        date: dateStr,
+        scope: 'trade',
+      });
+      const comRate = await tryGetFixingRate({
+        currency: trade.commissionCurrency,
+        date: dateStr,
+        scope: 'trade.commission',
+      });
       return {
         ...trade,
-        exchangeRate,
-        commissionExchangeRate,
-        rateUnavailable,
+        exchangeRate: rate?.rate ?? 0,
+        commissionExchangeRate: comRate?.rate ?? 0,
+        rateUnavailable: rate === undefined || comRate === undefined,
       };
     }),
   );
@@ -120,21 +152,16 @@ export async function calculateSessionTaxes(args: {
   // 6. Enrich dividends with fixing rates
   const enrichedDividends: EnrichedRawDividend[] = await Promise.all(
     dividends.map(async (div) => {
-      const dateStr = toDateString(div.date);
-      let exchangeRate = 0;
-      let rateUnavailable = false;
-
-      try {
-        const rate = await getFixingRate({
-          currency: div.currency,
-          date: dateStr,
-        });
-        exchangeRate = rate.rate;
-      } catch {
-        rateUnavailable = true;
-      }
-
-      return { ...div, exchangeRate, rateUnavailable };
+      const rate = await tryGetFixingRate({
+        currency: div.currency,
+        date: toDateString(div.date),
+        scope: 'dividend',
+      });
+      return {
+        ...div,
+        exchangeRate: rate?.rate ?? 0,
+        rateUnavailable: rate === undefined,
+      };
     }),
   );
 
@@ -143,67 +170,52 @@ export async function calculateSessionTaxes(args: {
     fxDate: string;
   })[] = await Promise.all(
     creditInterests.map(async (interest) => {
-      const dateStr = toDateString(interest.date);
-      let exchangeRate = 0;
-      let fxDate = '';
-      let rateUnavailable = false;
-
-      try {
-        const rate = await getFixingRate({
-          currency: interest.currency,
-          date: dateStr,
-        });
-        exchangeRate = rate.rate;
-        fxDate = rate.date;
-      } catch {
-        rateUnavailable = true;
-      }
-
-      return { ...interest, exchangeRate, fxDate, rateUnavailable };
+      const rate = await tryGetFixingRate({
+        currency: interest.currency,
+        date: toDateString(interest.date),
+        scope: 'creditInterest',
+      });
+      return {
+        ...interest,
+        exchangeRate: rate?.rate ?? 0,
+        fxDate: rate?.date ?? '',
+        rateUnavailable: rate === undefined,
+      };
     }),
   );
 
   // 8. Enrich withholding taxes with fixing rates
   const enrichedWithholding: EnrichedWithholdingTax[] = await Promise.all(
     withholdingTaxes.map(async (tax) => {
-      const dateStr = toDateString(tax.date);
-      let exchangeRate = 0;
-      let rateUnavailable = false;
-
-      try {
-        const rate = await getFixingRate({
-          currency: tax.currency,
-          date: dateStr,
-        });
-        exchangeRate = rate.rate;
-      } catch {
-        rateUnavailable = true;
-      }
-
-      return { ...tax, exchangeRate, rateUnavailable };
+      const rate = await tryGetFixingRate({
+        currency: tax.currency,
+        date: toDateString(tax.date),
+        scope: 'withholding',
+      });
+      return {
+        ...tax,
+        exchangeRate: rate?.rate ?? 0,
+        rateUnavailable: rate === undefined,
+      };
     }),
   );
 
   // 9. Enrich corporate actions with fixing rates for cash component
   const enrichedCorporateActions: EnrichedCorporateAction[] = await Promise.all(
     corporateActions.map(async (ca) => {
-      let cashExchangeRate = 0;
-      let cashRateUnavailable = false;
-
-      if (ca.cashPerShare && ca.cashPerShare > 0 && ca.cashCurrency) {
-        const dateStr = toDateString(ca.datetime);
-        try {
-          const rate = await getFixingRate({
-            currency: ca.cashCurrency,
-            date: dateStr,
-          });
-          cashExchangeRate = rate.rate;
-        } catch {
-          cashRateUnavailable = true;
-        }
+      if (!ca.cashPerShare || ca.cashPerShare <= 0 || !ca.cashCurrency) {
+        return { ...ca, cashExchangeRate: 0, cashRateUnavailable: false };
       }
-
-      return { ...ca, cashExchangeRate, cashRateUnavailable };
+      const rate = await tryGetFixingRate({
+        currency: ca.cashCurrency,
+        date: toDateString(ca.datetime),
+        scope: 'corporateAction',
+      });
+      return {
+        ...ca,
+        cashExchangeRate: rate?.rate ?? 0,
+        cashRateUnavailable: rate === undefined,
+      };
     }),
   );
 
@@ -222,24 +234,36 @@ export async function calculateSessionTaxes(args: {
     .toArray();
 
   // 11. Calculate taxes
-  const result = calculateTaxes({
-    trades: enrichedTrades,
-    dividends: enrichedDividends,
-    creditInterests: enrichedCreditInterests,
-    withholdingTaxes: enrichedWithholding,
-    corporateActions: enrichedCorporateActions,
-    carryInPositions,
-    priorLosses: priorLosses.map((p) => ({
-      year: p.year,
-      totalLossPln: p.totalLossPln,
-      alreadyDeductedPln: p.alreadyDeductedPln,
-    })),
-    taxPeriod,
-    symbolCountryMap,
-    includeAllInPitZg: session.includeAllInPitZg ?? false,
+  log.info('calculateSessionTaxes: running calculator', {
+    enrichedTrades: enrichedTrades.length,
+    enrichedDividends: enrichedDividends.length,
+    priorLosses: priorLosses.length,
   });
+  let result: TaxCalculationResult;
+  try {
+    result = calculateTaxes({
+      trades: enrichedTrades,
+      dividends: enrichedDividends,
+      creditInterests: enrichedCreditInterests,
+      withholdingTaxes: enrichedWithholding,
+      corporateActions: enrichedCorporateActions,
+      carryInPositions,
+      priorLosses: priorLosses.map((p) => ({
+        year: p.year,
+        totalLossPln: p.totalLossPln,
+        alreadyDeductedPln: p.alreadyDeductedPln,
+      })),
+      taxPeriod,
+      symbolCountryMap,
+      includeAllInPitZg: session.includeAllInPitZg ?? false,
+    });
+  } catch (e) {
+    log.error('calculateSessionTaxes: calculator threw', e);
+    throw e;
+  }
 
   // 12. Persist results
+  log.debug('calculateSessionTaxes: persisting results');
   await db.transaction(
     'rw',
     [
@@ -293,6 +317,9 @@ export async function calculateSessionTaxes(args: {
     },
   );
 
+  log.info(
+    `calculateSessionTaxes:done in ${String(Math.round(performance.now() - startedAt))}ms`,
+  );
   return result;
 }
 

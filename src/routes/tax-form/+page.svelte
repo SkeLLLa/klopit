@@ -11,6 +11,9 @@
     calculateSessionTaxes,
     clearSessionResults,
   } from '$lib/services/tax.js';
+  import { createLogger } from '$lib/state/logger.svelte.js';
+
+  const log = createLogger('tax-form');
   import { isSessionStale } from '$lib/utils/stale.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
@@ -75,13 +78,19 @@
       ? db.dividends.where('sessionId').equals(sessionId).count()
       : Promise.resolve(0),
   );
+  const countsLoaded = $derived(
+    tradeCount.current !== undefined && dividendCount.current !== undefined,
+  );
   const hasData = $derived(
     (tradeCount.current ?? 0) > 0 || (dividendCount.current ?? 0) > 0,
   );
 
-  // Auto-calculate on navigation when session has data but no results
+  // Auto-calculate on navigation when session has data but no results.
+  // Depend only on `sessionId` (not the full session record) so writes to
+  // the session row during calculation don't re-trigger the effect.
   $effect(() => {
-    if (session && hasData && !pit38 && !calculating) {
+    if (sessionId && countsLoaded && hasData && !pit38 && !calculating) {
+      log.info('auto-calc trigger', { sessionId });
       void runCalculation();
     }
   });
@@ -93,6 +102,7 @@
     try {
       await calculateSessionTaxes({ sessionId });
     } catch (e) {
+      log.error('runCalculation failed', e);
       error = e instanceof Error ? e.message : String(e);
     } finally {
       calculating = false;
@@ -107,6 +117,7 @@
       await clearSessionResults({ sessionId });
       await calculateSessionTaxes({ sessionId });
     } catch (e) {
+      log.error('handleRecalculate failed', e);
       error = e instanceof Error ? e.message : String(e);
     } finally {
       calculating = false;
@@ -127,6 +138,7 @@
       });
       await calculateSessionTaxes({ sessionId });
     } catch (e) {
+      log.error('handleToggleIncludeAll failed', e);
       error = e instanceof Error ? e.message : String(e);
     } finally {
       calculating = false;
@@ -155,6 +167,11 @@
     >
       {m.nav_docs_pit38()} <ArrowRight size={12} />
     </a>
+  </div>
+{:else if !countsLoaded && !pit38}
+  <!-- Counts not loaded yet — show neutral spinner instead of "no data" -->
+  <div class="flex flex-col items-center justify-center py-24 text-center">
+    <RefreshCw size={32} class="mb-3 animate-spin text-slate-400" />
   </div>
 {:else if !hasData && !pit38}
   <!-- Session has no data -->
@@ -279,5 +296,23 @@
         {/if}
       </div>
     </div>
+  </div>
+{:else}
+  <!--
+    Fallback: data exists, no error, not calculating, but pit38 not yet
+    populated. Likely a transient gap between Dexie write and liveQuery
+    fire — surface a manual retry instead of leaving the page blank.
+  -->
+  <div class="flex flex-col items-center justify-center py-24 text-center">
+    <AlertCircle size={40} class="mb-3 text-slate-400" />
+    <p class="text-sm text-slate-500 dark:text-slate-400">
+      {m.tax_calculating()}
+    </p>
+    <button
+      onclick={() => void runCalculation()}
+      class="mt-3 rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+    >
+      {m.tax_retry()}
+    </button>
   </div>
 {/if}

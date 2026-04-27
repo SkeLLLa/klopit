@@ -7,8 +7,18 @@
   import { sessionState } from '$lib/state/session.svelte.js';
   import { updateSession } from '$lib/services/session.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  import {
+    LOG_LEVELS,
+    loggerState,
+    type LogLevel,
+  } from '$lib/state/logger.svelte.js';
 
   pageTitle.set(m.settings_title());
+
+  function handleLogLevelChange(e: Event) {
+    const target = e.currentTarget as HTMLSelectElement;
+    loggerState.setLevel(target.value as LogLevel);
+  }
 
   const bootstrap = useSessionBootstrap();
   const sessions = $derived(bootstrap.sessions);
@@ -143,4 +153,34 @@
       </div>
     </section>
   {/if}
+
+  <section
+    class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800"
+  >
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          {m.settings_logging_title()}
+        </h3>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {m.settings_logging_description()}
+        </p>
+      </div>
+
+      <label class="flex items-center gap-3">
+        <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
+          {m.settings_logging_level_label()}
+        </span>
+        <select
+          value={loggerState.level}
+          onchange={handleLogLevelChange}
+          class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+        >
+          {#each LOG_LEVELS as lvl (lvl)}
+            <option value={lvl}>{lvl}</option>
+          {/each}
+        </select>
+      </label>
+    </div>
+  </section>
 </div>
