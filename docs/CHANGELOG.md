@@ -1,3 +1,15 @@
+## [1.20.1](https://github.com/SkeLLLa/klopit/compare/v1.20.0...v1.20.1) (2026-04-27)
+
+### 🛠 Fixes
+
+* **dashboard:** add a note about rounding ([3f505fc](https://github.com/SkeLLLa/klopit/commit/3f505fc41eb429791bc85144a66137e325c80d0a))
+* **deps:** bump @unovis/ts from 1.6.4 to 1.6.5 ([09defbf](https://github.com/SkeLLLa/klopit/commit/09defbf2bebef42ed2922a02938e8902c33bc3df))
+* **deps:** bump svelte from 5.55.3 to 5.55.5 ([a5c1d47](https://github.com/SkeLLLa/klopit/commit/a5c1d47c169a73f23352428c4cdf5d688b51374d))
+
+### 🧾 Other
+
+* **deps:** bump dependabot/fetch-metadata in the all-actions group ([a7f3a31](https://github.com/SkeLLLa/klopit/commit/a7f3a31b1683c40f13dfb932f1c7cfb1e62afae0))
+
 ## [1.20.0](https://github.com/SkeLLLa/klopit/compare/v1.19.0...v1.20.0) (2026-04-27)
 
 ### 🛠 Fixes
