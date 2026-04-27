@@ -10,6 +10,7 @@
 
   const githubIssuesLink = 'https://github.com/SkeLLLa/klopit/issues';
   const githubRepoLink = 'https://github.com/SkeLLLa/klopit';
+  const githubContributorsLink = 'https://github.com/SkeLLLa/klopit/graphs/contributors';
   const pitlyLink = 'https://github.com/volodymyr-kovtun/Pitly';
 
   const inspiredParts = $derived.by(() => {
@@ -105,12 +106,12 @@
       {m.about_maintainer_body()}
     </p>
     <a
-      href={githubRepoLink}
+      href={githubContributorsLink}
       target="_blank"
       rel="noopener noreferrer"
       class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
     >
-      {m.about_card_repo_cta()}
+      {m.about_contributors_cta()}
       <ArrowRight size={12} />
     </a>
   </section>

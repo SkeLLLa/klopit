@@ -23,7 +23,7 @@
     "url": "git+https://github.com/SkeLLLa/klopit.git"
   },
   "license": "AGPL-3.0-only",
-  "author": "m03geek",
+  "author": "kloPIT community",
   "type": "module",
   "directories": {
     "lib": "src",

@@ -255,12 +255,12 @@
             <span aria-hidden="true"> · </span>
             {docsMaintainerLabels[locale] ?? docsMaintainerLabels.en}
             <a
-              href="https://github.com/SkeLLLa/klopit"
+              href="https://github.com/SkeLLLa/klopit/graphs/contributors"
               target="_blank"
               rel="noopener noreferrer"
               class="font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
             >
-              m03geek
+              community
             </a>
           </p>
         {/if}
