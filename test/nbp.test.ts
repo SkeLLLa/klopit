@@ -209,10 +209,8 @@ void describe('NbpFetchError', () => {
   });
 
   void it('wraps fetch TimeoutError as NbpFetchError', async () => {
-    globalThis.fetch = (() =>
-      Promise.reject(
-        new DOMException('signal timed out', 'TimeoutError'),
-      )) as typeof fetch;
+    globalThis.fetch = () =>
+      Promise.reject(new DOMException('signal timed out', 'TimeoutError'));
 
     await assert.rejects(
       fetchRates({
