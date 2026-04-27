@@ -1,3 +1,9 @@
+## [1.19.0](https://github.com/SkeLLLa/klopit/compare/v1.18.1...v1.19.0) (2026-04-27)
+
+### 🚀 Features
+
+* add logging ([05c242f](https://github.com/SkeLLLa/klopit/commit/05c242fcc8cef23979f560032e490cb539edc816))
+
 ## [1.18.1](https://github.com/SkeLLLa/klopit/compare/v1.18.0...v1.18.1) (2026-04-26)
 
 ### 🛠 Fixes
