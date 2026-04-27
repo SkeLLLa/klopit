@@ -2,7 +2,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { formatPln } from '$lib/utils/format-pln.js';
   import type { TaxSummaryRecord } from '$lib/db.js';
-  import { TrendingUp, TrendingDown, Minus } from 'lucide-svelte';
+  import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-svelte';
   import { TAX_RATE } from '../../core/types.js';
 
   interface Props {
@@ -58,6 +58,7 @@
     color: 'blue' | 'green' | 'red' | 'amber';
     prevValue?: number;
     lowerIsBetter: boolean;
+    info?: string;
   }
 
   const cards: CardData[] = $derived([
@@ -68,6 +69,7 @@
       color: 'blue',
       prevValue: prevTaxOwed,
       lowerIsBetter: true,
+      info: taxOwedSubtitle ? m.dash_tax_owed_pit38_difference_info() : undefined,
     },
     {
       label: m.dash_capital_gains(),
@@ -125,9 +127,20 @@
     <div
       class="rounded-lg border bg-white p-4 dark:bg-slate-900 {colorClasses[card.color]}"
     >
-      <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        {card.label}
-      </p>
+      <div class="flex items-center gap-1.5">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          {card.label}
+        </p>
+        {#if card.info}
+          <span
+            class="inline-flex rounded-full text-slate-400 dark:text-slate-500"
+            title={card.info}
+            aria-label={card.info}
+          >
+            <Info size={13} />
+          </span>
+        {/if}
+      </div>
       <p class="mt-1 text-2xl font-bold {valueColorClasses[card.color]}">
         {formatPln(card.value)}
       </p>

@@ -54,6 +54,7 @@
   "dash_rates_warning": "Niektóre transakcje nie mają kursów NBP — wyniki mogą być niekompletne",
   "dash_symbol_chart": "Przychody vs Koszty wg symbolu",
   "dash_tax_owed": "Podatek do zapłaty",
+  "dash_tax_owed_pit38_difference_info": "Dashboard pokazuje sumę z surowych składników obliczeń. Poz. 51 PIT-38 używa pól formularza, w tym zaokrąglonej poz. 35, więc może różnić się o grosze.",
   "dash_tax_transactions": "Szczegóły transakcji podatkowych",
   "dash_title": "Dashboard",
   "dash_total_income": "Łączny dochód",

@@ -59,6 +59,7 @@
   "dash_rates_warning": "Some transactions have missing NBP rates — results may be incomplete",
   "dash_symbol_chart": "Proceeds vs Cost by Symbol",
   "dash_tax_owed": "Total Tax Owed",
+  "dash_tax_owed_pit38_difference_info": "The dashboard total uses raw calculated tax components. PIT-38 item 51 uses official form fields, including rounded item 35, so it can differ by grosze.",
   "dash_tax_transactions": "Tax Transactions Detail",
   "dash_title": "Dashboard",
   "dash_total_income": "Total Income",
