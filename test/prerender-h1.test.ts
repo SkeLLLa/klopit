@@ -17,6 +17,13 @@ function collectHtml(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
+function isRedirectStub(html: string): boolean {
+  return (
+    /<meta\s+http-equiv=["']?refresh["']?/i.test(html) &&
+    /<script[^>]*>location\.href\s*=/i.test(html)
+  );
+}
+
 void test('every prerendered page has exactly one <h1>', (t) => {
   if (!existsSync(buildDir)) {
     t.skip('build/ not found — run `pnpm build` first');
@@ -29,6 +36,8 @@ void test('every prerendered page has exactly one <h1>', (t) => {
   const failures: string[] = [];
   for (const file of files) {
     const html = readFileSync(file, 'utf8');
+    if (isRedirectStub(html)) continue;
+
     const count = (html.match(/<h1[\s>]/gi) ?? []).length;
     if (count !== 1) {
       failures.push(
