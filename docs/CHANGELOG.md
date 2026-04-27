@@ -1,3 +1,9 @@
+## [1.22.0](https://github.com/SkeLLLa/klopit/compare/v1.21.0...v1.22.0) (2026-04-27)
+
+### 🚀 Features
+
+* adr fees and fix 31.12 bug ([b897b79](https://github.com/SkeLLLa/klopit/commit/b897b79e0588a6c115b9495a16c7c74ed37e48ff))
+
 ## [1.21.0](https://github.com/SkeLLLa/klopit/compare/v1.20.1...v1.21.0) (2026-04-27)
 
 ### 🚀 Features
