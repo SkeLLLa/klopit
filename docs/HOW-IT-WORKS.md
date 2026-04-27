@@ -94,7 +94,7 @@ Broker CSV file    →       Parse data into           Fetch exchange rates,    
 **Purpose:** Auto-calculate your PIT-38 tax form and show exactly what to report
 
 **What you see:**
-The form displays **six sections** with calculated numbers:
+The form displays PIT-38 sections in the same order as the official form:
 
 1. **Section C — Capital Gains/Losses**
    - Proceeds from selling securities
@@ -112,31 +112,32 @@ The form displays **six sections** with calculated numbers:
    - Withholding tax paid abroad (capped per-dividend)
    - Additional tax owed to Poland (~4% after US withholding)
 
-5. **Sections H — Charity Donations** ([art. 45c](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/))
-   - Optional: 1.5% of tax owed for OPP (Organizacja Pożytku Publicznego)
-   - If you donate, it reduces your tax
+5. **Section H — Monthly Flat-Rate Tax** (placeholder)
+   - Monthly fields are shown as unsupported zero placeholders
 
-6. **Summary**
-   - Total tax you owe = section D + section G - charity donations
+6. **Section J — OPP 1.5% Request** ([art. 45c](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/))
+   - Optional KRS, requested amount, purpose, and consent fields
+   - The requested amount is displayed as 1.5% of supported PIT-38 tax due from poz. 35, rounded down to full 10 groszy
+   - This is a request to redirect part of tax already due; it does not reduce the PIT-38 tax-to-pay value
 
 **PIT/ZG attachment:**
 
-When you receive **dividends from foreign companies with foreign tax withheld**, you must submit a **PIT/ZG** attachment alongside your PIT-38 ([art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)). PIT/ZG reports:
+kloPIT generates PIT/ZG for **share income reported in PIT/ZG section C.3** alongside PIT-38 ([art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)). PIT/ZG reports:
 
-- Country of income origin = **company's country of residence** (not the exchange)
-- Dividend income amount in PLN
-- Tax paid abroad (withholding tax)
+- Country of income origin: item 6 country name and item 7 country code
+- Income from abroad: item 29
+- Tax paid abroad on that income: item 30
 
-You need **one PIT/ZG per country** — if you have dividends from US and German stocks with withholding tax, you file two PIT/ZG attachments. When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
+You need **one PIT/ZG per country**. The country is inferred from ISIN country mappings, and dividend ISINs are reused to fill the country for the same symbol when trade rows do not have a usable ISIN country. When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
 
-**By default, capital gains are NOT included in PIT/ZG.** Under [Art. 30b PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) and OECD Model Convention Art. 13, gains from selling shares are taxed exclusively in Poland (country of residence). There is no per-country breakdown — all gains are aggregated in PIT-38 Section C. kloPIT also supports an exception for including them in PIT/ZG; see the later section describing the relevant toggle and edge cases.
+Foreign dividends are settled in PIT-38 section G by default, not PIT/ZG. A disabled-by-default compatibility setting named **Show dividends in PIT/ZG** can add helper dividend rows to the PIT/ZG view when a user intentionally wants that extra view.
 
 **Practical example:**
 
 - Capital gains tax due: $2,850
 - Dividend tax due: $32
-- You donate $50 to OPP (1.5%)
-- **Total tax owed: $2,832**
+- You request a 1.5% OPP transfer from the Section J helper
+- **Total tax owed: $2,882** (the OPP request does not reduce the tax due)
 
 ---
 
@@ -154,7 +155,7 @@ The tax calculator (`calculator.ts`) orchestrates six steps:
 3. calculateCreditInterest()→  CreditInterestResult[] (PLN conversion, 19% flat rate)
 4. buildSummary()           →  TaxSummary             (aggregate totals for dashboard)
 5. buildPit38()             →  Pit38Fields            (PIT-38 form field values with rounding)
-6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG: dividends, plus conditional capital gains fields)
+6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG C.3 share income; optional dividend compatibility rows)
 ```
 
 All inputs arrive **pre-enriched** with NBP exchange rates resolved by the service layer before reaching the calculator.
@@ -474,8 +475,9 @@ Two distinct rounding functions are used, matching separate legal provisions:
 
 | Function         | Legal basis                                                                         | Algorithm                                                  | Used for                                                                                 |
 | ---------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `roundToFullPln` | [Art. 63 § 1 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/)  | `Math.round(amount)` — mathematical rounding to full złoty | Tax base (poz. 31), tax due (poz. 35), total tax to pay (poz. 51), overpayment (poz. 52) |
-| `roundToGroszUp` | [Art. 63 § 1a Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/) | `Math.ceil(amount × 100) / 100` — ceiling to full groszy   | Dividend tax 19% amount (poz. 47), dividend tax difference (poz. 49)                     |
+| `roundToFullPln` | [Art. 63 § 1 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/)  | `Math.round(amount)` — mathematical rounding to full złoty | Tax base (poz. 31), capital gains tax due (poz. 35), crypto placeholders (poz. 41/45), monthly placeholder fields |
+| `roundToGrosz`   | Form field precision (`zł, gr`)                                                     | `Math.round((amount + EPSILON) × 100) / 100` — nearest grosz | PIT-38 Section C totals/gain/loss (poz. 22/23/26/27/28/29), foreign tax credit (poz. 48), payment summary (poz. 51/52) |
+| `roundToGroszUp` | [Art. 63 § 1a Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/) | `Math.ceil(amount × 100) / 100` — ceiling to full groszy   | Dividend/interest tax amount (poz. 47), dividend/interest tax difference (poz. 49) |
 
 **`roundToGroszUp` precision handling:** Uses `+(amount * 100).toFixed(10)` before `Math.ceil` to avoid floating-point artifacts (e.g., `0.1 + 0.2 = 0.30000000000000004`).
 
@@ -502,13 +504,14 @@ This matters for UI copy/paste helpers: values copied into e-Urząd Skarbowy sho
 ```
 poz20 = 0                                    // PIT-8C proceeds (N/A for foreign broker)
 poz21 = 0                                    // PIT-8C costs
-poz22 = totalProceedsPln                     // Other proceeds (foreign broker)
+poz22 = roundToGrosz(totalProceedsPln)       // Other proceeds (foreign broker)
+poz23 = roundToGrosz(totalCostPln)           // Other costs
 poz24 = 0                                    // Exempt proceeds (art. 21 ust. 1 pkt 105a)
 poz25 = 0                                    // Exempt costs
-poz26 = poz20 + poz22 − poz24               // Total proceeds
-poz27 = poz21 + totalCostPln − poz25        // Total costs
-poz28 = max(poz26 − poz27, 0)              // Gain (dochód)
-poz29 = max(poz27 − poz26, 0)              // Loss (strata)
+poz26 = roundToGrosz(poz20 + poz22 − poz24)  // Total proceeds
+poz27 = roundToGrosz(poz21 + poz23 − poz25)  // Total costs
+poz28 = roundToGrosz(max(poz26 − poz27, 0))  // Gain (dochód)
+poz29 = roundToGrosz(max(poz27 − poz26, 0))  // Loss (strata)
 ```
 
 #### Section D — Tax Calculation
@@ -535,11 +538,22 @@ poz47 = roundToGroszUp((totalDividendsPln + totalCreditInterestPln) × 0.19)  //
 poz48 = round_to_groszy(min(totalDeductibleWithholdingPln + totalCreditInterestForeignTaxPln, poz47))  // Deductible foreign tax
 poz49 = roundToGroszUp(max(poz47 − poz48, 0))                   // Dividend tax difference (art. 63 § 1a)
 poz50 = 0                                                        // Advance payments by payers
-poz51 = roundToFullPln(max(poz35 + poz45 + poz46 + poz49 − poz50, 0))  // TAX TO PAY (art. 63 § 1)
-poz52 = roundToFullPln(max(poz50 − (poz35 + poz45 + poz46 + poz49), 0))  // OVERPAYMENT (art. 63 § 1)
+poz51 = roundToGrosz(max(poz35 + poz45 + poz46 + poz49 − poz50, 0))  // TAX TO PAY
+poz52 = roundToGrosz(max(poz50 − (poz35 + poz45 + poz46 + poz49), 0))  // OVERPAYMENT
 ```
 
 Where `round_to_groszy` uses `Math.round(amount × 100) / 100` (standard rounding to nearest grosz).
+
+#### Section J — OPP 1.5% Request
+
+```
+poz66 = selected OPP KRS
+poz67 = floor((poz35 + supported poz45) × 0.015 × 10) / 10
+poz68 = optional specific purpose
+poz69 = consent to pass taxpayer details and poz67 amount to the OPP
+```
+
+kloPIT does not currently calculate crypto Section F, so supported `poz45` is always 0 and `poz67` is effectively based on `poz35`.
 
 #### Sections H & I — Monthly Flat-Rate Tax (placeholders, all zeros)
 
@@ -551,7 +565,7 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 
 **Implementation:** `pit-zg.ts`
 
-**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) — PIT/ZG is required for foreign-source income with foreign tax. One attachment per country of income.
+**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) and PIT/ZG(8) section C.3 — PIT/ZG is filed per country for income/tax settled in PIT-38 under art. 30b.
 
 **Official grounding for field precision and labels:**
 - [PIT/ZG page on gov.pl](https://www.gov.pl/web/finanse/pitzg)
@@ -559,46 +573,49 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 
 The official PIT/ZG(8) form labels the reported income/tax amount boxes as `zł, gr`, so these values should be normalized to grosz precision when displayed or copied for filing.
 
-**Default behavior (toggle OFF):**
+**Default behavior:**
 
-Under [Art. 30b PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) and OECD Model Convention Art. 13, capital gains from selling shares are taxed exclusively in the country of residence (Poland). Art. 30b ust. 5a treats all gains as one pool — no per-country breakdown is required. Since there is typically no foreign withholding tax on capital gains and no treaty allocation to a foreign country, capital gains do not generate PIT/ZG entries.
+PIT/ZG is generated from sell trades by country. In the PIT/ZG view:
 
-Dividends, by contrast, are foreign-source income under [Art. 17 ust. 1 PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-17/) and OECD Art. 10. The source country is determined by the **company's country of residence** (not the exchange). When foreign tax is withheld on dividends, PIT/ZG is required.
+- item 6 is the Polish country name
+- item 7 is the country code
+- item 29 is income from abroad (positive net gain for that country)
+- item 30 is tax paid abroad on the item 29 income
 
-**Exceptions / toggle ON:**
+If item 29 is zero, item 30 is also shown as zero because it is tax paid abroad from the income in item 29.
 
-Capital gains *can* be taxed abroad in certain situations under specific treaty provisions:
-- **Real estate companies** (OECD Art. 13(4)) — if >50% of company value derives from real estate in another country
-- **Permanent establishment** (OECD Art. 13(2)) — shares connected with a foreign PE
-- **Significant shareholding** — some treaties allow taxation when holding a large stake (e.g. >10–25%)
-- **No-treaty countries** — domestic law of that country may apply
+Foreign dividends are art. 30a flat-rate income and stay in PIT-38 section G by default. They do not create PIT/ZG entries unless the user enables the compatibility setting.
 
-These edge cases affect a minority of investors. kloPIT therefore defaults to dividend-only PIT/ZG entries, but exposes a per-session `includeAllInPitZg` toggle in `/settings` and on `/tax-form`. When enabled, PIT/ZG includes all foreign dividends and all sell trades by country. See `/docs/pit-zg` for the legal rationale and examples.
+**Optional dividend compatibility setting:**
 
-**Country determination:** Extracted from the ISIN prefix (first 2 characters, ISO 3166-1 alpha-2). This represents the company's country of incorporation (issuer), which is the source country for dividend income under treaty rules. Falls back to `'XX'` if ISIN is unavailable.
+The `/settings` page exposes **Show dividends in PIT/ZG**, disabled by default. When enabled, PIT/ZG also shows helper dividend rows per country, next to the official PIT-38 section G values. This setting is intentionally narrow and does not replace the official PIT-38 section G dividend calculation.
+
+**Country determination:** Extracted from the ISIN prefix (first 2 characters, ISO 3166-1 alpha-2), plus manual overrides from the country mapping table. Dividend ISIN mappings are reused for the same symbol when trade rows lack a usable ISIN country or resolve to `XX`. The displayed country name is always generated in Polish, regardless of app language, to match the official Polish form.
 
 **Algorithm:**
 
 ```
-For each dividend:
-    Group by country (from ISIN prefix = company residence)
-    dividendIncomePln        += div.amountPln
-    dividendForeignTaxPln    += div.withholdingTaxPln
-    deductibleDividendTaxPln += div.deductibleWithholdingPln
-
 For each sell trade:
-    If includeAllInPitZg OR trade.foreignTaxPln > 0:
-        Group by country
-        proceedsPln          += trade.proceedsPln
-        costPln              += trade.costPln
-        tradeForeignTaxPln   += trade.foreignTaxPln
+    Group by country
+    proceedsPln          += trade.proceedsPln
+    costPln              += trade.costPln
+    tradeForeignTaxPln   += trade.foreignTaxPln
 
-If toggle OFF:
-    Filter: only countries where dividendForeignTaxPln > 0
-            OR tradeForeignTaxPln > 0
+For each country:
+    gainPln = max(proceedsPln − costPln, 0)
+    lossPln = max(costPln − proceedsPln, 0)
+    If gainPln == 0:
+        tradeForeignTaxPln = 0
+
+If showDividendsInPitZg:
+    For each dividend:
+        Group by country
+        dividendIncomePln        += div.amountPln
+        dividendForeignTaxPln    += div.withholdingTaxPln
+        deductibleDividendTaxPln += div.deductibleWithholdingPln
 ```
 
-Results are sorted alphabetically by country code. With the toggle OFF, countries with no foreign tax withheld are excluded. With the toggle ON, every country with dividend or trade data is kept.
+Results are sorted alphabetically by country code.
 
 ---
 
@@ -804,13 +821,15 @@ The app supports **three languages:**
 7. **PIT-38** (`buildPit38`):
    - Map summary values to form fields with proper rounding
    - Apply prior-year loss deduction via `applyLossCarryForward` (5-year window, 50%-per-year cap, FIFO across loss years)
+   - Round Section C totals and gain/loss to grosz precision before deriving the tax base
    - Round tax base and tax due to full PLN ([art. 63 § 1](https://lexlege.pl/ordynacja-podatkowa/art-63/))
    - Round dividend and credit interest tax to full groszy up ([art. 63 § 1a](https://lexlege.pl/ordynacja-podatkowa/art-63/))
+   - Keep poz. 51/52 at grosz precision because PIT-38(18) labels these fields as `zł, gr`
 8. **PIT/ZG** (`buildPitZg`):
-   - Group dividends by country (from ISIN prefix = company residence)
-   - Compute per-country dividend income, foreign tax paid, and deductible tax
-   - Exclude countries with no foreign tax withheld
-   - Capital gains excluded (Art. 30b PIT — taxed only in Poland, no country split)
+   - Group sell trades by country for PIT/ZG C.3 items 29/30
+   - Use country names in Polish for item 6 and country codes for item 7
+   - Reuse dividend ISIN mappings to fill a missing or unknown trade country for the same symbol
+   - Optionally add dividend compatibility rows when `showDividendsInPitZg` is enabled
 9. **Store & display** — Save all results to IndexedDB, update dashboard charts and form fields
 
 **Time:** Usually < 1 second (depends on number of trades, mostly waiting for NBP rate API responses during the enrichment step).
@@ -848,6 +867,8 @@ The app supports **three languages:**
 - ✅ Corporate actions (stock splits)
 - ✅ Multi-currency support (USD, EUR)
 - ✅ PIT-38 form fields sections C, D, G
+- ✅ PIT/ZG C.3 per-country attachment values for PIT-38 share income
+- ✅ OPP 1.5% Section J helper fields
 - ✅ Credit interest (broker cash interest, art. 30a)
 - ⏳ Cryptocurrency (framework in place, not yet implemented)
 - ⏳ Other brokers (planned)
@@ -896,7 +917,7 @@ The app supports **three languages:**
 **Step 6: File with tax authority**
 
 - Copy values from `/tax-form` into official PIT-38 on podatki.gov.pl
-- Fill in PIT/ZG attachment (one per country of income — e.g., USA)
+- Fill in PIT/ZG attachment rows shown by kloPIT (one per country when share income is present)
 - Submit and pay before April 30
 
 ---
@@ -963,8 +984,8 @@ Key Polish tax law provisions used in kloPIT calculations:
 | **FIFO**             | First In, First Out — method to match sales with purchases                     |
 | **NBP**              | Narodowy Bank Polski (Polish National Bank) — provides official exchange rates |
 | **PIT-38**           | Polish tax form for capital gains and dividends                                |
-| **PIT/ZG**           | Required attachment to PIT-38 for foreign income — one per country             |
-| **OPP**              | Charity donation (1.5% of tax owed, optional)                                  |
+| **PIT/ZG**           | Attachment to PIT-38 for foreign income/tax — one per country                  |
+| **OPP**              | Optional 1.5% request to transfer part of tax due to a public benefit organization |
 | **Withholding Tax**  | Tax deducted by foreign broker (usually 15% US dividends)                      |
 | **Carry-In**         | Shares owned from prior tax years                                              |
 | **Corporate Action** | Stock split, dividend spin-off, etc.                                           |
@@ -980,7 +1001,7 @@ kloPIT treats the PIT-38 form page as a **summary view** — every number is com
 **How to audit your numbers:**
 
 - **Capital gains (Sections C + D)** — `/dashboard#trades` shows each closed trade with proceeds (PLN), FIFO-matched cost basis (PLN), gain/loss (PLN), and the 19% tax on that trade. Totals at the bottom of the table tie to `poz. 22` (proceeds), `poz. 23` (costs), `poz. 28` (gain) or `poz. 29` (loss). Prior-year loss deductions feeding `poz. 30` are broken down per-year in Section D.
-- **Dividends (Section G)** — `/dashboard#dividends` shows each dividend with PLN amount, effective foreign withholding %, the UPO-capped deductible %, and PL tax-to-pay %. Totals correspond to `poz. 45` (19% of gross), `poz. 46` (capped withholding), `poz. 47` (non-deductible excess), and `poz. 49` (final PL tax).
-- **Rounding** — the base and PL tax amounts (`poz. 31`, `poz. 35`) are rounded to full PLN (`roundToFullPln` in `src/core/rounding.ts`). Dividend amounts (`poz. 47`, `poz. 49`) are rounded up to full grosze (`roundToGroszUp`). See `src/core/tax/pit38.ts` and `src/core/tax/aggregates.ts`.
+- **Dividends and credit interest (Section G)** — `/dashboard#dividends` shows each dividend with PLN amount, effective foreign withholding %, the UPO-capped deductible %, and PL tax-to-pay %. Totals correspond to `poz. 47` (19% flat-rate tax), `poz. 48` (deductible foreign tax), and `poz. 49` (tax difference).
+- **Rounding** — section C form totals (`poz. 22/23/26/27/28/29`) and payment summary (`poz. 51/52`) are rounded to grosz precision. The base and capital-gains tax due (`poz. 31`, `poz. 35`) are rounded to full PLN (`roundToFullPln`). Dividend and interest tax amounts (`poz. 47`, `poz. 49`) are rounded up to full grosze (`roundToGroszUp`). See `src/core/tax/pit38.ts`, `src/core/tax/rounding.ts`, and `src/core/tax/aggregates.ts`.
 
 **Parser architecture.** Imports run through `ParserDefinition` implementations in `src/core/parsers/` (Interactive Brokers CSV, IBI Capital PDF, manual entry). More brokers are on the roadmap — see `docs/ROADMAP.md`. Parser PRs are welcome.

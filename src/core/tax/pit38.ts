@@ -8,12 +8,12 @@ import {
 } from '../types.js';
 import {
   capitalGainsTax,
+  paymentSummaryAmount,
   roundedCapitalGainsBase,
   roundedCapitalGainsTaxDue,
   roundedDividendCredit,
   roundedDividendDifference,
   roundedDividendTax,
-  roundedTotalTaxToPay,
   sumCost,
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
@@ -22,6 +22,7 @@ import {
   sumProceeds,
 } from './aggregates.js';
 import { applyLossCarryForward } from './loss-carry-forward.js';
+import { roundToGrosz } from './rounding.js';
 
 export interface BuildPit38Args {
   trades: TradeResult[];
@@ -64,14 +65,14 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   // Section C — Capital gains/losses
   f[20] = 0; // No PIT-8C for foreign broker
   f[21] = 0;
-  f[22] = totalProceedsPln; // Other proceeds
-  f[23] = totalCostPln; // Other costs
+  f[22] = roundToGrosz({ amount: totalProceedsPln }); // Other proceeds
+  f[23] = roundToGrosz({ amount: totalCostPln }); // Other costs
   f[24] = 0; // No exemptions
   f[25] = 0;
-  f[26] = f[20] + f[22] - f[24]; // Total proceeds
-  f[27] = f[21] + f[23] - f[25]; // Total costs
-  f[28] = Math.max(f[26] - f[27], 0); // Gain
-  f[29] = Math.max(f[27] - f[26], 0); // Loss
+  f[26] = roundToGrosz({ amount: f[20] + f[22] - f[24] }); // Total proceeds
+  f[27] = roundToGrosz({ amount: f[21] + f[23] - f[25] }); // Total costs
+  f[28] = roundToGrosz({ amount: Math.max(f[26] - f[27], 0) }); // Gain
+  f[29] = roundToGrosz({ amount: Math.max(f[27] - f[26], 0) }); // Loss
 
   // Section D — Tax calculation
   // Apply art. 9 ust. 3 updof: per-loss-year 50% cap + 5-year window.
@@ -107,8 +108,8 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   f[49] = roundedDividendDifference({ dividendTax: f[47], credit: f[48] });
   f[50] = 0; // No advance payments
   const totalTax = f[35] + f[45] + f[46] + f[49];
-  f[51] = roundedTotalTaxToPay({ totalRawPln: totalTax - f[50] });
-  f[52] = roundedTotalTaxToPay({ totalRawPln: f[50] - totalTax });
+  f[51] = paymentSummaryAmount({ amountPln: totalTax - f[50] });
+  f[52] = paymentSummaryAmount({ amountPln: f[50] - totalTax });
 
   // Section H — Monthly tax (placeholders)
   f[53] = f[54] = f[55] = f[56] = f[57] = f[58] = 0;

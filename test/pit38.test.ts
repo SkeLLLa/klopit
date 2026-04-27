@@ -184,6 +184,26 @@ void describe('buildPit38', () => {
     assert.equal(result[51], 0);
   });
 
+  void it('rounds gain from section C totals to grosz precision', () => {
+    const result = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 1234.37,
+          costPln: 231.39,
+          gainLossPln: 1002.98,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      summary: makeSummary(),
+    });
+
+    assert.equal(result[26], 1234.37);
+    assert.equal(result[27], 231.39);
+    assert.equal(result[28], 1002.98);
+    assert.equal(result[29], 0);
+  });
+
   void it('reduces tax base by prior year loss', () => {
     const summary = makeSummary({
       year: 2024,
@@ -372,7 +392,7 @@ void describe('buildPit38', () => {
     assert.equal(result[47], 26.98);
     assert.equal(result[48], 15);
     assert.equal(result[49], 11.98);
-    assert.equal(result[51], 12);
+    assert.equal(result[51], 11.98);
   });
 
   void it('returns all zeros for empty summary', () => {
@@ -425,6 +445,33 @@ void describe('buildPit38', () => {
       `poz33: ${String(result[33])}`,
     );
     assert.equal(result[35], 190);
+  });
+
+  void it('keeps poz33 in grosze and rounds poz35 to full PLN', () => {
+    const summary = makeSummary({
+      totalProceedsPln: 1003,
+      totalCostPln: 0,
+    });
+    const trades = [
+      makeSellResult({
+        proceedsPln: 1003,
+        costPln: 0,
+        gainLossPln: 1003,
+        taxPln: 190.57,
+      }),
+    ];
+
+    const result = buildPit38({
+      trades,
+      dividends: [],
+      creditInterests: [],
+      summary,
+    });
+
+    assert.equal(result[31], 1003);
+    assert.equal(result[33], 190.57);
+    assert.equal(result[34], 0);
+    assert.equal(result[35], 191);
   });
 
   void it('maintains invariant poz51 = poz35 + poz49', () => {

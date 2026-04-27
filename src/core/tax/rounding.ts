@@ -7,3 +7,8 @@ export function roundToFullPln(args: { amount: number }): number {
 export function roundToGroszUp(args: { amount: number }): number {
   return Math.ceil(+(args.amount * 100).toFixed(10)) / 100;
 }
+
+/** Round to nearest grosz for form amounts stored with zł/gr precision. */
+export function roundToGrosz(args: { amount: number }): number {
+  return Math.round((args.amount + Number.EPSILON) * 100) / 100;
+}

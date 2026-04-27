@@ -45,8 +45,10 @@ export interface SessionRecord {
   dataUpdatedAt?: Date;
   /** Set by calculateSessionTaxes on successful completion. */
   calculatedAt?: Date;
-  /** Include all income in PIT/ZG, even when no foreign tax was withheld. */
+  /** Legacy PIT/ZG toggle retained only for database upgrades. */
   includeAllInPitZg?: boolean;
+  /** Show dividend compatibility rows in PIT/ZG. Disabled by default. */
+  showDividendsInPitZg?: boolean;
 }
 
 export interface ImportedFileRecord {
@@ -279,7 +281,7 @@ export class KlopitDB extends Dexie {
     this.version(11).stores({
       sessions: 'id, year',
     });
-    // v12: PIT/ZG shape and includeAllInPitZg semantics changed. Old
+    // v12: PIT/ZG shape and old includeAllInPitZg semantics changed. Old
     // taxSummaries / result rows can keep stale PIT/ZG payloads that no
     // longer match the current calculator output, so invalidate derived
     // tables and force recalculation while preserving imported source data.
@@ -294,6 +296,26 @@ export class KlopitDB extends Dexie {
         .table<SessionRecord>('sessions')
         .toCollection()
         .modify((session) => {
+          session.status = 'draft';
+          session.calculatedAt = undefined;
+          session.dataUpdatedAt = new Date();
+        });
+    });
+    // v13: replace the old "include all income in PIT/ZG" option with a
+    // narrower, disabled-by-default dividend compatibility option.
+    this.version(13).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('tradeResults').clear(),
+        tx.table('dividendResults').clear(),
+        tx.table('creditInterestResults').clear(),
+        tx.table('taxSummaries').clear(),
+      ]);
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          delete session.includeAllInPitZg;
+          session.showDividendsInPitZg = false;
           session.status = 'draft';
           session.calculatedAt = undefined;
           session.dataUpdatedAt = new Date();

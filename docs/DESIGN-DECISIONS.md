@@ -466,18 +466,20 @@ Can't use progressive tax brackets (which would require income info outside scop
 
 ## Design Decision: Rounding Strategy
 
-Two kinds of rounding in Polish tax law ([art. 63 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/)):
+Rounding follows both legal tax rounding rules and the precision printed on the official PIT forms:
 
 | Amount                        | Rule                                   | Legal basis                                                          |
 | ----------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
 | Tax base                      | Mathematical rounding to **whole PLN** | Art. 63 § 1 — ends below 50 gr → discard, 50 gr and above → round up |
 | Tax owed                      | Mathematical rounding to **whole PLN** | Art. 63 § 1 — same rule                                              |
 | Dividend tax (groszy amounts) | Round **up** to full groszy            | Art. 63 § 1a — taxes in groszy are rounded up                        |
+| PIT-38 fields marked `zł, gr` | Round to nearest grosz                 | Official form field precision                                        |
 
 **Implementation:**
 
-- `Math.round()` for tax base and tax owed (mathematical rounding per art. 63 § 1)
-- `Math.ceil()` for groszy (hundredths) — dividend tax difference per art. 63 § 1a
+- `roundToFullPln()` for tax base and full-PLN tax fields such as PIT-38 poz. 31 and 35
+- `roundToGrosz()` for PIT-38 fields that the official form marks as `zł, gr`, including Section C totals/gain/loss and poz. 51/52
+- `roundToGroszUp()` for tax amounts that must be rounded up to groszy, including PIT-38 poz. 47 and 49
 
 ---
 

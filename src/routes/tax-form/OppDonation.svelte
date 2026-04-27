@@ -9,13 +9,13 @@
 
   let {
     sessionId,
-    taxToPay,
+    taxDueBase,
     krs = '',
     details = '',
     consent = false,
   }: {
     sessionId: string;
-    taxToPay: number;
+    taxDueBase: number;
     krs?: string;
     details?: string;
     consent?: boolean;
@@ -44,8 +44,37 @@
     selectedFundId === CUSTOM || selectedFundId === '',
   );
 
-  // 1.5% rounded down to full 10 groszy
-  const oppAmount = $derived(Math.floor(taxToPay * 0.015 * 10) / 10);
+  // Twój e-PIT PIT-38 bases this value on poz. 35, rounded down to full 10 groszy.
+  const oppAmount = $derived(Math.floor(taxDueBase * 0.015 * 10) / 10);
+
+  const oppAmountRaw = $derived(oppAmount.toFixed(2));
+  const consentRaw = $derived(consentValue ? 'X' : '');
+  let copiedField = $state<string | undefined>();
+  let copiedResetTimeout: ReturnType<typeof setTimeout> | undefined;
+
+  function editableInputClass(extra = ''): string {
+    return `rounded border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 ${extra}`;
+  }
+
+  function valueButtonClass(field: string, extra = ''): string {
+    return `rounded border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-sm tabular-nums text-slate-900 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-700 ${copiedField === field ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/50' : ''} ${extra}`;
+  }
+
+  async function copyValue(value: string, field: string) {
+    if (!globalThis.navigator?.clipboard) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      copiedField = field;
+
+      if (copiedResetTimeout) clearTimeout(copiedResetTimeout);
+      copiedResetTimeout = setTimeout(() => {
+        copiedField = undefined;
+      }, 1200);
+    } catch {
+      return;
+    }
+  }
 
   async function persistOpp() {
     await updateSession({
@@ -62,15 +91,13 @@
 
   onDestroy(() => {
     persistOppDebounced.flush();
+    if (copiedResetTimeout) clearTimeout(copiedResetTimeout);
   });
 
   function handleFundChange() {
     if (selectedFundId === '' || selectedFundId === CUSTOM) {
-      // Switching to custom — clear fields so user can type
-      if (selectedFundId === '') {
-        krsValue = '';
-        detailsValue = '';
-      }
+      krsValue = '';
+      detailsValue = '';
       void persistOpp();
       return;
     }
@@ -83,10 +110,6 @@
   }
 
   function handleKrsInput() {
-    persistOppDebounced();
-  }
-
-  function handleDetailsInput() {
     persistOppDebounced();
   }
 
@@ -145,22 +168,28 @@
           oninput={handleKrsInput}
           placeholder={m.tax_opp_krs_placeholder()}
           maxlength={10}
-          class="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+          class={editableInputClass('font-mono tabular-nums')}
         />
       </div>
     {:else}
       <div class="flex flex-col gap-1">
-        <span
+        <label
+          for="opp-krs-readonly"
           class="text-xs font-medium text-slate-600 dark:text-slate-400"
         >
           {m.tax_opp_krs_label()}
           <span class="text-slate-400">(poz. 66)</span>
-        </span>
-        <span
-          class="rounded border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-sm dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300"
+        </label>
+        <button
+          id="opp-krs-readonly"
+          type="button"
+          class={valueButtonClass('krs', 'text-left')}
+          title={copiedField === 'krs' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+          aria-label={copiedField === 'krs' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+          onclick={() => void copyValue(krsValue, 'krs')}
         >
           {krsValue}
-        </span>
+        </button>
       </div>
     {/if}
 
@@ -172,41 +201,69 @@
         {m.tax_opp_details_label()}
         <span class="text-slate-400">(poz. 68)</span>
       </label>
-      <input
+      <button
         id="opp-details"
-        type="text"
-        bind:value={detailsValue}
-        oninput={handleDetailsInput}
-        placeholder={m.tax_opp_details_placeholder()}
-        class="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-      />
+        type="button"
+        class={valueButtonClass('details', 'text-left')}
+        title={copiedField === 'details' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+        aria-label={copiedField === 'details' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+        onclick={() => void copyValue(detailsValue, 'details')}
+      >
+        {detailsValue || '-'}
+      </button>
     </div>
   </div>
 
-  <div class="mt-3 flex items-center justify-between gap-4">
-    <label
-      class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
-    >
-      <input
-        type="checkbox"
-        bind:checked={consentValue}
-        onchange={handleConsentChange}
-        class="rounded border-slate-300 dark:border-slate-600"
-      />
-      <span>
-        {m.tax_opp_consent()} <span class="text-slate-400">(poz. 69)</span>
-      </span>
-    </label>
-
-    <div class="text-right">
-      <span class="text-xs text-slate-500 dark:text-slate-400">
-        {m.tax_opp_amount()} (poz. 67)
-      </span>
-      <div
-        class="font-mono text-sm font-semibold text-pink-700 dark:text-pink-300"
+  <div class="mt-3 grid gap-3 sm:grid-cols-4">
+    <div class="flex flex-col gap-1">
+      <label
+        for="opp-amount"
+        class="text-xs font-medium text-slate-600 dark:text-slate-400"
+      >
+        {m.tax_opp_amount()}
+        <span class="text-slate-400">(poz. 67)</span>
+      </label>
+      <button
+        id="opp-amount"
+        type="button"
+        class={valueButtonClass('amount', 'text-right font-semibold text-pink-700 dark:text-pink-300')}
+        title={copiedField === 'amount' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+        aria-label={copiedField === 'amount' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+        onclick={() => void copyValue(oppAmountRaw, 'amount')}
       >
         {formatPlnValue(oppAmount)} zl
-      </div>
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-1 sm:col-span-3">
+      <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+        {m.tax_opp_consent_label()}
+        <span class="text-slate-400">(poz. 69)</span>
+      </span>
+      <label
+        class="flex min-h-[34px] items-center gap-2 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+      >
+        <input
+          type="checkbox"
+          bind:checked={consentValue}
+          onchange={handleConsentChange}
+          class="rounded border-slate-300 dark:border-slate-600"
+        />
+        <span class="min-w-0 flex-1">{m.tax_opp_consent()}</span>
+        <button
+          type="button"
+          class="shrink-0 rounded border border-slate-200 px-2 py-0.5 font-mono text-xs text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-700"
+          title={copiedField === 'consent' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+          aria-label={copiedField === 'consent' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+          onclick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void copyValue(consentRaw, 'consent');
+          }}
+        >
+          {consentRaw || '-'}
+        </button>
+      </label>
     </div>
   </div>
 </div>

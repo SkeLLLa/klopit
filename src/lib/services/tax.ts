@@ -2,7 +2,7 @@ import {
   calculateTaxes,
   type TaxCalculationResult,
 } from '../../core/tax/calculator.js';
-import { isinToCountry } from '../../core/tax/country.js';
+import { buildSymbolCountryMap } from '../../core/tax/symbol-country.js';
 import type {
   EnrichedCorporateAction,
   EnrichedCreditInterest,
@@ -97,26 +97,11 @@ export async function calculateSessionTaxes(args: {
     .equals(args.sessionId)
     .toArray();
 
-  const symbolCountryMap = new Map<string, string>();
-
-  // Start with ISIN-based detection from trades
-  for (const trade of trades) {
-    if (trade.isin && !symbolCountryMap.has(trade.symbol)) {
-      symbolCountryMap.set(trade.symbol, isinToCountry({ isin: trade.isin }));
-    }
-  }
-
-  // Add from dividends (in case a symbol only has dividends)
-  for (const div of dividends) {
-    if (div.isin && !symbolCountryMap.has(div.symbol)) {
-      symbolCountryMap.set(div.symbol, isinToCountry({ isin: div.isin }));
-    }
-  }
-
-  // Apply manual overrides (highest priority)
-  for (const override of overrides) {
-    symbolCountryMap.set(override.symbol, override.country);
-  }
+  const symbolCountryMap = buildSymbolCountryMap({
+    trades,
+    dividends,
+    overrides,
+  });
 
   // 4. Prefetch and cache NBP rates
   log.info('calculateSessionTaxes: prefetching NBP rates');
@@ -255,7 +240,7 @@ export async function calculateSessionTaxes(args: {
       })),
       taxPeriod,
       symbolCountryMap,
-      includeAllInPitZg: session.includeAllInPitZg ?? false,
+      showDividendsInPitZg: session.showDividendsInPitZg ?? false,
     });
   } catch (e) {
     log.error('calculateSessionTaxes: calculator threw', e);

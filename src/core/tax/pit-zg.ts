@@ -1,46 +1,32 @@
 import type { DividendResult, PitZgFields, TradeResult } from '../types.js';
+import { getPolishCountryName } from './country-names.js';
 
 export interface BuildPitZgArgs {
   trades: TradeResult[];
   dividends: DividendResult[];
-  includeAll: boolean;
+  showDividends: boolean;
 }
 
 export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
-  const { trades, dividends, includeAll } = args;
+  const { trades, dividends, showDividends } = args;
   const countries = new Map<string, PitZgFields>();
 
-  for (const div of dividends) {
-    if (!includeAll && div.withholdingTaxPln <= 0) continue;
-    let entry = countries.get(div.country);
+  function getEntry(country: string): PitZgFields {
+    let entry = countries.get(country);
     if (!entry) {
       entry = {
-        country: div.country,
-        dividendIncomePln: 0,
-        dividendForeignTaxPln: 0,
-        deductibleDividendTaxPln: 0,
+        country,
+        countryNamePl: getPolishCountryName({ country }),
       };
-      countries.set(div.country, entry);
+      countries.set(country, entry);
     }
-    entry.dividendIncomePln += div.amountPln;
-    entry.dividendForeignTaxPln += div.withholdingTaxPln;
-    entry.deductibleDividendTaxPln += div.deductibleWithholdingPln;
+    return entry;
   }
 
   for (const trade of trades) {
     if (trade.type !== 'sell') continue;
-    if (!includeAll && trade.foreignTaxPln <= 0) continue;
 
-    let entry = countries.get(trade.country);
-    if (!entry) {
-      entry = {
-        country: trade.country,
-        dividendIncomePln: 0,
-        dividendForeignTaxPln: 0,
-        deductibleDividendTaxPln: 0,
-      };
-      countries.set(trade.country, entry);
-    }
+    const entry = getEntry(trade.country);
 
     entry.proceedsPln = (entry.proceedsPln ?? 0) + trade.proceedsPln;
     entry.costPln = (entry.costPln ?? 0) + trade.costPln;
@@ -49,20 +35,26 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
   }
 
   for (const entry of countries.values()) {
-    if (entry.proceedsPln !== undefined && entry.costPln !== undefined) {
-      const net = entry.proceedsPln - entry.costPln;
-      entry.gainPln = Math.max(net, 0);
-      entry.lossPln = Math.max(-net, 0);
+    const net = (entry.proceedsPln ?? 0) - (entry.costPln ?? 0);
+    entry.gainPln = Math.max(net, 0);
+    entry.lossPln = Math.max(-net, 0);
+    if (entry.gainPln === 0) {
+      entry.tradeForeignTaxPln = 0;
     }
   }
 
-  const filtered = includeAll
-    ? [...countries.values()]
-    : [...countries.values()].filter(
-        (entry) =>
-          entry.dividendForeignTaxPln > 0 ||
-          (entry.tradeForeignTaxPln ?? 0) > 0,
-      );
+  if (showDividends) {
+    for (const div of dividends) {
+      const entry = getEntry(div.country);
+      entry.dividendIncomePln = (entry.dividendIncomePln ?? 0) + div.amountPln;
+      entry.dividendForeignTaxPln =
+        (entry.dividendForeignTaxPln ?? 0) + div.withholdingTaxPln;
+      entry.deductibleDividendTaxPln =
+        (entry.deductibleDividendTaxPln ?? 0) + div.deductibleWithholdingPln;
+    }
+  }
 
-  return filtered.sort((a, b) => a.country.localeCompare(b.country));
+  return [...countries.values()].sort((a, b) =>
+    a.country.localeCompare(b.country),
+  );
 }

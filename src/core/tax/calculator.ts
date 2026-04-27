@@ -49,7 +49,7 @@ export interface CalculateTaxesArgs {
   priorLosses?: PriorYearLoss[];
   taxPeriod: TaxPeriod;
   symbolCountryMap?: Map<string, string>;
-  includeAllInPitZg?: boolean;
+  showDividendsInPitZg?: boolean;
 }
 
 export interface TaxCalculationResult {
@@ -74,7 +74,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     carryInPositions,
     priorLosses,
     taxPeriod,
-    includeAllInPitZg,
+    showDividendsInPitZg,
   } = args;
 
   const countryMap = args.symbolCountryMap ?? new Map<string, string>();
@@ -126,7 +126,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
   const pitZg = buildPitZg({
     trades: tradeResults,
     dividends: dividendResults,
-    includeAll: includeAllInPitZg ?? false,
+    showDividends: showDividendsInPitZg ?? false,
   });
 
   return {

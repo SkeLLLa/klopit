@@ -275,25 +275,26 @@ export interface CreditInterestResult {
 /**
  * Per-country PIT/ZG attachment fields.
  *
- * Capital gains fields are optional — populated only when the session's
- * `includeAllInPitZg` toggle is ON, or when a trade has foreignTaxPln \> 0.
- *
- * Dividend fields are always present when the entry exists.
+ * PIT-38 attachments use PIT/ZG section C.3 for income and foreign tax
+ * under art. 30b. Foreign dividends are art. 30a flat-rate income and stay
+ * in PIT-38 section G by default. They are included here only when the
+ * session's `showDividendsInPitZg` compatibility setting is enabled.
  */
 export interface PitZgFields {
   country: string;
+  countryNamePl: string;
 
-  // Dividends
-  dividendIncomePln: number;
-  dividendForeignTaxPln: number;
-  deductibleDividendTaxPln: number;
-
-  // Capital gains (present when includeAll OR trade foreign tax > 0)
+  // Capital gains / share income (PIT/ZG C.3, present for sell trades)
   proceedsPln?: number;
   costPln?: number;
   gainPln?: number;
   lossPln?: number;
   tradeForeignTaxPln?: number;
+
+  // Optional dividend compatibility section
+  dividendIncomePln?: number;
+  dividendForeignTaxPln?: number;
+  deductibleDividendTaxPln?: number;
 }
 
 /** Aggregated tax summary for a year */

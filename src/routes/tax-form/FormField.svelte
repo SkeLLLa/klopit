@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { Info } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { roundToFullPln, roundToGroszUp } from '../../core/tax/rounding.js';
@@ -11,13 +12,15 @@
     variant = 'computed',
     suffix = 'zl',
     highlighted = false,
+    help,
   }: {
     label: string;
     poz?: number;
-    value: number;
+    value: number | string;
     variant?: 'computed' | 'placeholder';
     suffix?: string;
     highlighted?: boolean;
+    help?: string;
   } = $props();
 
   const rawDecimalFormatter = new Intl.NumberFormat('en-US', {
@@ -27,8 +30,8 @@
   });
 
   const fullPlnPositions = new Set([
-    31, 35, 41, 45, 46, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
-    64, 65,
+    31, 35, 41, 45, 46, 50, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+    65,
   ]);
 
   const groszUpPositions = new Set([47, 49]);
@@ -38,6 +41,7 @@
   }
 
   const normalizedValue = $derived.by(() => {
+    if (typeof value === 'string') return value;
     if (suffix === '%') return value;
 
     if (poz != null) {
@@ -54,12 +58,15 @@
   });
 
   const formattedValue = $derived(
-    suffix === '%'
+    typeof normalizedValue === 'string'
+      ? normalizedValue
+      : suffix === '%'
       ? `${String(normalizedValue)}%`
       : `${formatPlnValue(normalizedValue)} ${suffix}`,
   );
 
   const rawValue = $derived.by(() => {
+    if (typeof normalizedValue === 'string') return normalizedValue;
     if (suffix === '%') return String(normalizedValue);
     if (poz != null && fullPlnPositions.has(poz)) {
       return String(normalizedValue);
@@ -97,6 +104,15 @@
 >
   <span class="min-w-0 flex-1 text-sm text-slate-700 dark:text-slate-300">
     {label}
+    {#if help}
+      <span
+        class="ml-1 inline-flex align-[-2px] text-slate-400"
+        title={help}
+        aria-label={help}
+      >
+        <Info size={13} />
+      </span>
+    {/if}
   </span>
   {#if poz != null}
     <span
@@ -108,7 +124,7 @@
   <button
     type="button"
     onclick={() => void handleCopy()}
-    class="w-36 shrink-0 rounded border px-3 py-1 text-right font-mono text-sm tabular-nums transition
+    class="{typeof value === 'string' ? 'w-52 truncate text-left' : 'w-36 text-right'} shrink-0 rounded border px-3 py-1 font-mono text-sm tabular-nums transition
       {variant === 'placeholder'
       ? 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600 dark:hover:border-slate-700 dark:hover:bg-slate-800'
       : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-700'}

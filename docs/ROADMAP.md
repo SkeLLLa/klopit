@@ -23,7 +23,7 @@ Ready-to-file tax outputs and performance optimizations.
 | ID       | Feature             | Brief Description                                                                                                                | Status |
 | -------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | **P1.1** | e-Deklaracje XML    | Schema-valid XML for PIT-38(18) + embedded PIT/ZG. Direct download → upload to e-Urząd Skarbowy. Build-time XSD validation.      |        |
-| **P1.2** | PIT/ZG Export       | Printable PIT/ZG(7) cards per country + XML attachment. Verified `poz.` numbering.                                               |        |
+| **P1.2** | PIT/ZG Export       | Printable PIT/ZG(8) cards per country + XML attachment. Verified `poz.` numbering and item 6/7 country display.                  |        |
 | **P1.3** | Loss CF Consistency | Audit all export formats (UI, PDF, CSV, XML) read from single `TaxSummary` source. No recalculation drift.                       |        |
 | **P1.4** | NBP Prefetch        | Fetch full tax-year rates in ≤4 calls per currency (93-day chunks). Consistency: all enriched records see same session snapshot. |        |
 
@@ -35,7 +35,7 @@ Income categories and audit extensions for Interactive Brokers (primary broker).
 
 | ID       | Feature         | Brief Description                                                                                                                     | Status |
 | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| **P2.1** | Interest Income | Tax brokerage interest at 19% flat (art. 30a ust. 1 pkt 2). Populate PIT-38 `poz. 46`. Support IBKR SYEP/CREDIT/OTHER classification. |        |
+| **P2.1** | Interest Income | Tax brokerage credit interest at 19% flat (art. 30a ust. 1 pkt 3). Combine with PIT-38 Section G dividend values.                     | ✅     |
 
 ---
 

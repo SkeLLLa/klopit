@@ -126,6 +126,11 @@ export function roundedDividendDifference(args: {
   });
 }
 
+/** Payment summary amount, kept in grosze. PIT-38(18) poz 51/52. */
+export function paymentSummaryAmount(args: { amountPln: number }): number {
+  return Math.round((Math.max(args.amountPln, 0) + Number.EPSILON) * 100) / 100;
+}
+
 /** Capital-gains tax base (gain minus prior-year losses), full PLN. PIT-38(18) poz 31. */
 export function roundedCapitalGainsBase(args: {
   gainPostLcfPln: number;
@@ -146,9 +151,4 @@ export function roundedCapitalGainsTaxDue(args: {
   return roundToFullPln({
     amount: Math.max(args.tax - args.foreignCredit, 0),
   });
-}
-
-/** Total tax to pay, rounded to full PLN. PIT-38(18) poz 51. */
-export function roundedTotalTaxToPay(args: { totalRawPln: number }): number {
-  return roundToFullPln({ amount: Math.max(args.totalRawPln, 0) });
 }

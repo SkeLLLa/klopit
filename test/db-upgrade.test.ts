@@ -194,7 +194,8 @@ void describe('KlopitDB schema upgrade', () => {
     assert.ok(upgradedSession);
     assert.equal(upgradedSession.status, 'draft');
     assert.equal(upgradedSession.calculatedAt, undefined);
-    assert.equal(upgradedSession.includeAllInPitZg, true);
+    assert.equal(upgradedSession.includeAllInPitZg, undefined);
+    assert.equal(upgradedSession.showDividendsInPitZg, false);
 
     klopit.close();
   });

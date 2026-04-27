@@ -5,6 +5,7 @@
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import { isinToCountry } from '../../core/tax/country.js';
+  import { buildSymbolCountryMap } from '../../core/tax/symbol-country.js';
   import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
   let { sessionId }: { sessionId: string } = $props();
@@ -100,6 +101,10 @@
     const overrides = overridesQuery.current ?? [];
 
     const overrideMap = new Map(overrides.map((o) => [o.symbol, o.country]));
+    const detectedMap = buildSymbolCountryMap({
+      trades: tradeSymbolIsins,
+      dividends: dividendSymbolIsins,
+    });
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable inside $derived.by, not reactive state
     const symbolMap = new Map<string, { isin?: string }>();
 
@@ -112,11 +117,20 @@
     }
 
     // Fill in ISINs from the compound-index results.
+    function shouldUseIsin(existing: { isin?: string } | undefined, isin?: string) {
+      if (!isin) return false;
+      if (!existing?.isin) return true;
+      return (
+        isinToCountry({ isin: existing.isin }) === 'XX' &&
+        isinToCountry({ isin }) !== 'XX'
+      );
+    }
+
     for (const { symbol, isin } of tradeSymbolIsins) {
       const existing = symbolMap.get(symbol);
       if (!existing) {
         symbolMap.set(symbol, { isin });
-      } else if (isin && !existing.isin) {
+      } else if (shouldUseIsin(existing, isin)) {
         existing.isin = isin;
       }
     }
@@ -124,7 +138,7 @@
       const existing = symbolMap.get(symbol);
       if (!existing) {
         symbolMap.set(symbol, { isin });
-      } else if (isin && !existing.isin) {
+      } else if (shouldUseIsin(existing, isin)) {
         existing.isin = isin;
       }
     }
@@ -134,7 +148,7 @@
       result.push({
         symbol,
         isin: info.isin,
-        detected: isinToCountry({ isin: info.isin }),
+        detected: detectedMap.get(symbol) ?? isinToCountry({ isin: info.isin }),
         override: overrideMap.get(symbol) ?? '',
       });
     }

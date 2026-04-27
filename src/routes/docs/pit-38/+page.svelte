@@ -95,6 +95,7 @@
       <li>{@html m.page_pit38_sec4_c()}</li>
       <li>{@html m.page_pit38_sec4_d()}</li>
       <li>{@html m.page_pit38_sec4_g()}</li>
+      <li>{@html m.page_pit38_sec4_j()}</li>
       <li>{@html m.page_pit38_sec4_pitzg()}</li>
     </ul>
     <!-- eslint-enable svelte/no-at-html-tags -->

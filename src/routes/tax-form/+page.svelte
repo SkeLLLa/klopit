@@ -6,7 +6,6 @@
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
-  import { updateSession } from '$lib/services/session.js';
   import {
     calculateSessionTaxes,
     clearSessionResults,
@@ -18,6 +17,7 @@
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
   import PitZgView from './PitZgView.svelte';
+  import SectionA from './SectionA.svelte';
   import SectionC from './SectionC.svelte';
   import SectionD from './SectionD.svelte';
   import SectionE from './SectionE.svelte';
@@ -43,7 +43,6 @@
   );
   const taxSummary = $derived(taxSummaryQuery.current);
   const pit38 = $derived(taxSummary?.pit38);
-  const includeAllInPitZg = $derived(session?.includeAllInPitZg ?? false);
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,
@@ -124,26 +123,6 @@
     }
   }
 
-  async function handleToggleIncludeAll(value: boolean) {
-    if (!sessionId) return;
-    calculating = true;
-    error = null;
-    try {
-      await updateSession({
-        id: sessionId,
-        changes: {
-          includeAllInPitZg: value,
-          dataUpdatedAt: new Date(),
-        },
-      });
-      await calculateSessionTaxes({ sessionId });
-    } catch (e) {
-      log.error('handleToggleIncludeAll failed', e);
-      error = e instanceof Error ? e.message : String(e);
-    } finally {
-      calculating = false;
-    }
-  }
 </script>
 
 <h1 class="sr-only">{m.page_tax_form()}</h1>
@@ -261,22 +240,11 @@
       </a>
     </div>
 
-    <!-- OPP Donation -->
-    <OppDonation
-      sessionId={session.id}
-      taxToPay={pit38[51]}
-      krs={session.oppKrs ?? ''}
-      details={session.oppDetails ?? ''}
-      consent={session.oppConsent ?? false}
-    />
-
     <!-- Sidebar + Content layout -->
     <div class="flex gap-6">
       <DocumentSidebar
         countries={pitZgCountries}
         {activeDocument}
-        {includeAllInPitZg}
-        onToggleIncludeAll={handleToggleIncludeAll}
         onselect={(doc) => (activeDocument = doc)}
       />
 
@@ -284,12 +252,20 @@
         {#if typeof activeDocument === 'string'}
           <!-- PIT-38 sections -->
           <div class="space-y-4">
+            <SectionA />
             <SectionC {pit38} />
             <SectionD {pit38} lossDeduction={taxSummary?.lossDeduction} />
             <SectionE {pit38} />
             <SectionF {pit38} />
             <SectionG {pit38} />
             <SectionH {pit38} />
+            <OppDonation
+              sessionId={session.id}
+              taxDueBase={pit38[35]}
+              krs={session.oppKrs ?? ''}
+              details={session.oppDetails ?? ''}
+              consent={session.oppConsent ?? false}
+            />
           </div>
         {:else if activePitZg}
           <PitZgView pitZg={activePitZg} />

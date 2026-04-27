@@ -54,167 +54,160 @@ void describe('buildPitZg', () => {
     const result = buildPitZg({
       trades: [],
       dividends: [],
-      includeAll: false,
+      showDividends: false,
     });
     assert.deepEqual(result, []);
   });
 
-  void describe('includeAll: false (default)', () => {
-    void it('includes dividends with foreign tax withheld', () => {
-      const dividends = [
+  void it('includes sell trades by country by default', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'US',
+          proceedsPln: 50000,
+          costPln: 30000,
+          foreignTaxPln: 1500,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].country, 'US');
+    assert.equal(result[0].countryNamePl, 'Stany Zjednoczone');
+    assert.equal(result[0].proceedsPln, 50000);
+    assert.equal(result[0].costPln, 30000);
+    assert.equal(result[0].gainPln, 20000);
+    assert.equal(result[0].lossPln, 0);
+    assert.equal(result[0].tradeForeignTaxPln, 1500);
+  });
+
+  void it('includes sell trades even when no foreign tax was paid', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'US',
+          proceedsPln: 50000,
+          costPln: 30000,
+          foreignTaxPln: 0,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].tradeForeignTaxPln, 0);
+  });
+
+  void it('does not show PIT/ZG item 30 tax when item 29 income is zero', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'US',
+          proceedsPln: 30000,
+          costPln: 50000,
+          foreignTaxPln: 100,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].gainPln, 0);
+    assert.equal(result[0].lossPln, 20000);
+    assert.equal(result[0].tradeForeignTaxPln, 0);
+  });
+
+  void it('ignores buy trades', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          type: 'buy',
+          proceedsPln: 0,
+          costPln: 0,
+          foreignTaxPln: 1500,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    assert.equal(result.length, 0);
+  });
+
+  void it('does not include dividends by default', () => {
+    const result = buildPitZg({
+      trades: [],
+      dividends: [makeDivResult()],
+      showDividends: false,
+    });
+    assert.equal(result.length, 0);
+  });
+
+  void it('includes dividends when the compatibility setting is enabled', () => {
+    const result = buildPitZg({
+      trades: [],
+      dividends: [
+        makeDivResult({
+          country: 'DE',
+          amountPln: 100,
+          withholdingTaxPln: 0,
+          deductibleWithholdingPln: 0,
+        }),
+      ],
+      showDividends: true,
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].country, 'DE');
+    assert.equal(result[0].countryNamePl, 'Niemcy');
+    assert.equal(result[0].dividendIncomePln, 100);
+    assert.equal(result[0].dividendForeignTaxPln, 0);
+    assert.equal(result[0].deductibleDividendTaxPln, 0);
+  });
+
+  void it('merges trades and dividends by country when dividends are enabled', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'US',
+          proceedsPln: 50000,
+          costPln: 30000,
+          foreignTaxPln: 1000,
+        }),
+      ],
+      dividends: [
         makeDivResult({
           country: 'US',
           amountPln: 200,
           withholdingTaxPln: 30,
           deductibleWithholdingPln: 15,
         }),
-      ];
-      const result = buildPitZg({
-        trades: [],
-        dividends,
-        includeAll: false,
-      });
-      assert.equal(result.length, 1);
-      assert.equal(result[0].country, 'US');
-      assert.equal(result[0].dividendIncomePln, 200);
-      assert.equal(result[0].dividendForeignTaxPln, 30);
-      assert.equal(result[0].deductibleDividendTaxPln, 15);
-      assert.equal(result[0].proceedsPln, undefined);
+      ],
+      showDividends: true,
     });
 
-    void it('excludes dividends with no foreign tax', () => {
-      const result = buildPitZg({
-        trades: [],
-        dividends: [
-          makeDivResult({
-            country: 'PL',
-            amountPln: 100,
-            withholdingTaxPln: 0,
-            deductibleWithholdingPln: 0,
-          }),
-        ],
-        includeAll: false,
-      });
-      assert.equal(result.length, 0);
-    });
-
-    void it('excludes trades with no foreign tax', () => {
-      const result = buildPitZg({
-        trades: [
-          makeSellResult({
-            country: 'US',
-            proceedsPln: 50000,
-            costPln: 30000,
-            foreignTaxPln: 0,
-          }),
-        ],
-        dividends: [],
-        includeAll: false,
-      });
-      assert.equal(result.length, 0);
-    });
-
-    void it('includes trades with foreign tax > 0', () => {
-      const result = buildPitZg({
-        trades: [
-          makeSellResult({
-            country: 'US',
-            proceedsPln: 50000,
-            costPln: 30000,
-            foreignTaxPln: 1500,
-          }),
-        ],
-        dividends: [],
-        includeAll: false,
-      });
-      assert.equal(result.length, 1);
-      assert.equal(result[0].country, 'US');
-      assert.equal(result[0].proceedsPln, 50000);
-      assert.equal(result[0].costPln, 30000);
-      assert.equal(result[0].gainPln, 20000);
-      assert.equal(result[0].lossPln, 0);
-      assert.equal(result[0].tradeForeignTaxPln, 1500);
-    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].country, 'US');
+    assert.equal(result[0].proceedsPln, 50000);
+    assert.equal(result[0].tradeForeignTaxPln, 1000);
+    assert.equal(result[0].dividendIncomePln, 200);
+    assert.equal(result[0].dividendForeignTaxPln, 30);
+    assert.equal(result[0].deductibleDividendTaxPln, 15);
   });
 
-  void describe('includeAll: true', () => {
-    void it('includes trades and populates capital gains fields', () => {
-      const result = buildPitZg({
-        trades: [
-          makeSellResult({
-            country: 'US',
-            proceedsPln: 50000,
-            costPln: 30000,
-            foreignTaxPln: 0,
-          }),
-        ],
-        dividends: [],
-        includeAll: true,
-      });
-      assert.equal(result.length, 1);
-      assert.equal(result[0].country, 'US');
-      assert.equal(result[0].proceedsPln, 50000);
-      assert.equal(result[0].costPln, 30000);
-      assert.equal(result[0].gainPln, 20000);
-      assert.equal(result[0].tradeForeignTaxPln, 0);
+  void it('sorts results by country code', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({ country: 'US' }),
+        makeSellResult({ country: 'DE' }),
+      ],
+      dividends: [],
+      showDividends: false,
     });
-
-    void it('merges mixed trades and dividends by country', () => {
-      const result = buildPitZg({
-        trades: [
-          makeSellResult({
-            country: 'US',
-            proceedsPln: 50000,
-            costPln: 30000,
-            foreignTaxPln: 1000,
-          }),
-        ],
-        dividends: [
-          makeDivResult({
-            country: 'US',
-            amountPln: 200,
-            withholdingTaxPln: 30,
-            deductibleWithholdingPln: 15,
-          }),
-        ],
-        includeAll: true,
-      });
-      assert.equal(result.length, 1);
-      assert.equal(result[0].country, 'US');
-      assert.equal(result[0].dividendIncomePln, 200);
-      assert.equal(result[0].dividendForeignTaxPln, 30);
-      assert.equal(result[0].deductibleDividendTaxPln, 15);
-      assert.equal(result[0].proceedsPln, 50000);
-      assert.equal(result[0].tradeForeignTaxPln, 1000);
-    });
-
-    void it('includes zero-tax dividends when toggle is on', () => {
-      const result = buildPitZg({
-        trades: [],
-        dividends: [
-          makeDivResult({
-            country: 'DE',
-            amountPln: 100,
-            withholdingTaxPln: 0,
-            deductibleWithholdingPln: 0,
-          }),
-        ],
-        includeAll: true,
-      });
-      assert.equal(result.length, 1);
-      assert.equal(result[0].country, 'DE');
-      assert.equal(result[0].dividendIncomePln, 100);
-      assert.equal(result[0].dividendForeignTaxPln, 0);
-    });
-
-    void it('sorts results by country code', () => {
-      const result = buildPitZg({
-        trades: [makeSellResult({ country: 'US' })],
-        dividends: [makeDivResult({ country: 'DE', withholdingTaxPln: 0 })],
-        includeAll: true,
-      });
-      assert.equal(result[0].country, 'DE');
-      assert.equal(result[1].country, 'US');
-    });
+    assert.equal(result[0].country, 'DE');
+    assert.equal(result[1].country, 'US');
   });
 });

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { localizeHref } from '$lib/paraglide/runtime';
   import { m } from '$lib/paraglide/messages.js';
   import {
     FileText,
@@ -7,7 +6,6 @@
     ChevronRight,
     ChevronDown,
     MapPin,
-    Info,
   } from 'lucide-svelte';
 
   type ActiveDocument = 'pit38' | { pitZg: string };
@@ -16,14 +14,10 @@
     countries,
     activeDocument,
     onselect,
-    includeAllInPitZg = false,
-    onToggleIncludeAll,
   }: {
     countries: string[];
     activeDocument: ActiveDocument;
     onselect: (doc: ActiveDocument) => void;
-    includeAllInPitZg?: boolean;
-    onToggleIncludeAll: (value: boolean) => void | Promise<void>;
   } = $props();
 
   let pitZgExpanded = $state(true);
@@ -91,27 +85,6 @@
     {/if}
   </div>
 
-  <div class="mt-4 border-t border-slate-200 pt-3 dark:border-slate-600">
-    <div class="rounded-md bg-slate-50 p-2 dark:bg-slate-800/80">
-      <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-        <input
-          type="checkbox"
-          checked={includeAllInPitZg}
-          onchange={() => onToggleIncludeAll(!includeAllInPitZg)}
-          class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
-        />
-        <span>{m.tax_pitzg_include_all()}</span>
-      </label>
-      <a
-        href={localizeHref('/docs/pit-zg')}
-        class="mt-2 inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline dark:text-blue-400"
-      >
-        <Info size={12} />
-        {m.tax_pitzg_learn_more()}
-      </a>
-    </div>
-  </div>
-
   <!-- Country mapping link -->
   <div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-600">
     <a
@@ -143,20 +116,4 @@
       <option value="pitzg:{country}">PIT/ZG — {country}</option>
     {/each}
   </select>
-  <label class="mt-3 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-    <input
-      type="checkbox"
-      checked={includeAllInPitZg}
-      onchange={() => onToggleIncludeAll(!includeAllInPitZg)}
-      class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
-    />
-    <span>{m.tax_pitzg_include_all()}</span>
-  </label>
-  <a
-    href={localizeHref('/docs/pit-zg')}
-    class="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
-  >
-    <Info size={12} />
-    {m.tax_pitzg_learn_more()}
-  </a>
 </div>

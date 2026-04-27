@@ -122,7 +122,8 @@ void describe('calculateTaxes', () => {
       corporateActions: [],
       carryInPositions: [],
       taxPeriod: taxPeriod2024,
-      includeAllInPitZg: true,
+      showDividendsInPitZg: true,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
     });
 
     // Trades
@@ -161,6 +162,7 @@ void describe('calculateTaxes', () => {
     assert.ok(result.pit38[51] > 0);
     assert.equal(result.pit38[51], result.pit38[35] + result.pit38[49]);
     assert.equal(result.pitZg.length, 1);
+    assert.equal(result.pitZg[0]?.countryNamePl, 'Stany Zjednoczone');
     assert.ok((result.pitZg[0]?.proceedsPln ?? 0) > 0);
     assert.ok((result.pitZg[0]?.dividendIncomePln ?? 0) > 0);
   });
@@ -188,7 +190,6 @@ void describe('calculateTaxes', () => {
       corporateActions: [],
       carryInPositions: [],
       taxPeriod: taxPeriod2024,
-      includeAllInPitZg: true,
     });
 
     assert.ok(result.summary.totalProceedsPln > 0);
@@ -213,7 +214,7 @@ void describe('calculateTaxes', () => {
     assert.ok((result.pitZg[0]?.proceedsPln ?? 0) > 0);
   });
 
-  void it('keeps trade-only PIT/ZG empty when includeAllInPitZg is explicitly false', () => {
+  void it('generates PIT/ZG for sell trades by default', () => {
     const buy = makeTrade({
       datetime: new Date(2024, 0, 15),
       quantity: 50,
@@ -236,13 +237,13 @@ void describe('calculateTaxes', () => {
       corporateActions: [],
       carryInPositions: [],
       taxPeriod: taxPeriod2024,
-      includeAllInPitZg: false,
     });
 
-    assert.equal(result.pitZg.length, 0);
+    assert.equal(result.pitZg.length, 1);
+    assert.ok((result.pitZg[0]?.proceedsPln ?? 0) > 0);
   });
 
-  void it('handles dividends only (no trades)', () => {
+  void it('keeps dividend-only PIT/ZG empty by default', () => {
     const div = makeDiv({ amount: 100 });
     const tax = makeTax({ amount: -15 });
 
@@ -261,11 +262,10 @@ void describe('calculateTaxes', () => {
     assert.equal(result.pit38[35], 0);
     assert.ok(result.summary.totalDividendsPln > 0);
     assert.equal(result.pit38[51], result.pit38[49]);
-    assert.equal(result.pitZg.length, 1);
-    assert.ok((result.pitZg[0]?.dividendIncomePln ?? 0) > 0);
+    assert.equal(result.pitZg.length, 0);
   });
 
-  void it('includes only foreign-taxed dividends when includeAllInPitZg is explicitly false', () => {
+  void it('includes dividends in PIT/ZG when enabled in settings', () => {
     const taxedDiv = makeDiv({ symbol: 'AAPL', amount: 100 });
     const taxedWht = makeTax({ symbol: 'AAPL', amount: -15 });
     const untaxedDiv = makeDiv({
@@ -286,11 +286,13 @@ void describe('calculateTaxes', () => {
         ['AAPL', 'US'],
         ['MSFT', 'US'],
       ]),
-      includeAllInPitZg: false,
+      showDividendsInPitZg: true,
     });
 
     assert.equal(result.pitZg.length, 1);
     assert.equal(result.pitZg[0]?.country, 'US');
+    assert.equal(result.pitZg[0]?.countryNamePl, 'Stany Zjednoczone');
+    assert.ok((result.pitZg[0]?.dividendIncomePln ?? 0) > 0);
     assert.ok((result.pitZg[0]?.dividendForeignTaxPln ?? 0) > 0);
   });
 
@@ -525,10 +527,11 @@ void describe('calculateTaxes', () => {
       assert.equal(d.country, 'US');
     }
 
-    // PIT/ZG has one entry for US (dividends with foreign tax withheld)
+    // PIT/ZG has one entry for US from the sell trade.
     assert.equal(result.pitZg.length, 1);
     assert.equal(result.pitZg[0].country, 'US');
-    assert.ok(result.pitZg[0].dividendIncomePln > 0);
+    assert.equal(result.pitZg[0].countryNamePl, 'Stany Zjednoczone');
+    assert.ok((result.pitZg[0].proceedsPln ?? 0) > 0);
   });
 
   void it('defaults country to XX when symbolCountryMap not provided', () => {
@@ -559,8 +562,9 @@ void describe('calculateTaxes', () => {
     for (const t of result.trades) {
       assert.equal(t.country, 'XX');
     }
-    // No PIT/ZG entries — trades-only, no dividends with foreign tax
-    assert.equal(result.pitZg.length, 0);
+    assert.equal(result.pitZg.length, 1);
+    assert.equal(result.pitZg[0]?.country, 'XX');
+    assert.equal(result.pitZg[0]?.countryNamePl, 'Nieznany kraj');
   });
 
   void it('includes prior year loss in PIT-38 calculation', () => {
@@ -633,6 +637,6 @@ void describe('calculateTaxes', () => {
     assert.equal(result.pit38[47], 7.98);
     assert.equal(result.pit38[48], 0);
     assert.equal(result.pit38[49], 7.98);
-    assert.equal(result.pit38[51], 8);
+    assert.equal(result.pit38[51], 7.98);
   });
 });

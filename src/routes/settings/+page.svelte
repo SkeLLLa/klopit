@@ -24,7 +24,7 @@
   const sessions = $derived(bootstrap.sessions);
   const session = $derived(bootstrap.activeSession);
   const activeSessionId = $derived(bootstrap.activeSessionId);
-  const includeAllInPitZg = $derived(session?.includeAllInPitZg ?? false);
+  const showDividendsInPitZg = $derived(session?.showDividendsInPitZg ?? false);
   let saving = $state(false);
   let error: string | null = $state(null);
 
@@ -41,7 +41,7 @@
       await updateSession({
         id: session.id,
         changes: {
-          includeAllInPitZg: !includeAllInPitZg,
+          showDividendsInPitZg: !showDividendsInPitZg,
           dataUpdatedAt: new Date(),
         },
       });
@@ -108,7 +108,7 @@
         <label class="flex items-center gap-3">
           <input
             type="checkbox"
-            checked={includeAllInPitZg}
+            checked={showDividendsInPitZg}
             onchange={handleToggle}
             disabled={saving}
             class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
@@ -119,7 +119,7 @@
         </label>
 
         <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-          {includeAllInPitZg
+          {showDividendsInPitZg
             ? m.settings_pitzg_description_on()
             : m.settings_pitzg_description_off()}
         </p>

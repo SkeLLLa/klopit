@@ -3,12 +3,12 @@ import { describe, it } from 'node:test';
 import {
   capitalGainsTax,
   groupByCountry,
+  paymentSummaryAmount,
   roundedCapitalGainsBase,
   roundedCapitalGainsTaxDue,
   roundedDividendCredit,
   roundedDividendDifference,
   roundedDividendTax,
-  roundedTotalTaxToPay,
   sumCost,
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
@@ -369,12 +369,12 @@ void describe('roundedCapitalGainsTaxDue', () => {
   });
 });
 
-void describe('roundedTotalTaxToPay', () => {
-  void it('rounds to full PLN (PIT-38 poz 51)', () => {
-    assert.equal(roundedTotalTaxToPay({ totalRawPln: 3840.4 }), 3840);
+void describe('paymentSummaryAmount', () => {
+  void it('keeps grosze precision (PIT-38 poz 51/52)', () => {
+    assert.equal(paymentSummaryAmount({ amountPln: 3840.4 }), 3840.4);
   });
 
   void it('returns 0 for negative', () => {
-    assert.equal(roundedTotalTaxToPay({ totalRawPln: -100 }), 0);
+    assert.equal(paymentSummaryAmount({ amountPln: -100 }), 0);
   });
 });
