@@ -1,3 +1,9 @@
+## [1.23.0](https://github.com/SkeLLLa/klopit/compare/v1.22.2...v1.23.0) (2026-04-28)
+
+### 🚀 Features
+
+* a11y and ai visibility. ([ab04508](https://github.com/SkeLLLa/klopit/commit/ab0450889f204326dfc4e1414786315c60cead40))
+
 ## [1.22.2](https://github.com/SkeLLLa/klopit/compare/v1.22.1...v1.22.2) (2026-04-28)
 
 ### 🛠 Fixes
