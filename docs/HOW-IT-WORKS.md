@@ -999,7 +999,7 @@ Key Polish tax law provisions used in kloPIT calculations:
 
 **Full legal texts:**
 
-- [Ustawa o podatku dochodowym od osób fizycznych (PIT)](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/) — Dz.U. 1991 nr 80 poz. 350
+- [Ustawa o podatku dochodowym od osób fizycznych (PIT)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19910800350) — Dz.U. 1991 nr 80 poz. 350
 - [Ordynacja podatkowa](https://lexlege.pl/ordynacja-podatkowa/) — Dz.U. 1997 nr 137 poz. 926
 
 ---

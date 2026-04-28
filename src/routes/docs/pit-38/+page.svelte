@@ -32,7 +32,7 @@
       desc: m.page_pit38_sec6_link1_desc(),
     },
     {
-      href: 'https://www.podatki.gov.pl/pit/e-deklaracje-pit/',
+      href: 'https://www.podatki.gov.pl/e-deklaracje/',
       title: m.page_pit38_sec6_link2_title(),
       desc: m.page_pit38_sec6_link2_desc(),
     },

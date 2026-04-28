@@ -37,7 +37,7 @@
     {
       title: m.about_card_license_title(),
       description: m.about_card_license_desc(),
-      href: 'https://github.com/SkeLLLa/klopit/blob/main/LICENSE',
+      href: 'https://github.com/SkeLLLa/klopit/blob/master/LICENSE',
       cta: m.about_card_license_cta(),
       icon: Scale
     },
