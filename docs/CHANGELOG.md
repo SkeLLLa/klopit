@@ -1,3 +1,9 @@
+## [1.22.2](https://github.com/SkeLLLa/klopit/compare/v1.22.1...v1.22.2) (2026-04-28)
+
+### 🛠 Fixes
+
+* actualize links ([b51031b](https://github.com/SkeLLLa/klopit/commit/b51031b9646bbcd965bf3934e95cfe1f90b49cb2))
+
 ## [1.22.1](https://github.com/SkeLLLa/klopit/compare/v1.22.0...v1.22.1) (2026-04-27)
 
 ### 🛠 Fixes
