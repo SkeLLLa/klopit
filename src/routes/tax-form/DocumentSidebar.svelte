@@ -100,6 +100,7 @@
 <!-- Mobile dropdown -->
 <div class="mb-4 lg:hidden">
   <select
+    aria-label={m.tax_sidebar_tax_reports()}
     class="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
     value={typeof activeDocument === 'string' ? 'pit38' : `pitzg:${activeDocument.pitZg}`}
     onchange={(e) => {

@@ -162,6 +162,7 @@
       </h2>
       {#if calculatedSessions.length > 1}
         <select
+          aria-label={m.data_session_label()}
           value={sessionId}
           onchange={handleSessionChange}
           class="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"

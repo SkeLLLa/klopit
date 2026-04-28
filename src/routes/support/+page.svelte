@@ -28,6 +28,76 @@
 
   <section class="space-y-4">
     <div>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        {m.support_software_title()}
+      </h2>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        {m.support_software_intro()}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <article
+        class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+      >
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {m.support_software_bugs_title()}
+        </h3>
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {m.support_software_bugs_desc()}
+        </p>
+        <a
+          href="https://github.com/SkeLLLa/klopit/issues/new?labels=bug"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-3 inline-flex rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
+        >
+          {m.support_software_bugs_cta()}
+        </a>
+      </article>
+
+      <article
+        class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+      >
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {m.support_software_features_title()}
+        </h3>
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {m.support_software_features_desc()}
+        </p>
+        <a
+          href="https://github.com/SkeLLLa/klopit/issues/new?labels=enhancement"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-3 inline-flex rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
+        >
+          {m.support_software_features_cta()}
+        </a>
+      </article>
+
+      <article
+        class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+      >
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {m.support_software_community_title()}
+        </h3>
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {m.support_software_community_desc()}
+        </p>
+        <a
+          href="https://github.com/SkeLLLa/klopit/discussions"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-3 inline-flex rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
+        >
+          {m.support_software_community_cta()}
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <section class="space-y-4">
+    <div>
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
         {m.support_tax_section_title()}
       </h3>

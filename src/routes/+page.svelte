@@ -70,16 +70,16 @@
 </script>
 
 <div>
-  <h1 class="mb-1 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+  <h1 class="mb-3 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
     {m.home_welcome()}
   </h1>
+  <p class="mb-4 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+    {m.home_description()}
+  </p>
   <p
-    class="mb-4 border-r-2 border-emerald-300/60 pr-3 text-right text-[11px] italic leading-relaxed text-slate-400 dark:border-emerald-500/30 dark:text-slate-500"
+    class="mb-5 border-r-2 border-emerald-300/60 pr-3 text-right text-[11px] italic leading-relaxed text-slate-400 dark:border-emerald-500/30 dark:text-slate-500"
   >
     {m.home_name_origin()}
-  </p>
-  <p class="mb-5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
-    {m.home_description()}
   </p>
 
   <WhyPillars />

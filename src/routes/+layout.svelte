@@ -31,6 +31,7 @@
   const SITE_URL = 'https://klopit.co.pl';
   const ORGANIZATION_ID = `${SITE_URL}/#organization`;
   const WEB_APP_ID = `${SITE_URL}/#webapplication`;
+  const WEBSITE_ID = `${SITE_URL}/#website`;
   const localeTags: Record<string, string> = {
     en: 'en',
     pl: 'pl-PL',
@@ -84,7 +85,31 @@
       '@id': `${SITE_URL}/#logo`,
       url: `${SITE_URL}/icons/icon-512.svg`,
     },
-    sameAs: ['https://github.com/SkeLLLa/klopit'],
+    sameAs: [
+      'https://github.com/SkeLLLa/klopit',
+      'https://github.com/SkeLLLa/klopit/discussions',
+    ],
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        contactType: 'technical support',
+        url: 'https://github.com/SkeLLLa/klopit/issues',
+        availableLanguage: ['English', 'Polish', 'Ukrainian'],
+      },
+    ],
+  };
+
+  const websiteSchema = {
+    '@type': 'WebSite',
+    '@id': WEBSITE_ID,
+    url: `${SITE_URL}/`,
+    name: 'kloPIT',
+    alternateName: 'klopit',
+    description:
+      'Free open-source PIT-38 tax calculator for Polish investors using foreign brokers.',
+    inLanguage: ['en', 'pl-PL', 'uk-UA'],
+    publisher: { '@id': ORGANIZATION_ID },
+    license: 'https://www.gnu.org/licenses/agpl-3.0.html',
   };
 
   function stripLocalePrefix(pathname: string): string {
@@ -109,6 +134,7 @@
   const jsonLd = $derived.by(() => {
     const graph: Record<string, unknown>[] = [
       publisher,
+      websiteSchema,
       {
         '@type': 'WebApplication',
         '@id': WEB_APP_ID,

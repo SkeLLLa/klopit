@@ -4,7 +4,7 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
-  import { ArrowRight, Bug, FileText, ListChecks, Lock, Scale } from 'lucide-svelte';
+  import { ArrowRight, Bug, ChevronDown, FileText, ListChecks, Lock, Scale } from 'lucide-svelte';
 
   pageTitle.set(m.page_about());
 
@@ -70,26 +70,35 @@
       </p>
     </div>
 
-    <details class="group mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
-      <summary class="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-        <span class="inline-block text-emerald-600 transition group-open:rotate-90 dark:text-emerald-400">&rsaquo;</span>
-        {m.about_acronyms_question()}
-      </summary>
-      <ul class="mt-3 grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
-        {#each KLO_ACRONYMS as acronym (acronym)}
-          <li class="text-xs text-slate-500 dark:text-slate-400">
-            <span class="font-semibold text-emerald-600 dark:text-emerald-400">klo</span>PIT &mdash; {acronym}
-          </li>
-        {/each}
-      </ul>
-      <a
-        href={githubIssuesLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="mt-3 inline-block text-xs font-semibold text-emerald-700 underline hover:opacity-80 dark:text-emerald-400"
+    <details class="group mt-4 scroll-mt-20 rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-emerald-600">
+      <summary
+        class="group/summary flex cursor-pointer list-none items-center gap-3 rounded-xl p-4 transition-colors hover:bg-emerald-50/50 group-open:rounded-b-none dark:hover:bg-emerald-500/10 [&::-webkit-details-marker]:hidden"
       >
-        {m.about_acronyms_submit()}
-      </a>
+        <span class="min-w-0 flex-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {m.about_acronyms_question()}
+        </span>
+        <ChevronDown
+          size={16}
+          class="shrink-0 text-slate-400 transition-[transform,color] group-open:rotate-180 group-hover/summary:text-emerald-500 dark:text-slate-500"
+        />
+      </summary>
+      <div class="border-t border-slate-100 px-4 pb-4 dark:border-slate-700/50">
+        <ul class="mt-3 grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
+          {#each KLO_ACRONYMS as acronym (acronym)}
+            <li class="text-xs text-slate-500 dark:text-slate-400">
+              <span class="font-semibold text-emerald-600 dark:text-emerald-400">klo</span>PIT &mdash; {acronym}
+            </li>
+          {/each}
+        </ul>
+        <a
+          href={githubIssuesLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-3 inline-block text-xs font-semibold text-emerald-700 underline hover:opacity-80 dark:text-emerald-400"
+        >
+          {m.about_acronyms_submit()}
+        </a>
+      </div>
     </details>
   </section>
 

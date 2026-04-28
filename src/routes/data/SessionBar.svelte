@@ -58,6 +58,7 @@
     <div class="flex items-center gap-2">
       <input
         type="number"
+        aria-label={m.data_year()}
         bind:value={newYear}
         min={2000}
         max={2099}

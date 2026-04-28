@@ -132,6 +132,7 @@
                 <td class="px-3 py-2">
                   <input
                     type="number"
+                    aria-label={m.prior_losses_year()}
                     bind:value={editYear}
                     onkeydown={handleKeydown}
                     class="w-24 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -141,6 +142,7 @@
                   <input
                     type="number"
                     step="0.01"
+                    aria-label={m.prior_losses_total_loss()}
                     bind:value={editTotal}
                     onkeydown={handleKeydown}
                     class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -150,6 +152,7 @@
                   <input
                     type="number"
                     step="0.01"
+                    aria-label={m.prior_losses_already_deducted()}
                     bind:value={editDeducted}
                     onkeydown={handleKeydown}
                     class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -235,6 +238,7 @@
           <td class="px-3 py-2">
             <input
               type="number"
+              aria-label={m.prior_losses_year()}
               bind:value={newYear}
               onkeydown={handleAddKeydown}
               class="w-24 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -245,6 +249,7 @@
               type="number"
               step="0.01"
               placeholder="0.00"
+              aria-label={m.prior_losses_total_loss()}
               bind:value={newTotal}
               onkeydown={handleAddKeydown}
               class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -254,6 +259,7 @@
             <input
               type="number"
               step="0.01"
+              aria-label={m.prior_losses_already_deducted()}
               bind:value={newDeducted}
               onkeydown={handleAddKeydown}
               class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"

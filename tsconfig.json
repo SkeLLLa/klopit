@@ -8,5 +8,11 @@
   },
   "exclude": ["build/**/*", "coverage/**/*", "node_modules/**/*"],
   "extends": "./.svelte-kit/tsconfig.json",
-  "include": ["src/**/*", "src/**/*.svelte", "package.json", "test/**/*"]
+  "include": [
+    "src/**/*",
+    "src/**/*.svelte",
+    "package.json",
+    "scripts/**/*",
+    "test/**/*"
+  ]
 }

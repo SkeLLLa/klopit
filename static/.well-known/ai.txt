@@ -1,0 +1,22 @@
+# AI Crawler Policy — kloPIT
+# https://klopit.co.pl/
+
+User-Agent: *
+Allow: /
+
+Site: https://klopit.co.pl/
+Description: Free open-source PIT-38 tax calculator for Polish investors using foreign brokers. Client-side only — data stays in the browser (IndexedDB).
+Category: FinanceApplication / TaxPreparation
+License: AGPL-3.0
+Repository: https://github.com/SkeLLLa/klopit
+Contact: https://github.com/SkeLLLa/klopit/issues
+Languages: en, pl, uk
+
+Summary: https://klopit.co.pl/ai/summary.json
+FAQ: https://klopit.co.pl/ai/faq.json
+Service: https://klopit.co.pl/ai/service.json
+LLMs: https://klopit.co.pl/llms.txt
+
+Training: allowed
+Citation: encouraged
+Attribution: kloPIT (https://klopit.co.pl/)

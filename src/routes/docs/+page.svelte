@@ -40,6 +40,37 @@
     {m.page_docs()}
   </h1>
 
+  <p class="max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+    {m.page_docs_intro()}
+  </p>
+
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+      {m.page_docs_section_forms()}
+    </h2>
+    <p class="max-w-3xl text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+      {m.page_docs_section_forms_desc()}
+    </p>
+  </section>
+
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+      {m.page_docs_section_brokers()}
+    </h2>
+    <p class="max-w-3xl text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+      {m.page_docs_section_brokers_desc()}
+    </p>
+  </section>
+
+  <section class="space-y-2">
+    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+      {m.page_docs_section_topics()}
+    </h2>
+    <p class="max-w-3xl text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+      {m.page_docs_section_topics_desc()}
+    </p>
+  </section>
+
   <div class="columns-1 gap-4 sm:columns-2">
     {#each docsSection?.children ?? [] as child (child.labelKey)}
       {@const Icon = iconMap[child.icon]}

@@ -113,35 +113,35 @@
             {#if editingId === row.id}
               <tr class="border-b border-slate-100 dark:border-slate-800">
                 <td class="px-3 py-2">
-                  <select bind:value={editType} class="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                  <select aria-label={m.data_type()} bind:value={editType} class="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
                     <option value="stock-split">stock-split</option>
                     <option value="merger">merger</option>
                   </select>
                 </td>
-                <td class="px-3 py-2"><input type="text" bind:value={editSymbol} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2"><input type="text" bind:value={editIsin} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
-                <td class="px-3 py-2"><input type="datetime-local" bind:value={editDatetime} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
+                <td class="px-3 py-2"><input type="text" aria-label={m.data_symbol()} bind:value={editSymbol} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
+                <td class="px-3 py-2"><input type="text" aria-label={m.data_isin()} bind:value={editIsin} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
+                <td class="px-3 py-2"><input type="datetime-local" aria-label={m.data_datetime()} bind:value={editDatetime} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 <td class="px-3 py-2">
                   {#if editType === 'stock-split'}
                     <div class="flex items-center gap-1">
-                      <input type="number" step="any" bind:value={editNumerator} onkeydown={handleKeydown} class="w-16 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                      <input type="number" step="any" aria-label="Split numerator" bind:value={editNumerator} onkeydown={handleKeydown} class="w-16 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
                       <span class="text-slate-400">for</span>
-                      <input type="number" step="any" bind:value={editDenominator} onkeydown={handleKeydown} class="w-16 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                      <input type="number" step="any" aria-label="Split denominator" bind:value={editDenominator} onkeydown={handleKeydown} class="w-16 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
                     </div>
                   {:else}
                     <div class="flex flex-col gap-1">
                       <div class="flex items-center gap-1">
-                        <input type="text" bind:value={editTargetSymbol} placeholder="Target symbol" onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
-                        <input type="text" bind:value={editTargetIsin} placeholder="Target ISIN" onkeydown={handleKeydown} class="w-32 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                        <input type="text" aria-label="Target symbol" bind:value={editTargetSymbol} placeholder="Target symbol" onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                        <input type="text" aria-label="Target ISIN" bind:value={editTargetIsin} placeholder="Target ISIN" onkeydown={handleKeydown} class="w-32 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
                       </div>
                       <div class="flex items-center gap-1">
-                        <input type="number" step="any" bind:value={editNumerator} placeholder="Num" onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                        <input type="number" step="any" aria-label="Conversion numerator" bind:value={editNumerator} placeholder="Num" onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
                         <span class="text-xs text-slate-400">for</span>
-                        <input type="number" step="any" bind:value={editDenominator} placeholder="Den" onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                        <input type="number" step="any" aria-label="Conversion denominator" bind:value={editDenominator} placeholder="Den" onkeydown={handleKeydown} class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
                       </div>
                       <div class="flex items-center gap-1">
-                        <input type="text" bind:value={editCashCurrency} placeholder="CCY" onkeydown={handleKeydown} class="w-14 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
-                        <input type="number" step="any" bind:value={editCashPerShare} placeholder="Cash/share" onkeydown={handleKeydown} class="w-24 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                        <input type="text" aria-label="Cash currency" bind:value={editCashCurrency} placeholder="CCY" onkeydown={handleKeydown} class="w-14 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+                        <input type="number" step="any" aria-label="Cash per share" bind:value={editCashPerShare} placeholder="Cash/share" onkeydown={handleKeydown} class="w-24 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
                       </div>
                     </div>
                   {/if}

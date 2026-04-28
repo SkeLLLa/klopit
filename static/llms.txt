@@ -1,34 +1,65 @@
 # kloPIT
 
-> Darmowy, open-source kalkulator PIT-38 online dla polskich inwestorów korzystających z zagranicznych brokerów.
+> Free open-source PIT-38 tax calculator for Polish investors using foreign brokers. Runs entirely in the browser — data never leaves the device.
 
-kloPIT pomaga obliczyć polski PIT-38 i PIT/ZG z transakcji giełdowych, dywidend zagranicznych, kursów NBP i metody FIFO. Aplikacja działa w przeglądarce: importowane dane pozostają lokalnie w IndexedDB i nie są wysyłane na serwer.
+kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, dividends, NBP exchange rates and FIFO cost basis. Imported data stays locally in IndexedDB and is not sent to any server. AGPL-3.0, no signup, no tracking.
 
-## Najważniejsze adresy
+## Core pages
 
-- Strona główna: https://klopit.co.pl/
-- Dokumentacja: https://klopit.co.pl/docs/
-- Przewodnik PIT-38: https://klopit.co.pl/docs/pit-38/
-- Przewodnik PIT/ZG: https://klopit.co.pl/docs/pit-zg/
-- Interactive Brokers: https://klopit.co.pl/docs/ibkr/
-- W-8BEN i dywidendy USA: https://klopit.co.pl/docs/ibkr/w8ben/
-- Obsługiwani brokerzy i funkcje: https://klopit.co.pl/docs/brokers/
-- Dywidendy USA 15% czy 19%: https://klopit.co.pl/docs/dividends/us-15-or-19/
-- FAQ: https://klopit.co.pl/docs/faq/
-- Kod źródłowy: https://github.com/SkeLLLa/klopit
+- [Home — PIT-38 calculator](https://klopit.co.pl/)
+- [About kloPIT](https://klopit.co.pl/about/)
+- [Support and contributing](https://klopit.co.pl/support/)
+- [Source code on GitHub](https://github.com/SkeLLLa/klopit)
+- [Issue tracker](https://github.com/SkeLLLa/klopit/issues)
 
-## Obsługiwane obszary
+## Documentation
 
-- Import CSV z Interactive Brokers Activity Statement.
-- Import PDF z IBI Capital dla ESPP i RSU.
-- Import CSV z Charles Schwab.
-- Ręczne dodawanie transakcji, dywidend i podatku u źródła dla pozostałych brokerów.
-- Zyski kapitałowe liczone metodą FIFO.
-- Kursy średnie NBP tabela A z dnia roboczego poprzedzającego transakcję lub dywidendę.
-- Dywidendy zagraniczne z limitem odliczenia podatku u źródła według UPO.
-- Wartości do sekcji C, D i G formularza PIT-38 oraz załącznika PIT/ZG.
-- Straty z lat ubiegłych z limitem pięciu lat i 50% rocznie.
+- [Documentation index](https://klopit.co.pl/docs/)
+- [PIT-38 guide](https://klopit.co.pl/docs/pit-38/)
+- [PIT/ZG attachment guide](https://klopit.co.pl/docs/pit-zg/)
+- [FAQ](https://klopit.co.pl/docs/faq/)
+- [Supported brokers and features](https://klopit.co.pl/docs/brokers/)
 
-## Zastrzeżenie
+## Broker guides
 
-kloPIT nie jest oficjalnym narzędziem administracji skarbowej i nie stanowi porady prawnej ani podatkowej. Wyniki należy zweryfikować przed złożeniem deklaracji.
+- [Interactive Brokers — Activity Statement CSV](https://klopit.co.pl/docs/ibkr/)
+- [W-8BEN form for US dividends](https://klopit.co.pl/docs/ibkr/w8ben/)
+- [IBI Capital ESPP](https://klopit.co.pl/docs/ibi/espp/)
+- [IBI Capital RSU](https://klopit.co.pl/docs/ibi/rsu/)
+
+## Tax topics
+
+- [US dividends — 15% or 19% withholding](https://klopit.co.pl/docs/dividends/us-15-or-19/)
+
+## Localized entry points
+
+- [English (default)](https://klopit.co.pl/)
+- [Polski](https://klopit.co.pl/pl/)
+- [Українська](https://klopit.co.pl/uk/)
+
+## AI discovery endpoints
+
+- [AI summary](https://klopit.co.pl/ai/summary.json)
+- [AI FAQ](https://klopit.co.pl/ai/faq.json)
+- [AI service description](https://klopit.co.pl/ai/service.json)
+- [AI crawler policy](https://klopit.co.pl/.well-known/ai.txt)
+- [Sitemap](https://klopit.co.pl/sitemap.xml)
+
+## Capabilities
+
+- Import CSV from Interactive Brokers Activity Statements (trades, dividends, withholding tax, corporate actions).
+- Import PDF from IBI Capital for ESPP and RSU grants with per-grant FIFO lots.
+- Import CSV from Charles Schwab.
+- Manual entry for trades, dividends and foreign withholding tax for any other broker.
+- Capital gains via FIFO per ISIN, with lot-level isolation for ESPP grants.
+- NBP Table A average exchange rates from the business day preceding each transaction or dividend.
+- Foreign dividend withholding credit capped per dividend at the lower of 19% and the bilateral tax-treaty rate.
+- PIT-38 Section C (proceeds and costs), Section D (tax base and 19% tax), Section G (foreign dividends), Section H (total tax due).
+- PIT/ZG per-country breakdown using ISIN country mapping.
+- Loss carryforward over 5 years with the 50% annual cap.
+- Carry-in positions across tax years.
+- Symbol-to-country override table for treaty rate selection.
+
+## Disclaimer
+
+kloPIT is not an official tax administration tool and does not constitute legal or tax advice. Verify all results before filing your declaration.

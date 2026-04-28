@@ -33,10 +33,11 @@
   },
   "scripts": {
     "build": "pnpm run build:app && pnpm run build:format",
-    "build:app": "vite build && svelte-sitemap",
+    "build:app": "pnpm run generate:ai && vite build && svelte-sitemap",
     "build:clean": "rm -rf build",
     "build:format": "pretty-quick",
     "dev": "vite dev",
+    "generate:ai": "tsx scripts/generate-ai-metadata.ts",
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations",
     "lint": "pnpm run lint:types && pnpm run lint:codestyle",
     "lint:codestyle": "eslint",

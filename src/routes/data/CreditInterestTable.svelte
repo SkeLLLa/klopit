@@ -83,6 +83,7 @@
                 <td class="px-3 py-2"
                   ><input
                     type="date"
+                    aria-label={m.data_date()}
                     bind:value={editDate}
                     onkeydown={handleKeydown}
                     class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -92,6 +93,7 @@
                   ><input
                     type="number"
                     step="any"
+                    aria-label={m.data_amount()}
                     bind:value={editAmount}
                     onkeydown={handleKeydown}
                     class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -100,6 +102,7 @@
                 <td class="px-3 py-2"
                   ><input
                     type="text"
+                    aria-label={m.data_currency()}
                     bind:value={editCurrency}
                     onkeydown={handleKeydown}
                     class="w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
@@ -108,6 +111,7 @@
                 <td class="px-3 py-2"
                   ><input
                     type="text"
+                    aria-label={m.data_description()}
                     bind:value={editDescription}
                     onkeydown={handleKeydown}
                     class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"

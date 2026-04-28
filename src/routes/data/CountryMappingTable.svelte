@@ -216,6 +216,7 @@
                 <input
                   type="text"
                   maxlength="2"
+                  aria-label={m.data_country_override_placeholder()}
                   class="w-16 rounded border border-slate-300 px-2 py-1 text-xs uppercase dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                   placeholder={m.data_country_override_placeholder()}
                   value={entry.override}
