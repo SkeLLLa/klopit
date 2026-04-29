@@ -1,3 +1,11 @@
+## [1.23.1](https://github.com/SkeLLLa/klopit/compare/v1.23.0...v1.23.1) (2026-04-29)
+
+### 🛠 Fixes
+
+* ai-bots instructions ([d640d75](https://github.com/SkeLLLa/klopit/commit/d640d754e20af1a60c2147abc1be1cfdbc44738a))
+* lint ([78ce8a6](https://github.com/SkeLLLa/klopit/commit/78ce8a60b0f1b410bd5373808d33c7b9810a0ac5))
+* lint ([e875906](https://github.com/SkeLLLa/klopit/commit/e875906bd85df51e346ab59fa3863b35c0ca86e5))
+
 ## [1.23.0](https://github.com/SkeLLLa/klopit/compare/v1.22.2...v1.23.0) (2026-04-28)
 
 ### 🚀 Features
