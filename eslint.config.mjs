@@ -23,14 +23,11 @@ export default [
   ...eslintConfig,
   ...svelte.configs['flat/recommended'],
   {
-    files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+    files: ['**/*.svelte'],
     languageOptions: {
       parser: svelteParser,
       parserOptions: {
         parser: tsParser,
-        project: 'tsconfig.json',
-        tsconfigRootDir: import.meta.dirname,
-        extraFileExtensions: ['.svelte'],
       },
       globals: {
         ...globals.browser,
@@ -39,7 +36,7 @@ export default [
     },
   },
   {
-    files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+    files: ['**/*.svelte'],
     rules: {
       'import-x/no-unresolved': [
         'error',
@@ -49,4 +46,18 @@ export default [
     },
   },
   ...svelte.configs['flat/prettier'],
+  {
+    files: ['**/*.svelte.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: 'tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.browser,
+        __APP_VERSION__: 'readonly',
+      },
+    },
+  },
 ];
