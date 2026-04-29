@@ -191,14 +191,14 @@ const agentSkillDigest = createHash('sha256')
   .digest('hex');
 
 await writeJson(`${agentSkillsDir}/index.json`, {
-  '$schema': 'https://schemas.agentskills.io/discovery/0.2.0/schema.json',
-  'skills': [
+  $schema: 'https://schemas.agentskills.io/discovery/0.2.0/schema.json',
+  skills: [
     {
-      'name': agentSkillMetadata.name,
-      'type': 'skill-md',
-      'description': agentSkillMetadata.description,
-      'url': `/.well-known/agent-skills/${agentSkillMetadata.name}/SKILL.md`,
-      'digest': `sha256:${agentSkillDigest}`,
+      name: agentSkillMetadata.name,
+      type: 'skill-md',
+      description: agentSkillMetadata.description,
+      url: `/.well-known/agent-skills/${agentSkillMetadata.name}/SKILL.md`,
+      digest: `sha256:${agentSkillDigest}`,
     },
   ],
 });
