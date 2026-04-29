@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +7,9 @@ import { FAQ_ITEMS } from '../src/lib/constants/faq.js';
 
 const SITE_URL = 'https://klopit.co.pl';
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const aiDir = resolve(rootDir, 'static/ai');
+const agentSkillsDir = 'static/.well-known/agent-skills';
+const agentSkillName = 'klopit-tax-calculator';
+const agentSkillPath = `${agentSkillsDir}/${agentSkillName}/SKILL.md`;
 
 type JsonObject = Record<string, unknown>;
 type Messages = Record<string, string>;
@@ -16,11 +19,9 @@ async function readJson<T>(path: string): Promise<T> {
 }
 
 async function writeJson(path: string, value: JsonObject): Promise<void> {
-  await mkdir(aiDir, { recursive: true });
-  await writeFile(
-    resolve(rootDir, path),
-    `${JSON.stringify(value, null, 2)}\n`,
-  );
+  const outputPath = resolve(rootDir, path);
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function msg(messages: Messages, key: string): string {
@@ -28,7 +29,44 @@ function msg(messages: Messages, key: string): string {
   if (!value) {
     throw new Error(`Missing message key: ${key}`);
   }
-  return value.replace(/<[^>]*>/g, '');
+  return stripHtmlTags(value);
+}
+
+function stripHtmlTags(value: string): string {
+  let sanitized = value;
+  let previous: string;
+
+  do {
+    previous = sanitized;
+    sanitized = sanitized.replace(/<[^>]*>/g, '');
+  } while (sanitized !== previous);
+
+  return sanitized;
+}
+
+function readYamlString(frontmatter: string, key: string): string {
+  const line = frontmatter
+    .split('\n')
+    .find((entry) => entry.startsWith(`${key}:`));
+  const value = line?.slice(key.length + 1).trim();
+  if (!value) {
+    throw new Error(`Missing ${key} in ${agentSkillPath}`);
+  }
+  return value.replace(/^['"]|['"]$/g, '');
+}
+
+function readSkillMetadata(skillMarkdown: string): {
+  name: string;
+  description: string;
+} {
+  const frontmatter = /^---\n([\s\S]*?)\n---/.exec(skillMarkdown)?.[1];
+  if (!frontmatter) {
+    throw new Error(`Missing YAML frontmatter in ${agentSkillPath}`);
+  }
+  return {
+    name: readYamlString(frontmatter, 'name'),
+    description: readYamlString(frontmatter, 'description'),
+  };
 }
 
 const [messages, pkg] = await Promise.all([
@@ -144,4 +182,23 @@ await writeJson('static/ai/service.json', {
     creditInterest: '19%',
     dividends: '19%',
   },
+});
+
+const agentSkillBytes = await readFile(resolve(rootDir, agentSkillPath));
+const agentSkillMetadata = readSkillMetadata(agentSkillBytes.toString('utf8'));
+const agentSkillDigest = createHash('sha256')
+  .update(agentSkillBytes)
+  .digest('hex');
+
+await writeJson(`${agentSkillsDir}/index.json`, {
+  '$schema': 'https://schemas.agentskills.io/discovery/0.2.0/schema.json',
+  'skills': [
+    {
+      'name': agentSkillMetadata.name,
+      'type': 'skill-md',
+      'description': agentSkillMetadata.description,
+      'url': `/.well-known/agent-skills/${agentSkillMetadata.name}/SKILL.md`,
+      'digest': `sha256:${agentSkillDigest}`,
+    },
+  ],
 });

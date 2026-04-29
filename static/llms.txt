@@ -43,6 +43,7 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 - [AI FAQ](https://klopit.co.pl/ai/faq.json)
 - [AI service description](https://klopit.co.pl/ai/service.json)
 - [AI crawler policy](https://klopit.co.pl/.well-known/ai.txt)
+- [Agent skills index](https://klopit.co.pl/.well-known/agent-skills/index.json)
 - [Sitemap](https://klopit.co.pl/sitemap.xml)
 
 ## Capabilities

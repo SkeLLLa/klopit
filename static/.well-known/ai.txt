@@ -16,6 +16,7 @@ Summary: https://klopit.co.pl/ai/summary.json
 FAQ: https://klopit.co.pl/ai/faq.json
 Service: https://klopit.co.pl/ai/service.json
 LLMs: https://klopit.co.pl/llms.txt
+Agent-Skills: https://klopit.co.pl/.well-known/agent-skills/index.json
 
 Training: allowed
 Citation: encouraged
