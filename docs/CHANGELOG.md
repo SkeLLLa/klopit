@@ -1,3 +1,9 @@
+## [1.23.2](https://github.com/SkeLLLa/klopit/compare/v1.23.1...v1.23.2) (2026-04-30)
+
+### 🛠 Fixes
+
+* **tax:** fifo js math ([77855f6](https://github.com/SkeLLLa/klopit/commit/77855f6449b12396d3000ee7576fdac0dedf7e11))
+
 ## [1.23.1](https://github.com/SkeLLLa/klopit/compare/v1.23.0...v1.23.1) (2026-04-29)
 
 ### 🛠 Fixes
