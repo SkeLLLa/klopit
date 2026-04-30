@@ -1004,6 +1004,37 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
     );
   });
 
+  void it('detects tiny real shortfall on large share quantities', () => {
+    // The scaled epsilon is capped, so a 0.0001-share shortfall remains
+    // visible even when the sell quantity is large.
+    const buy = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 100_000,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 10),
+      quantity: 100_000.0001,
+      price: 120,
+      proceeds: 12_000_000.012,
+      type: 'sell',
+      commission: 0,
+    });
+
+    assert.throws(
+      () =>
+        calculateCapitalGains({
+          trades: [buy, sell],
+          corporateActions: [],
+          carryInPositions: [],
+          taxPeriod: taxPeriod2024,
+        }),
+      /Insufficient buy lots/,
+    );
+  });
+
   void it('treats lot remainder within epsilon as fully consumed', () => {
     // Sell qty equal to lot qty up to float drift — lot must be removed,
     // not left as a near-zero ghost lot that breaks subsequent FIFO.

@@ -270,8 +270,12 @@ function processTrade(args: {
     }
 
     // Float subtraction leaves ~1e-15 residue (e.g. 0.1+0.2 != 0.3).
-    // Compare against epsilon scaled to trade size to avoid spurious shorts.
-    const qtyEpsilon = Math.max(Math.abs(trade.quantity), 1) * 1e-9;
+    // Compare against epsilon scaled to trade size, capped so a real
+    // fractional shortfall cannot disappear on very large trades.
+    const qtyEpsilon = Math.min(
+      Math.max(Math.abs(trade.quantity), 1) * 1e-9,
+      1e-8,
+    );
 
     while (remainingQty > qtyEpsilon && lots.length > 0) {
       const lot = lots[0];
