@@ -788,4 +788,269 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
       `taxPln: ${String(result[0].taxPln)}`,
     );
   });
+
+  void it('tolerates float-precision residue when consuming buy lots', () => {
+    // 0.1 + 0.2 === 0.30000000000000004 in IEEE-754. Two buys of 0.1 and 0.2
+    // followed by a sell of (0.1 + 0.2) used to throw "Insufficient buy lots"
+    // because remainingQty after the second lot was ~4e-17, not zero.
+    const buy1 = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 0.1,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const buy2 = makeTrade({
+      datetime: new Date(2024, 0, 11),
+      quantity: 0.2,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 10),
+      quantity: 0.1 + 0.2,
+      price: 120,
+      proceeds: (0.1 + 0.2) * 120,
+      type: 'sell',
+      commission: 0,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy1, buy2, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    const sellResult = result.find((r) => r.type === 'sell');
+    assert.ok(sellResult, 'Expected a sell result');
+    // costPln = 0.3 * 100 * 4.0 = 120
+    assert.ok(
+      Math.abs(sellResult.costPln - 120) < 0.01,
+      `costPln: ${String(sellResult.costPln)}`,
+    );
+  });
+
+  void it('still throws when truly short beyond epsilon tolerance', () => {
+    const buy = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 10,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 10),
+      quantity: 11, // 1 share over what was bought — real shortfall
+      price: 120,
+      proceeds: 1320,
+      type: 'sell',
+      commission: 0,
+    });
+
+    assert.throws(
+      () =>
+        calculateCapitalGains({
+          trades: [buy, sell],
+          corporateActions: [],
+          carryInPositions: [],
+          taxPeriod: taxPeriod2024,
+        }),
+      /Insufficient buy lots/,
+    );
+  });
+
+  void it('handles IBKR fractional-share quantities (4 decimals)', () => {
+    // IBKR allows fractional shares with up to 4 decimal places, e.g. 1.2345.
+    // Summing them accumulates IEEE-754 drift:
+    //   1.2345 + 2.3456 + 3.4567 === 7.0367999999999995
+    // FIFO must still consume all three lots cleanly.
+    const buy1 = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 1.2345,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const buy2 = makeTrade({
+      datetime: new Date(2024, 0, 11),
+      quantity: 2.3456,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const buy3 = makeTrade({
+      datetime: new Date(2024, 0, 12),
+      quantity: 3.4567,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const totalQty = 1.2345 + 2.3456 + 3.4567; // 7.0367999999999995
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 10),
+      quantity: totalQty,
+      price: 120,
+      proceeds: totalQty * 120,
+      type: 'sell',
+      commission: 0,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy1, buy2, buy3, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    const sellResult = result.find((r) => r.type === 'sell');
+    assert.ok(sellResult, 'Expected a sell result');
+    // costPln = 7.0368 * 100 * 4.0 = 2814.72
+    assert.ok(
+      Math.abs(sellResult.costPln - 2814.72) < 0.01,
+      `costPln: ${String(sellResult.costPln)}`,
+    );
+    // proceedsPln = totalQty * 120 * 4.0 = 7.0368 * 480 = 3377.664
+    assert.ok(
+      Math.abs(sellResult.proceedsPln - 3377.664) < 0.01,
+      `proceedsPln: ${String(sellResult.proceedsPln)}`,
+    );
+  });
+
+  void it('handles fractional partial lot consumption with correct cost basis', () => {
+    // Buy fractional shares at different prices, sell partial across lots.
+    // FIFO must split lot2 cleanly and preserve the remainder.
+    const buy1 = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 1.2345,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const buy2 = makeTrade({
+      datetime: new Date(2024, 0, 11),
+      quantity: 2.3456,
+      price: 200,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell1 = makeTrade({
+      datetime: new Date(2024, 3, 10),
+      quantity: 2, // consumes all of buy1 (1.2345) + 0.7655 of buy2
+      price: 150,
+      proceeds: 300,
+      type: 'sell',
+      commission: 0,
+    });
+    const sell2 = makeTrade({
+      datetime: new Date(2024, 4, 10),
+      quantity: 1.5801, // 2.3456 - 0.7655 = 1.5801, all from buy2 remainder
+      price: 160,
+      proceeds: 1.5801 * 160,
+      type: 'sell',
+      commission: 0,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy1, buy2, sell1, sell2],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    const sells = result.filter((r) => r.type === 'sell');
+    assert.equal(sells.length, 2);
+    // sell1 cost = 1.2345 * 100 * 4 + 0.7655 * 200 * 4 = 493.8 + 612.4 = 1106.2
+    assert.ok(
+      Math.abs(sells[0].costPln - 1106.2) < 0.01,
+      `sell1 costPln: ${String(sells[0].costPln)}`,
+    );
+    // sell2 cost = 1.5801 * 200 * 4 = 1264.08
+    assert.ok(
+      Math.abs(sells[1].costPln - 1264.08) < 0.01,
+      `sell2 costPln: ${String(sells[1].costPln)}`,
+    );
+  });
+
+  void it('detects real fractional shortfall below 1 share', () => {
+    // Don't let epsilon mask genuine fractional shortfall.
+    // Buy 1.2345, sell 1.2346 — 0.0001 short, must throw.
+    const buy = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 1.2345,
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 10),
+      quantity: 1.2346,
+      price: 120,
+      proceeds: 148.152,
+      type: 'sell',
+      commission: 0,
+    });
+
+    assert.throws(
+      () =>
+        calculateCapitalGains({
+          trades: [buy, sell],
+          corporateActions: [],
+          carryInPositions: [],
+          taxPeriod: taxPeriod2024,
+        }),
+      /Insufficient buy lots/,
+    );
+  });
+
+  void it('treats lot remainder within epsilon as fully consumed', () => {
+    // Sell qty equal to lot qty up to float drift — lot must be removed,
+    // not left as a near-zero ghost lot that breaks subsequent FIFO.
+    const buy1 = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      quantity: 0.1 + 0.2, // 0.30000000000000004
+      price: 100,
+      type: 'buy',
+      commission: 0,
+    });
+    const buy2 = makeTrade({
+      datetime: new Date(2024, 0, 11),
+      quantity: 1,
+      price: 200,
+      type: 'buy',
+      commission: 0,
+    });
+    const sell1 = makeTrade({
+      datetime: new Date(2024, 3, 10),
+      quantity: 0.3, // exact 0.3, leaves ~4e-17 in lot1
+      price: 110,
+      proceeds: 33,
+      type: 'sell',
+      commission: 0,
+    });
+    const sell2 = makeTrade({
+      datetime: new Date(2024, 4, 10),
+      quantity: 1, // must come from buy2 at price 200, not the ghost lot1
+      price: 220,
+      proceeds: 220,
+      type: 'sell',
+      commission: 0,
+    });
+
+    const result = calculateCapitalGains({
+      trades: [buy1, buy2, sell1, sell2],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+
+    const sells = result.filter((r) => r.type === 'sell');
+    assert.equal(sells.length, 2);
+    // sell2 uses buy2: 1 * 200 * 4.0 = 800
+    assert.ok(
+      Math.abs(sells[1].costPln - 800) < 0.01,
+      `sell2 costPln: ${String(sells[1].costPln)}`,
+    );
+  });
 });

@@ -84,11 +84,22 @@
     (tradeCount.current ?? 0) > 0 || (dividendCount.current ?? 0) > 0,
   );
 
+  // Track sessionId we've already failed for, so a thrown error doesn't
+  // re-arm the auto-calc effect into an infinite loop.
+  let failedSessionId: string | null = $state(null);
+
   // Auto-calculate on navigation when session has data but no results.
   // Depend only on `sessionId` (not the full session record) so writes to
   // the session row during calculation don't re-trigger the effect.
   $effect(() => {
-    if (sessionId && countsLoaded && hasData && !pit38 && !calculating) {
+    if (
+      sessionId &&
+      countsLoaded &&
+      hasData &&
+      !pit38 &&
+      !calculating &&
+      failedSessionId !== sessionId
+    ) {
       log.info('auto-calc trigger', { sessionId });
       void runCalculation();
     }
@@ -98,11 +109,13 @@
     if (!sessionId) return;
     calculating = true;
     error = null;
+    failedSessionId = null;
     try {
       await calculateSessionTaxes({ sessionId });
     } catch (e) {
       log.error('runCalculation failed', e);
       error = e instanceof Error ? e.message : String(e);
+      failedSessionId = sessionId;
     } finally {
       calculating = false;
     }

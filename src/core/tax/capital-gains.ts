@@ -269,7 +269,11 @@ function processTrade(args: {
       );
     }
 
-    while (remainingQty > 0 && lots.length > 0) {
+    // Float subtraction leaves ~1e-15 residue (e.g. 0.1+0.2 != 0.3).
+    // Compare against epsilon scaled to trade size to avoid spurious shorts.
+    const qtyEpsilon = Math.max(Math.abs(trade.quantity), 1) * 1e-9;
+
+    while (remainingQty > qtyEpsilon && lots.length > 0) {
       const lot = lots[0];
       const usedQty = Math.min(remainingQty, lot.quantity);
 
@@ -277,14 +281,14 @@ function processTrade(args: {
         usedQty * (lot.costPerSharePln + lot.commissionPerSharePln);
       remainingQty -= usedQty;
 
-      if (usedQty >= lot.quantity) {
+      if (lot.quantity - usedQty <= qtyEpsilon) {
         lots.shift();
       } else {
         lot.quantity -= usedQty;
       }
     }
 
-    if (remainingQty > 0) {
+    if (remainingQty > qtyEpsilon) {
       throw new Error(
         `Insufficient buy lots for ${trade.symbol} (${trade.isin ?? 'no ISIN'}) on ${trade.datetime.toISOString()}. Short ${String(remainingQty)} shares.`,
       );
