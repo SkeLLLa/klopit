@@ -1,3 +1,9 @@
+## [1.23.3](https://github.com/SkeLLLa/klopit/compare/v1.23.2...v1.23.3) (2026-04-30)
+
+### 🛠 Fixes
+
+* support rich ppl who have >100k shares ([fa8adf2](https://github.com/SkeLLLa/klopit/commit/fa8adf2b3ba1bde17c8e82360795ec39beba5f6e))
+
 ## [1.23.2](https://github.com/SkeLLLa/klopit/compare/v1.23.1...v1.23.2) (2026-04-30)
 
 ### 🛠 Fixes
