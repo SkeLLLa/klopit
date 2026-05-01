@@ -18,6 +18,7 @@
     nav_docs_pitzg: m.page_docs_desc_pitzg,
     nav_docs_brokers: m.page_docs_desc_brokers,
     nav_docs_div_usa: m.page_docs_desc_div_usa,
+    nav_docs_trade_settlement: m.page_docs_desc_trade_settlement,
     nav_docs_ib: m.page_docs_desc_ib,
     nav_docs_ibi: m.page_docs_desc_ibi,
     nav_docs_ibkr_w8ben: m.page_docs_desc_ibkr_w8ben,

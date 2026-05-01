@@ -26,6 +26,7 @@ interface BrokerPageContent {
   manualCta: string;
   notYetTitle: string;
   notYet: string[];
+  sourcesTitle: string;
   itemListName: string;
   itemListDescriptionPrefix: string;
   faqPairs: { q: string; a: string }[];
@@ -91,6 +92,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       'cryptocurrencies in sections E/F',
       'monthly flat-tax fields in sections H/I',
     ],
+    sourcesTitle: 'Sources',
     itemListName: 'Brokers supported by kloPIT',
     itemListDescriptionPrefix: 'Import formats:',
     faqPairs: [
@@ -169,6 +171,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       'kryptowaluty w sekcjach E/F',
       'miesięczne pola podatku zryczałtowanego w sekcjach H/I',
     ],
+    sourcesTitle: 'Źródła',
     itemListName: 'Obsługiwani brokerzy w kloPIT',
     itemListDescriptionPrefix: 'Import plików',
     faqPairs: [
@@ -248,6 +251,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       'криптовалюти в секціях E/F',
       'місячні поля фіксованого податку в секціях H/I',
     ],
+    sourcesTitle: 'Джерела',
     itemListName: 'Брокери, підтримувані kloPIT',
     itemListDescriptionPrefix: 'Формати імпорту:',
     faqPairs: [

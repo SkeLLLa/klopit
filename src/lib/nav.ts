@@ -41,6 +41,11 @@ export const navigation: NavSection[] = [
             icon: 'FileText',
           },
           {
+            labelKey: 'nav_docs_trade_settlement',
+            href: '/docs/trade-vs-settlement-date',
+            icon: 'FileText',
+          },
+          {
             labelKey: 'nav_docs_ib',
             href: '/docs/ibkr',
             icon: 'FileText',

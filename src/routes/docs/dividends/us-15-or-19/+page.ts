@@ -1,3 +1,4 @@
+import type { GroundingSource } from '$lib/components/docs/grounding';
 import { getLocale, type Locale } from '$lib/paraglide/runtime';
 
 interface DividendPageContent {
@@ -26,7 +27,7 @@ interface DividendPageContent {
   faqPairs: { q: string; a: string }[];
   relatedLinks: { label: string; href: string }[];
   sourcesTitle: string;
-  sources: { label: string; href: string }[];
+  sources: GroundingSource[];
   howToName: string;
   howToSteps: string[];
 }
@@ -132,20 +133,29 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
     sourcesTitle: 'Legal basis and sources',
     sources: [
       {
+        key: 'art30a',
         label: 'Polish PIT Act, article 30a',
-        href: 'https://isap.sejm.gov.pl/',
+        href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-dochodowy-od-osob-fizycznych-16794311/art-30-a',
+        quote: '„z dywidend ... pobiera się 19%”',
       },
       {
+        key: 'art11a',
         label: 'Polish PIT Act, article 11a',
-        href: 'https://isap.sejm.gov.pl/',
+        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        quote:
+          '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
       {
+        key: 'usTreaty',
         label: 'Poland-US tax treaty of October 8, 1974',
-        href: 'https://isap.sejm.gov.pl/',
+        href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/usa-polska-umowa-o-uniknieciu-podwojnego-opodatkowania-i-16789907/art-11',
+        quote: '„15% kwoty dywidendy brutto we wszystkich innych przypadkach”',
       },
       {
+        key: 'w8ben',
         label: 'IRS Form W-8BEN',
         href: 'https://www.irs.gov/forms-pubs/about-form-w-8-ben',
+        quote: '“claim a reduced rate of, or exemption from, withholding”',
       },
     ],
     howToName: 'How to report a US dividend in PIT-38',
@@ -258,15 +268,30 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
     ],
     sourcesTitle: 'Podstawa prawna i źródła',
     sources: [
-      { label: 'Ustawa o PIT, art. 30a', href: 'https://isap.sejm.gov.pl/' },
-      { label: 'Ustawa o PIT, art. 11a', href: 'https://isap.sejm.gov.pl/' },
       {
-        label: 'UPO Polska-USA z 8 października 1974 r.',
-        href: 'https://isap.sejm.gov.pl/',
+        key: 'art30a',
+        label: 'Ustawa o PIT, art. 30a',
+        href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-dochodowy-od-osob-fizycznych-16794311/art-30-a',
+        quote: '„z dywidend ... pobiera się 19%”',
       },
       {
+        key: 'art11a',
+        label: 'Ustawa o PIT, art. 11a',
+        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        quote:
+          '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
+      },
+      {
+        key: 'usTreaty',
+        label: 'UPO Polska-USA z 8 października 1974 r.',
+        href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/usa-polska-umowa-o-uniknieciu-podwojnego-opodatkowania-i-16789907/art-11',
+        quote: '„15% kwoty dywidendy brutto we wszystkich innych przypadkach”',
+      },
+      {
+        key: 'w8ben',
         label: 'IRS Form W-8BEN',
         href: 'https://www.irs.gov/forms-pubs/about-form-w-8-ben',
+        quote: '“claim a reduced rate of, or exemption from, withholding”',
       },
     ],
     howToName: 'Jak rozliczyć dywidendę USA w PIT-38',
@@ -380,20 +405,29 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
     sourcesTitle: 'Правова основа і джерела',
     sources: [
       {
+        key: 'art30a',
         label: 'Польський закон про PIT, ст. 30a',
-        href: 'https://isap.sejm.gov.pl/',
+        href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-dochodowy-od-osob-fizycznych-16794311/art-30-a',
+        quote: '„z dywidend ... pobiera się 19%”',
       },
       {
+        key: 'art11a',
         label: 'Польський закон про PIT, ст. 11a',
-        href: 'https://isap.sejm.gov.pl/',
+        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        quote:
+          '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
       {
+        key: 'usTreaty',
         label: 'Податкова угода Польща-США від 8 жовтня 1974 р.',
-        href: 'https://isap.sejm.gov.pl/',
+        href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/usa-polska-umowa-o-uniknieciu-podwojnego-opodatkowania-i-16789907/art-11',
+        quote: '„15% kwoty dywidendy brutto we wszystkich innych przypadkach”',
       },
       {
+        key: 'w8ben',
         label: 'Форма IRS W-8BEN',
         href: 'https://www.irs.gov/forms-pubs/about-form-w-8-ben',
+        quote: '“claim a reduced rate of, or exemption from, withholding”',
       },
     ],
     howToName: 'Як розрахувати дивіденд США в PIT-38',

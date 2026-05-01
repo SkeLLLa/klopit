@@ -1,4 +1,6 @@
 <script lang="ts">
+  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
+  import type { GroundingSource } from '$lib/components/docs/grounding';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { ArrowRight, CheckCircle2, Clock, FileText, MinusCircle } from 'lucide-svelte';
@@ -10,7 +12,44 @@
   $effect(() => {
     pageTitle.set(content.pageTitle);
   });
+
+  const sources: GroundingSource[] = [
+    {
+      key: 'art30b',
+      label: 'Ustawa o PIT, art. 30b',
+      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
+      quote: '„podatek dochodowy wynosi 19% uzyskanego dochodu”',
+    },
+    {
+      key: 'art11a',
+      label: 'Ustawa o PIT, art. 11a',
+      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+      quote: '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
+    },
+    {
+      key: 'art30a',
+      label: 'Ustawa o PIT, art. 30a',
+      href: 'https://sip.lex.pl/akty-prawne/dzu-dziennik-ustaw/podatek-dochodowy-od-osob-fizycznych-16794311/art-30-a',
+      quote: '„z dywidend ... pobiera się 19%”',
+    },
+    {
+      key: 'art9',
+      label: 'Ustawa o PIT, art. 9 ust. 3',
+      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
+      quote: '„nie może przekroczyć 50% wysokości tej straty”',
+    },
+    {
+      key: 'pit38Foreign',
+      label: 'podatki.gov.pl - PIT-38 i dochody z zagranicy',
+      href: 'https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/',
+      quote: '„automatycznie dołączy do zeznania załącznik PIT/ZG”',
+    },
+  ];
 </script>
+
+{#snippet citations(keys: string[])}
+  <GroundingLinks {sources} {keys} />
+{/snippet}
 
 <article class="space-y-8">
   <header class="space-y-3">
@@ -72,12 +111,25 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900/40">
-          {#each content.features as row (row[0])}
+          {#each content.features as row, index (row[0])}
             <tr>
               <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                 {row[0]}
               </td>
-              <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{row[1]}</td>
+              <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
+                {row[1]}
+                {#if index === 3}
+                  {@render citations(['art11a'])}
+                {:else if index === 4}
+                  {@render citations(['art30a'])}
+                {:else if index === 5}
+                  {@render citations(['art30b', 'art30a'])}
+                {:else if index === 6}
+                  {@render citations(['pit38Foreign'])}
+                {:else if index === 7}
+                  {@render citations(['art9'])}
+                {/if}
+              </td>
             </tr>
           {/each}
         </tbody>
@@ -118,5 +170,12 @@
         {/each}
       </ul>
     </div>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
+      {content.sourcesTitle}
+    </h2>
+    <GroundingLinks {sources} variant="list" />
   </section>
 </article>
