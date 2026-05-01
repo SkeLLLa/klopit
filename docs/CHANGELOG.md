@@ -1,3 +1,9 @@
+## [1.24.0](https://github.com/SkeLLLa/klopit/compare/v1.23.3...v1.24.0) (2026-05-01)
+
+### 🚀 Features
+
+* organise docs & add shared components ([fda2a0b](https://github.com/SkeLLLa/klopit/commit/fda2a0bdfb200e1c9020f4ad9d2de0aeb8b11e18))
+
 ## [1.23.3](https://github.com/SkeLLLa/klopit/compare/v1.23.2...v1.23.3) (2026-04-30)
 
 ### 🛠 Fixes
