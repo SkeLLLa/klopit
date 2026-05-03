@@ -41,8 +41,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       unpdf:
-        specifier: ^1.6.0
-        version: 1.6.0(@napi-rs/canvas@0.1.98)
+        specifier: ^1.6.2
+        version: 1.6.2(@napi-rs/canvas@0.1.98)
     devDependencies:
       '@commitlint/config-conventional':
         specifier: ^20.5.0
@@ -3854,8 +3854,8 @@ packages:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
 
-  unpdf@1.6.0:
-    resolution: {integrity: sha512-DsjbuDe6PDbZzGvAP40QQp0xskrXP3Tm3fd/FLkGObL00Icr7cc28QgrPHYg+6B1lMWydgXwDXauIv5CGyXudA==}
+  unpdf@1.6.2:
+    resolution: {integrity: sha512-zQ80ySoPuPHOsvIoRp/nJyQt8TOUoTh1+WBCGcBvlddQNgKDLRwm0AY3x8Q35I7+kIiRSgqMx+Ma2pl9McIp7A==}
     peerDependencies:
       '@napi-rs/canvas': ^0.1.69
     peerDependenciesMeta:
@@ -7776,7 +7776,7 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  unpdf@1.6.0(@napi-rs/canvas@0.1.98):
+  unpdf@1.6.2(@napi-rs/canvas@0.1.98):
     optionalDependencies:
       '@napi-rs/canvas': 0.1.98
 
