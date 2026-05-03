@@ -58,7 +58,7 @@
     "svelte": "^5.55.5",
     "svelty-picker": "^6.1.6",
     "typeid-js": "^1.2.0",
-    "unpdf": "^1.6.0"
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^20.5.0",
