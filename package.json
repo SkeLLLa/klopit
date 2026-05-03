@@ -51,7 +51,7 @@
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/onest": "^5.2.11",
-    "@unovis/svelte": "^1.6.4",
+    "@unovis/svelte": "^1.6.5",
     "@unovis/ts": "^1.6.5",
     "dexie": "^4.4.2",
     "lucide-svelte": "^1.0.1",
