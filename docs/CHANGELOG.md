@@ -1,3 +1,9 @@
+## [1.24.1](https://github.com/SkeLLLa/klopit/compare/v1.24.0...v1.24.1) (2026-05-04)
+
+### 🛠 Fixes
+
+* **deps:** bump unpdf from 1.6.0 to 1.6.2 ([e0f2860](https://github.com/SkeLLLa/klopit/commit/e0f28608090d9645aefa09320a731a81c37f07fc))
+
 ## [1.24.0](https://github.com/SkeLLLa/klopit/compare/v1.23.3...v1.24.0) (2026-05-01)
 
 ### 🚀 Features
