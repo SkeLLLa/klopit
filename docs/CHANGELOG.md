@@ -1,3 +1,13 @@
+## [1.24.2](https://github.com/SkeLLLa/klopit/compare/v1.24.1...v1.24.2) (2026-05-05)
+
+### 🛠 Fixes
+
+* **deps:** bump @unovis/svelte from 1.6.4 to 1.6.5 ([542cf73](https://github.com/SkeLLLa/klopit/commit/542cf73d3a288caeca969e59a465ffdae02862cc))
+
+### 🧾 Other
+
+* **deps-dev:** bump the all-minor-patch group across 1 directory with 6 updates ([367b3c3](https://github.com/SkeLLLa/klopit/commit/367b3c31496dc45b25f240bde148935067d3e126))
+
 ## [1.24.1](https://github.com/SkeLLLa/klopit/compare/v1.24.0...v1.24.1) (2026-05-04)
 
 ### 🛠 Fixes
