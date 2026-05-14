@@ -55,7 +55,7 @@
     "@unovis/ts": "^1.6.5",
     "dexie": "^4.4.2",
     "lucide-svelte": "^1.0.1",
-    "svelte": "^5.55.5",
+    "svelte": "^5.55.7",
     "svelty-picker": "^6.1.6",
     "typeid-js": "^1.2.0",
     "unpdf": "^1.6.2"
