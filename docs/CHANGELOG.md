@@ -1,3 +1,14 @@
+## [1.24.3](https://github.com/SkeLLLa/klopit/compare/v1.24.2...v1.24.3) (2026-05-16)
+
+### 🛠 Fixes
+
+* **deps:** bump svelte from 5.55.5 to 5.55.7 ([9dcf7ef](https://github.com/SkeLLLa/klopit/commit/9dcf7efffc069aa88f80116d30f861139abd1271))
+
+### 🧾 Other
+
+* add commitlint config with relaxed body-max-line-length ([9747a3b](https://github.com/SkeLLLa/klopit/commit/9747a3b611f4ecbeada420a74184fc350de04c6c))
+* **deps-dev:** bump the all-minor-patch group with 10 updates ([d203c14](https://github.com/SkeLLLa/klopit/commit/d203c14d83cfa30012e5ef15298aa0e3a8b13149))
+
 ## [1.24.2](https://github.com/SkeLLLa/klopit/compare/v1.24.1...v1.24.2) (2026-05-05)
 
 ### 🛠 Fixes
