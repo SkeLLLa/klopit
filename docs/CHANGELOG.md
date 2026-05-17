@@ -1,3 +1,9 @@
+## [1.24.4](https://github.com/SkeLLLa/klopit/compare/v1.24.3...v1.24.4) (2026-05-17)
+
+### 🛠 Fixes
+
+* **deps:** bump devalue from 5.8.0 to 5.8.1 ([572cc5a](https://github.com/SkeLLLa/klopit/commit/572cc5ae54916a1c9ff82aa7a457d3a416498925))
+
 ## [1.24.3](https://github.com/SkeLLLa/klopit/compare/v1.24.2...v1.24.3) (2026-05-16)
 
 ### 🛠 Fixes
