@@ -30,7 +30,7 @@ kloPIT automates the most tedious parts of filing **PIT-38** (capital gains & di
 
 - **Privacy by design** — all processing and storage happen in IndexedDB in your browser; nothing is uploaded anywhere
 - **FIFO cost basis** — mandated by Polish tax law ([art. 24 ust. 10 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/))
-- **NBP rate lookup** — automatic mid-rate fetch (Table A) for the last business day before each transaction, with local caching
+- **NBP rate lookup** — automatic mid-rate fetch (Table A) for the last business day before each transaction, with an optional estimated T+2 settlement-date mode for trade rates and local caching
 - **Dividend withholding credit** — correctly offsets foreign withholding tax (e.g. US 15%) against the 19% Polish rate
 - **PIT/ZG attachment** — shows per-country values required alongside PIT-38 for foreign-source income
 - **Multi-session** — manage multiple tax years independently; edit or delete individual rows after import

@@ -28,6 +28,9 @@
   const reduceAdrFeesFromDividends = $derived(
     session?.reduceAdrFeesFromDividends ?? false,
   );
+  const useSettlementDateForTradeRates = $derived(
+    session?.useSettlementDateForTradeRates ?? false,
+  );
   let saving = $state(false);
   let error: string | null = $state(null);
 
@@ -69,6 +72,12 @@
   async function handleAdrFeesToggle() {
     await persistSessionSetting({
       reduceAdrFeesFromDividends: !reduceAdrFeesFromDividends,
+    });
+  }
+
+  async function handleTradeRateDateToggle() {
+    await persistSessionSetting({
+      useSettlementDateForTradeRates: !useSettlementDateForTradeRates,
     });
   }
 </script>
@@ -209,6 +218,57 @@
             <div class="flex items-start gap-2">
               <Info size={13} class="mt-0.5 shrink-0" />
               <p>{m.settings_adr_fees_tooltip()}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+      >
+        <div class="space-y-3">
+          <div>
+            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {m.settings_trade_rates_title()}
+            </h3>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              {m.settings_trade_rates_summary()}
+            </p>
+          </div>
+
+          <label class="flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={useSettlementDateForTradeRates}
+              onchange={handleTradeRateDateToggle}
+              disabled={saving}
+              class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
+            />
+            <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
+              {m.settings_trade_rates_toggle_label()}
+            </span>
+          </label>
+
+          <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+            {useSettlementDateForTradeRates
+              ? m.settings_trade_rates_description_on()
+              : m.settings_trade_rates_description_off()}
+          </p>
+
+          <div
+            class="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+          >
+            <div class="flex items-start gap-2">
+              <Info size={13} class="mt-0.5 shrink-0" />
+              <div class="space-y-1.5">
+                <p>{m.settings_trade_rates_tooltip()}</p>
+                <a
+                  href={localizeHref('/docs/trade-vs-settlement-date')}
+                  class="inline-flex items-center gap-1 font-medium text-amber-800 hover:underline dark:text-amber-200"
+                >
+                  {m.tax_pitzg_learn_more()}
+                </a>
+              </div>
             </div>
           </div>
         </div>

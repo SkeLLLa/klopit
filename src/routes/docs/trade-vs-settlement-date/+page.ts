@@ -202,13 +202,14 @@ const contentByLocale: Record<Locale, TradeSettlementPageContent> = {
       },
       {
         area: 'NBP rate lookup',
-        dateUsed: 'Previous Polish business day before the trade date',
-        why: 'kloPIT converts both sale proceeds and acquisition costs using the date convention chosen for the transaction, so PLN values do not mix trade-date and settlement-date logic.',
+        dateUsed:
+          'Previous Polish business day before the trade date by default; optional estimated T+2 mode for trade rates',
+        why: 'kloPIT defaults to the documented trade date. The optional settlement-date setting affects only trade NBP rates and uses an estimated T+2 business-day date when users want that convention.',
       },
       {
-        area: 'Future settlement-date mode',
-        dateUsed: 'Not enabled today',
-        why: 'A future setting should switch all affected calculations together: tax year, FIFO dates and NBP lookup dates. For IBKR this would require a settlement-date statement/export or a trade-level settlement field if the user provides one; the current Activity Statement examples only provide Date/Time for Trades.',
+        area: 'Exact settlement-date mode',
+        dateUsed: 'Future import workflow',
+        why: 'The current setting estimates T+2 for NBP rates only. A full settlement-date workflow should use broker-provided settlement dates and switch all affected calculations together: tax year, FIFO dates and NBP lookup dates.',
       },
     ],
     reasonsIntro: 'Reasons:',
@@ -224,7 +225,7 @@ const contentByLocale: Record<Locale, TradeSettlementPageContent> = {
       'whichever date convention you choose, apply it consistently to sale proceeds, buy-leg cost basis, FIFO matches and NBP rates. Mixing conventions can produce wrong PLN results and shift gains between tax years.',
     futureTitle: 'Future direction',
     futureBody:
-      'The desirable long-term behavior is a per-session setting that lets the user choose between trade-date and settlement-date semantics, with that choice applied uniformly across all FIFO matches and rate lookups.',
+      'kloPIT now has a limited per-session setting for estimated T+2 trade NBP rates. The desirable long-term behavior is an exact broker-settlement-date workflow that applies the chosen convention uniformly across tax-year assignment, FIFO matches and rate lookups.',
     futureListIntro:
       'This becomes important once kloPIT supports Polish domestic brokers such as XTB, mBank or DM BOS, where:',
     futureReasons: [
@@ -407,13 +408,14 @@ const contentByLocale: Record<Locale, TradeSettlementPageContent> = {
       },
       {
         area: 'Kurs NBP',
-        dateUsed: 'Poprzedni polski dzień roboczy przed datą transakcji',
-        why: 'kloPIT przelicza przychód i koszt według tej samej konwencji daty, która steruje transakcją, żeby wartości PLN nie mieszały logiki trade-date i settlement-date.',
+        dateUsed:
+          'Domyślnie poprzedni polski dzień roboczy przed datą transakcji; opcjonalnie szacowany tryb T+2 dla kursów transakcji',
+        why: 'kloPIT domyślnie używa udokumentowanej daty transakcji. Opcjonalne ustawienie rozrachunku dotyczy tylko kursów NBP dla transakcji i używa szacowanej daty T+2 w dniach roboczych, jeśli użytkownik wybiera tę konwencję.',
       },
       {
-        area: 'Przyszły tryb settlement-date',
-        dateUsed: 'Dziś niewłączony',
-        why: 'Przyszłe ustawienie powinno przełączać wszystkie zależne obliczenia razem: rok podatkowy, daty FIFO i daty kursów NBP. Dla IBKR wymagałoby to statementu/eksportu według daty rozrachunku albo pola rozrachunku na poziomie transakcji, jeśli użytkownik je dostarczy; obecne przykłady Activity Statement mają w Trades tylko Date/Time.',
+        area: 'Dokładny tryb settlement-date',
+        dateUsed: 'Przyszły przepływ importu',
+        why: 'Obecne ustawienie szacuje T+2 tylko dla kursów NBP. Pełny tryb settlement-date powinien używać dat rozrachunku od brokera i przełączać wszystkie zależne obliczenia razem: rok podatkowy, daty FIFO i daty kursów NBP.',
       },
     ],
     reasonsIntro: 'Powody:',
@@ -429,7 +431,7 @@ const contentByLocale: Record<Locale, TradeSettlementPageContent> = {
       'niezależnie od wybranej konwencji stosuj ją jednolicie do przychodu ze sprzedaży, kosztu nabycia, dopasowań FIFO i kursów NBP. Mieszanie konwencji może dawać błędne wartości PLN i przesuwać dochód między latami.',
     futureTitle: 'Docelowy kierunek',
     futureBody:
-      'Docelowo najlepszym rozwiązaniem jest ustawienie per sesja, w którym użytkownik wybiera semantykę daty transakcji albo daty rozrachunku, a wybór jest stosowany jednolicie do wszystkich dopasowań FIFO i kursów NBP.',
+      'kloPIT ma teraz ograniczone ustawienie per sesja dla szacowanych kursów NBP T+2 przy transakcjach. Docelowo najlepszym rozwiązaniem jest dokładny przepływ oparty na datach rozrachunku od brokera, w którym wybrana konwencja jest stosowana jednolicie do roku podatkowego, dopasowań FIFO i kursów NBP.',
     futureListIntro:
       'To stanie się ważne, gdy kloPIT zacznie obsługiwać polskich brokerów, np. XTB, mBank lub DM BOS, gdzie:',
     futureReasons: [
@@ -612,13 +614,14 @@ const contentByLocale: Record<Locale, TradeSettlementPageContent> = {
       },
       {
         area: 'Курс NBP',
-        dateUsed: 'Попередній польський робочий день перед датою угоди',
-        why: 'kloPIT конвертує виручку і собівартість за тією самою конвенцією дати, яка керує транзакцією, щоб суми PLN не змішували логіку trade-date і settlement-date.',
+        dateUsed:
+          'Типово попередній польський робочий день перед датою угоди; опційний орієнтовний режим T+2 для курсів угод',
+        why: 'kloPIT типово використовує задокументовану дату угоди. Опційне налаштування розрахунку впливає лише на курси NBP для угод і використовує орієнтовну дату T+2 у робочих днях, якщо користувач обирає цю конвенцію.',
       },
       {
-        area: 'Майбутній режим settlement-date',
-        dateUsed: 'Зараз не ввімкнений',
-        why: 'Майбутнє налаштування має перемикати всі залежні розрахунки разом: податковий рік, дати FIFO і дати курсів NBP. Для IBKR це потребувало б statement/експорту за датою розрахунку або поля розрахунку на рівні угоди, якщо користувач його надасть; поточні приклади Activity Statement мають у Trades лише Date/Time.',
+        area: 'Точний режим settlement-date',
+        dateUsed: 'Майбутній імпортний процес',
+        why: 'Поточне налаштування лише оцінює T+2 для курсів NBP. Повний режим settlement-date має використовувати дати розрахунку від брокера і разом перемикати всі залежні розрахунки: податковий рік, дати FIFO і дати курсів NBP.',
       },
     ],
     reasonsIntro: 'Причини:',
@@ -634,7 +637,7 @@ const contentByLocale: Record<Locale, TradeSettlementPageContent> = {
       'яку б дату ви не обрали, застосовуйте її однаково до виручки від продажу, собівартості купівлі, FIFO-зіставлень і курсів NBP. Змішування підходів може дати неправильні суми PLN і зсунути прибуток між роками.',
     futureTitle: 'Подальший напрям',
     futureBody:
-      'Бажана довгострокова поведінка - налаштування на рівні сесії, де користувач вибирає семантику дати угоди або дати розрахунку, а вибір застосовується однаково до всіх FIFO-зіставлень і курсів NBP.',
+      'kloPIT тепер має обмежене налаштування на рівні сесії для орієнтовних курсів NBP T+2 за угодами. Бажана довгострокова поведінка - точний процес на основі дат розрахунку від брокера, де вибрана конвенція однаково застосовується до податкового року, FIFO-зіставлень і курсів NBP.',
     futureListIntro:
       'Це стане важливим, коли kloPIT підтримуватиме польських внутрішніх брокерів, наприклад XTB, mBank або DM BOS, де:',
     futureReasons: [
