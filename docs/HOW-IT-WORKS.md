@@ -174,6 +174,7 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 - The system fetches the NBP (Polish National Bank) exchange rate from **the last business day before** January 15
 - Converts your USD amount to PLN using that historical rate
 - Stores the rate for your records
+- If the session setting **Use estimated T+2 settlement dates for trade rates** is enabled, trade proceeds, costs, and commissions instead use the last Polish business day before the estimated T+2 settlement date. Dividends, withholding tax, credit interest, and corporate-action cash keep using their own event dates.
 
 **Why the last business day before?** Polish tax law requires it ([art. 11a ust. 1](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)). Weekends and holidays don't have rates, so we go back to the last trading day.
 
@@ -182,7 +183,7 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 - `exchangeRate` — NBP rate for the trade amount (price × quantity)
 - `commissionExchangeRate` — NBP rate for the commission amount (may differ if commission currency differs from trade currency)
 
-Both rates are the average NBP Table A rate from the last business day preceding the transaction date.
+By default both rates are the average NBP Table A rate from the last business day preceding the transaction date. With the settlement-date setting enabled, trade rates use the last Polish business day preceding the estimated T+2 settlement date.
 
 ---
 
@@ -377,38 +378,38 @@ dividendTaxOwedPln = max(totalDividendsPln × 0.19 − totalDeductibleWithholdin
 
 Mapped treaty rates (portfolio / default column — the higher rate from each "X/Y" treaty entry, since individual investors virtually never hold the ≥10–25 % stakes required to unlock the reduced rate). Data source: [PwC Worldwide Tax Summaries — Poland, Withholding taxes](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes). Cross-reference the full official list: [Wykaz umów o unikaniu podwójnego opodatkowania — Ministerstwo Finansów](https://www.podatki.gov.pl/podatkowa-wspolpraca-miedzynarodowa/wykaz-umow-o-unikaniu-podwojnego-opodatkowania/).
 
-| ISO | Country              | Rate | ISO | Country              | Rate | ISO | Country              | Rate |
-| --- | -------------------- | ---- | --- | -------------------- | ---- | --- | -------------------- | ---- |
-| AE  | United Arab Emirates | 5 %  | GB  | United Kingdom       | 10 % | MY  | Malaysia             | 5 %  |
-| AL  | Albania              | 10 % | GE  | Georgia              | 5 %  | NG  | Nigeria              | 10 % |
-| AM  | Armenia              | 10 % | GR  | Greece               | 19 % | NL  | Netherlands          | 15 % |
-| AT  | Austria              | 15 % | HR  | Croatia              | 15 % | NO  | Norway               | 15 % |
-| AU  | Australia            | 15 % | HU  | Hungary              | 10 % | NZ  | New Zealand          | 15 % |
-| AZ  | Azerbaijan           | 10 % | ID  | Indonesia            | 15 % | PH  | Philippines          | 15 % |
-| BA  | Bosnia & Herzegovina | 15 % | IE  | Ireland              | 15 % | PK  | Pakistan             | 15 % |
-| BD  | Bangladesh           | 15 % | IL  | Israel               | 10 % | PT  | Portugal             | 15 % |
-| BE  | Belgium              | 10 % | IN  | India                | 10 % | QA  | Qatar                | 5 %  |
-| BG  | Bulgaria             | 10 % | IR  | Iran                 | 7 %  | RO  | Romania              | 15 % |
-| BR  | Brazil               | 15 % | IS  | Iceland              | 15 % | RS  | Serbia               | 15 % |
-| BY  | Belarus              | 15 % | IT  | Italy                | 10 % | SA  | Saudi Arabia         | 5 %  |
-| CA  | Canada               | 15 % | JO  | Jordan               | 10 % | SE  | Sweden               | 15 % |
-| CH  | Switzerland          | 15 % | JP  | Japan                | 10 % | SG  | Singapore            | 10 % |
-| CL  | Chile                | 15 % | KG  | Kyrgyzstan           | 10 % | SI  | Slovenia             | 15 % |
-| CN  | China                | 10 % | KR  | Korea (South)        | 10 % | SK  | Slovak Republic      | 5 %  |
-| CY  | Cyprus               | 5 %  | KW  | Kuwait               | 5 %  | SY  | Syria                | 10 % |
-| CZ  | Czech Republic       | 5 %  | KZ  | Kazakhstan           | 15 % | TH  | Thailand             | 19 % |
-| DE  | Germany              | 15 % | LB  | Lebanon              | 5 %  | TJ  | Tajikistan           | 15 % |
-| DK  | Denmark              | 15 % | LK  | Sri Lanka            | 10 % | TN  | Tunisia              | 10 % |
-| DZ  | Algeria              | 15 % | LT  | Lithuania            | 15 % | TR  | Turkey               | 15 % |
-| EE  | Estonia              | 15 % | LU  | Luxembourg           | 15 % | TW  | Taiwan               | 10 % |
-| EG  | Egypt                | 12 % | LV  | Latvia               | 15 % | UA  | Ukraine              | 15 % |
-| ES  | Spain                | 15 % | MA  | Morocco              | 15 % | US  | United States        | 15 % |
-| ET  | Ethiopia             | 10 % | MD  | Moldova              | 15 % | UY  | Uruguay              | 15 % |
-| FI  | Finland              | 15 % | ME  | Montenegro           | 15 % | UZ  | Uzbekistan           | 15 % |
-| FR  | France               | 15 % | MK  | North Macedonia      | 15 % | VN  | Vietnam              | 15 % |
-|     |                      |      | MN  | Mongolia             | 10 % | ZA  | South Africa         | 15 % |
-|     |                      |      | MT  | Malta                | 10 % | ZM  | Zambia               | 15 % |
-|     |                      |      | MX  | Mexico               | 15 % | ZW  | Zimbabwe             | 15 % |
+| ISO | Country              | Rate | ISO | Country         | Rate | ISO | Country         | Rate |
+| --- | -------------------- | ---- | --- | --------------- | ---- | --- | --------------- | ---- |
+| AE  | United Arab Emirates | 5 %  | GB  | United Kingdom  | 10 % | MY  | Malaysia        | 5 %  |
+| AL  | Albania              | 10 % | GE  | Georgia         | 5 %  | NG  | Nigeria         | 10 % |
+| AM  | Armenia              | 10 % | GR  | Greece          | 19 % | NL  | Netherlands     | 15 % |
+| AT  | Austria              | 15 % | HR  | Croatia         | 15 % | NO  | Norway          | 15 % |
+| AU  | Australia            | 15 % | HU  | Hungary         | 10 % | NZ  | New Zealand     | 15 % |
+| AZ  | Azerbaijan           | 10 % | ID  | Indonesia       | 15 % | PH  | Philippines     | 15 % |
+| BA  | Bosnia & Herzegovina | 15 % | IE  | Ireland         | 15 % | PK  | Pakistan        | 15 % |
+| BD  | Bangladesh           | 15 % | IL  | Israel          | 10 % | PT  | Portugal        | 15 % |
+| BE  | Belgium              | 10 % | IN  | India           | 10 % | QA  | Qatar           | 5 %  |
+| BG  | Bulgaria             | 10 % | IR  | Iran            | 7 %  | RO  | Romania         | 15 % |
+| BR  | Brazil               | 15 % | IS  | Iceland         | 15 % | RS  | Serbia          | 15 % |
+| BY  | Belarus              | 15 % | IT  | Italy           | 10 % | SA  | Saudi Arabia    | 5 %  |
+| CA  | Canada               | 15 % | JO  | Jordan          | 10 % | SE  | Sweden          | 15 % |
+| CH  | Switzerland          | 15 % | JP  | Japan           | 10 % | SG  | Singapore       | 10 % |
+| CL  | Chile                | 15 % | KG  | Kyrgyzstan      | 10 % | SI  | Slovenia        | 15 % |
+| CN  | China                | 10 % | KR  | Korea (South)   | 10 % | SK  | Slovak Republic | 5 %  |
+| CY  | Cyprus               | 5 %  | KW  | Kuwait          | 5 %  | SY  | Syria           | 10 % |
+| CZ  | Czech Republic       | 5 %  | KZ  | Kazakhstan      | 15 % | TH  | Thailand        | 19 % |
+| DE  | Germany              | 15 % | LB  | Lebanon         | 5 %  | TJ  | Tajikistan      | 15 % |
+| DK  | Denmark              | 15 % | LK  | Sri Lanka       | 10 % | TN  | Tunisia         | 10 % |
+| DZ  | Algeria              | 15 % | LT  | Lithuania       | 15 % | TR  | Turkey          | 15 % |
+| EE  | Estonia              | 15 % | LU  | Luxembourg      | 15 % | TW  | Taiwan          | 10 % |
+| EG  | Egypt                | 12 % | LV  | Latvia          | 15 % | UA  | Ukraine         | 15 % |
+| ES  | Spain                | 15 % | MA  | Morocco         | 15 % | US  | United States   | 15 % |
+| ET  | Ethiopia             | 10 % | MD  | Moldova         | 15 % | UY  | Uruguay         | 15 % |
+| FI  | Finland              | 15 % | ME  | Montenegro      | 15 % | UZ  | Uzbekistan      | 15 % |
+| FR  | France               | 15 % | MK  | North Macedonia | 15 % | VN  | Vietnam         | 15 % |
+|     |                      |      | MN  | Mongolia        | 10 % | ZA  | South Africa    | 15 % |
+|     |                      |      | MT  | Malta           | 10 % | ZM  | Zambia          | 15 % |
+|     |                      |      | MX  | Mexico          | 15 % | ZW  | Zimbabwe        | 15 % |
 
 Notes:
 
@@ -428,13 +429,13 @@ Interactive Brokers Activity Statements may include depositary-receipt fees in t
 
 Why kloPIT handles them this way:
 
-| Decision / assumption | Grounding |
-| --------------------- | --------- |
-| ADR/GDR/CDI accrual rows are real broker-account fees, not parser noise. | IBKR documents ADR/GDR/CDI fees as pass-through custody/depository charges assessed to accounts holding the receipt on the record date: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php). |
-| A fee that IBKR reports as a separate cash-account debit is treated separately from the dividend payment unless the user chooses otherwise. | IBKR's fee page describes separate pass-through charges and recommends checking the instrument prospectus, so the statement row is imported as a fee instead of silently folding it into a dividend amount: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php). |
-| Default behavior is conservative: do not reduce the Polish art. 30a dividend base by ADR/GDR/CDI fees. | Polish PIT art. 30a ust. 1 pkt 4 covers dividends, and art. 30a ust. 6 states that the flat-rate tax for the listed income types is collected without reducing revenue by tax-deductible costs: [PIT Act art. 30a](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/). |
-| Foreign dividend tax and foreign tax credit remain in PIT-38 section G. | The Ministry of Finance PIT-38 guidance for 2025 describes foreign art. 30a income, including dividends, and the art. 30a ust. 9 foreign-tax-credit cap: [podatki.gov.pl — PIT-38 za 2025 rok](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/). |
-| An opt-in setting exists because a user may have broker/prospectus/tax-advisor evidence that the fee should be treated as reducing a specific dividend rather than as a separate cost. | IBKR points users to the ADR/GDR/CDI prospectus for fee details, while the Polish sources above do not directly resolve every broker-reporting pattern. The setting keeps this judgment explicit and auditable. |
+| Decision / assumption                                                                                                                                                                  | Grounding                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ADR/GDR/CDI accrual rows are real broker-account fees, not parser noise.                                                                                                               | IBKR documents ADR/GDR/CDI fees as pass-through custody/depository charges assessed to accounts holding the receipt on the record date: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php).                                                                     |
+| A fee that IBKR reports as a separate cash-account debit is treated separately from the dividend payment unless the user chooses otherwise.                                            | IBKR's fee page describes separate pass-through charges and recommends checking the instrument prospectus, so the statement row is imported as a fee instead of silently folding it into a dividend amount: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php). |
+| Default behavior is conservative: do not reduce the Polish art. 30a dividend base by ADR/GDR/CDI fees.                                                                                 | Polish PIT art. 30a ust. 1 pkt 4 covers dividends, and art. 30a ust. 6 states that the flat-rate tax for the listed income types is collected without reducing revenue by tax-deductible costs: [PIT Act art. 30a](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/).                 |
+| Foreign dividend tax and foreign tax credit remain in PIT-38 section G.                                                                                                                | The Ministry of Finance PIT-38 guidance for 2025 describes foreign art. 30a income, including dividends, and the art. 30a ust. 9 foreign-tax-credit cap: [podatki.gov.pl — PIT-38 za 2025 rok](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/).                                                      |
+| An opt-in setting exists because a user may have broker/prospectus/tax-advisor evidence that the fee should be treated as reducing a specific dividend rather than as a separate cost. | IBKR points users to the ADR/GDR/CDI prospectus for fee details, while the Polish sources above do not directly resolve every broker-reporting pattern. The setting keeps this judgment explicit and auditable.                                                                                                 |
 
 When the setting **Reduce dividends by matched ADR/GDR fees** is enabled, kloPIT matches an ADR/GDR/CDI fee to a dividend only by the same payment date and the same ISIN or symbol, and only in the same currency. The reduction is capped at the dividend amount, so it cannot create a negative dividend base.
 
@@ -491,11 +492,11 @@ foreignTaxPln   = 0 (IBKR LLC — US portfolio interest exemption)
 
 Two distinct rounding functions are used, matching separate legal provisions:
 
-| Function         | Legal basis                                                                         | Algorithm                                                  | Used for                                                                                 |
-| ---------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `roundToFullPln` | [Art. 63 § 1 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/)  | `Math.round(amount)` — mathematical rounding to full złoty | Tax base (poz. 31), capital gains tax due (poz. 35), crypto placeholders (poz. 41/45), monthly placeholder fields |
+| Function         | Legal basis                                                                         | Algorithm                                                    | Used for                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `roundToFullPln` | [Art. 63 § 1 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/)  | `Math.round(amount)` — mathematical rounding to full złoty   | Tax base (poz. 31), capital gains tax due (poz. 35), crypto placeholders (poz. 41/45), monthly placeholder fields      |
 | `roundToGrosz`   | Form field precision (`zł, gr`)                                                     | `Math.round((amount + EPSILON) × 100) / 100` — nearest grosz | PIT-38 Section C totals/gain/loss (poz. 22/23/26/27/28/29), foreign tax credit (poz. 48), payment summary (poz. 51/52) |
-| `roundToGroszUp` | [Art. 63 § 1a Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/) | `Math.ceil(amount × 100) / 100` — ceiling to full groszy   | Dividend/interest tax amount (poz. 47), dividend/interest tax difference (poz. 49) |
+| `roundToGroszUp` | [Art. 63 § 1a Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/) | `Math.ceil(amount × 100) / 100` — ceiling to full groszy     | Dividend/interest tax amount (poz. 47), dividend/interest tax difference (poz. 49)                                     |
 
 **`roundToGroszUp` precision handling:** Uses `+(amount * 100).toFixed(10)` before `Math.ceil` to avoid floating-point artifacts (e.g., `0.1 + 0.2 = 0.30000000000000004`).
 
@@ -510,10 +511,12 @@ Two distinct rounding functions are used, matching separate legal provisions:
 The `buildPit38()` function maps aggregated tax data to the official PIT-38(18) form fields. Here is the exact computation for each populated field:
 
 **Official grounding for field precision and labels:**
+
 - [PIT-38 (18) form page on podatki.gov.pl](https://www.podatki.gov.pl/podatki-osobiste/pit/formularze/) and the linked [official PIT-38(18) PDF](https://www.gov.pl/attachment/1874d956-4063-4a9c-a65c-ab7b6bc7aa30)
 - [Official PIT-38 brochure for 2025](https://www.podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf)
 
 The official PIT-38(18) form distinguishes between two kinds of amount fields:
+
 - `zł, gr` fields: for example `poz. 20-30`, `33-34`, `36-40`, `43-44`, `47-49`
 - full-PLN fields: for example `poz. 31`, `35`, `41`, `45`, and monthly fields in section `H`
 
@@ -596,6 +599,7 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 **Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) and PIT/ZG(8) section C.3 — PIT/ZG is filed per country for income/tax settled in PIT-38 under art. 30b.
 
 **Official grounding for field precision and labels:**
+
 - [PIT/ZG page on gov.pl](https://www.gov.pl/web/finanse/pitzg)
 - [Official PIT/ZG(8) PDF](https://www.gov.pl/attachment/213803ec-f7e6-4b15-b643-e25dc145e2bd)
 
@@ -827,7 +831,7 @@ The app supports **three languages:**
 **Process:**
 
 1. **Load data** — Fetch all trades, dividends, withholding taxes, corporate actions, and carry-in positions from your session in IndexedDB
-2. **Resolve exchange rates** — For each transaction, fetch the NBP Table A average rate from the last business day before the transaction date. Each trade gets two rates (amount + commission). Each dividend and withholding tax entry gets its own rate.
+2. **Resolve exchange rates** — For each transaction, fetch the NBP Table A average rate from the last business day before the event date. Each trade gets two rates (amount + commission), optionally based on estimated T+2 settlement dates when that session setting is enabled. Each dividend and withholding tax entry gets its own rate.
 3. **Capital gains** (`calculateCapitalGains`):
    - Seed carry-in positions into FIFO queues (cost = 0, already claimed)
    - Build unified timeline of trades + corporate actions, sorted chronologically
@@ -979,23 +983,23 @@ A: Losses are tracked and can offset gains up to limits, or be carried forward 5
 
 Key Polish tax law provisions used in kloPIT calculations:
 
-| Topic                            | Legal basis                        | Link                                                                                     |
-| -------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| PIT-38 form obligation           | Art. 45 ust. 1a pkt 1 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)  |
-| Capital gains tax 19%            | Art. 30b ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) |
-| Dividend tax 19%                 | Art. 30a ust. 1 pkt 4 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
-| Credit interest tax 19%          | Art. 30a ust. 1 pkt 3 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
-| Foreign tax deduction cap        | Art. 30a ust. 9 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) |
-| FIFO method                      | Art. 24 ust. 10 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)  |
-| Exchange rate conversion         | Art. 11a ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) |
-| Loss carry-forward (5 years)     | Art. 9 ust. 3 ustawy o PIT         | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)   |
-| Rounding to full PLN             | Art. 63 § 1 Ordynacji podatkowej   | [lexlege.pl](https://lexlege.pl/ordynacja-podatkowa/art-63/)                             |
-| Rounding to full groszy          | Art. 63 § 1a Ordynacji podatkowej  | [lexlege.pl](https://lexlege.pl/ordynacja-podatkowa/art-63/)                             |
-| OPP 1.5% donation                | Art. 45c ustawy o PIT              | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/) |
-| Filing deadline (April 30)       | Art. 45 ust. 1 ustawy o PIT        | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)  |
-| PIT/ZG attachment                | Art. 45 ust. 1a ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)  |
-| US-Poland tax treaty (dividends) | Art. 11 Konwencji PL-US            | [isap.sejm.gov.pl](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19760310178)   |
-| DTT withholding rates (all countries) | Polish double-tax treaties (UPO) | [PwC Worldwide Tax Summaries — Poland](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes) |
+| Topic                                 | Legal basis                        | Link                                                                                                    |
+| ------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| PIT-38 form obligation                | Art. 45 ust. 1a pkt 1 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| Capital gains tax 19%                 | Art. 30b ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                |
+| Dividend tax 19%                      | Art. 30a ust. 1 pkt 4 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| Credit interest tax 19%               | Art. 30a ust. 1 pkt 3 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| Foreign tax deduction cap             | Art. 30a ust. 9 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| FIFO method                           | Art. 24 ust. 10 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                 |
+| Exchange rate conversion              | Art. 11a ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                |
+| Loss carry-forward (5 years)          | Art. 9 ust. 3 ustawy o PIT         | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)                  |
+| Rounding to full PLN                  | Art. 63 § 1 Ordynacji podatkowej   | [lexlege.pl](https://lexlege.pl/ordynacja-podatkowa/art-63/)                                            |
+| Rounding to full groszy               | Art. 63 § 1a Ordynacji podatkowej  | [lexlege.pl](https://lexlege.pl/ordynacja-podatkowa/art-63/)                                            |
+| OPP 1.5% donation                     | Art. 45c ustawy o PIT              | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/)                |
+| Filing deadline (April 30)            | Art. 45 ust. 1 ustawy o PIT        | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| PIT/ZG attachment                     | Art. 45 ust. 1a ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| US-Poland tax treaty (dividends)      | Art. 11 Konwencji PL-US            | [isap.sejm.gov.pl](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19760310178)                  |
+| DTT withholding rates (all countries) | Polish double-tax treaties (UPO)   | [PwC Worldwide Tax Summaries — Poland](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes) |
 
 **Full legal texts:**
 
@@ -1006,19 +1010,19 @@ Key Polish tax law provisions used in kloPIT calculations:
 
 ## Glossary
 
-| Term                 | Meaning                                                                        |
-| -------------------- | ------------------------------------------------------------------------------ |
-| **Credit Interest** | Interest earned on uninvested cash held at a broker                    |
-| **FIFO**             | First In, First Out — method to match sales with purchases                     |
-| **NBP**              | Narodowy Bank Polski (Polish National Bank) — provides official exchange rates |
-| **PIT-38**           | Polish tax form for capital gains and dividends                                |
-| **PIT/ZG**           | Attachment to PIT-38 for foreign income/tax — one per country                  |
+| Term                 | Meaning                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| **Credit Interest**  | Interest earned on uninvested cash held at a broker                                |
+| **FIFO**             | First In, First Out — method to match sales with purchases                         |
+| **NBP**              | Narodowy Bank Polski (Polish National Bank) — provides official exchange rates     |
+| **PIT-38**           | Polish tax form for capital gains and dividends                                    |
+| **PIT/ZG**           | Attachment to PIT-38 for foreign income/tax — one per country                      |
 | **OPP**              | Optional 1.5% request to transfer part of tax due to a public benefit organization |
-| **Withholding Tax**  | Tax deducted by foreign broker (usually 15% US dividends)                      |
-| **Carry-In**         | Shares owned from prior tax years                                              |
-| **Corporate Action** | Stock split, dividend spin-off, etc.                                           |
-| **Session**          | One tax year's workspace (trades + dividends + results)                        |
-| **IndexedDB**        | Browser database where your data is stored locally                             |
+| **Withholding Tax**  | Tax deducted by foreign broker (usually 15% US dividends)                          |
+| **Carry-In**         | Shares owned from prior tax years                                                  |
+| **Corporate Action** | Stock split, dividend spin-off, etc.                                               |
+| **Session**          | One tax year's workspace (trades + dividends + results)                            |
+| **IndexedDB**        | Browser database where your data is stored locally                                 |
 
 ---
 

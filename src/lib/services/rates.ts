@@ -7,6 +7,7 @@ const log = createLogger('rates');
 const PREFETCH_DAYS_BEFORE = 14;
 const PREFETCH_DAYS_AFTER = 78; // 14 + 78 + 1 = 93 (max NBP range)
 const MAX_WALK_BACK_DAYS = 14;
+const TRADE_SETTLEMENT_BUSINESS_DAYS = 2;
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -33,6 +34,18 @@ function addDays(d: Date, n: number): Date {
 function isWeekend(d: Date): boolean {
   const dow = d.getDay();
   return dow === 0 || dow === 6;
+}
+
+function addBusinessDays(d: Date, days: number): Date {
+  const result = new Date(d);
+  let remaining = days;
+  while (remaining > 0) {
+    result.setDate(result.getDate() + 1);
+    if (!isWeekend(result)) {
+      remaining--;
+    }
+  }
+  return result;
 }
 
 function eachDay(start: Date, end: Date): string[] {
@@ -204,16 +217,17 @@ export async function getCachedRates(args: {
 }
 
 /**
- * Get the NBP fixing rate for a transaction.
+ * Get the NBP fixing rate for a reference date.
  *
  * Per Polish tax law, uses the average NBP rate from the last business day
- * BEFORE the transaction date. Walks backwards skipping weekends and
+ * BEFORE the reference date. Walks backwards skipping weekends and
  * confirmed holidays (cached as `rate: null`). If a date has no cache
  * entry (gap), triggers a prefetch before continuing.
  */
 export async function getFixingRate(args: {
   currency: string;
   date: string;
+  settlementBusinessDays?: number;
 }): Promise<NbpRate> {
   const upperCurrency = args.currency.toUpperCase();
 
@@ -221,8 +235,12 @@ export async function getFixingRate(args: {
     return { date: args.date, rate: 1, currency: 'PLN', table: '' };
   }
 
-  const txDate = parseDate(args.date);
-  let candidate = addDays(txDate, -1);
+  const referenceDate =
+    args.settlementBusinessDays === undefined
+      ? parseDate(args.date)
+      : addBusinessDays(parseDate(args.date), args.settlementBusinessDays);
+  const referenceDateStr = toDateString(referenceDate);
+  let candidate = addDays(referenceDate, -1);
 
   for (let i = 0; i < MAX_WALK_BACK_DAYS; i++) {
     const dateStr = toDateString(candidate);
@@ -281,11 +299,22 @@ export async function getFixingRate(args: {
   }
 
   log.warn(
-    `getFixingRate: gave up walking back ${String(MAX_WALK_BACK_DAYS)} days for ${upperCurrency} before ${args.date}`,
+    `getFixingRate: gave up walking back ${String(MAX_WALK_BACK_DAYS)} days for ${upperCurrency} before ${referenceDateStr}`,
   );
   throw new Error(
-    `Could not find NBP fixing rate for ${upperCurrency} within ${String(MAX_WALK_BACK_DAYS)} days before ${args.date}`,
+    `Could not find NBP fixing rate for ${upperCurrency} within ${String(MAX_WALK_BACK_DAYS)} days before ${referenceDateStr}`,
   );
+}
+
+/** Get the NBP fixing rate using an estimated T+2 settlement date for securities trades. */
+export async function getTradeSettlementFixingRate(args: {
+  currency: string;
+  date: string;
+}): Promise<NbpRate> {
+  return getFixingRate({
+    ...args,
+    settlementBusinessDays: TRADE_SETTLEMENT_BUSINESS_DAYS,
+  });
 }
 
 /** Collect all unique (currency, date) pairs from session data and prefetch rates */
@@ -339,10 +368,12 @@ export async function fetchRatesForSession(args: {
 
   allDates.sort((a, b) => a.getTime() - b.getTime());
 
-  // Extend range: 14 days before earliest (for fixing rate walk-back)
-  // and to the last date
+  // Extend range for fixing rate walk-back and optional T+2 trade settlement.
   const earliest = addDays(allDates[0], -PREFETCH_DAYS_BEFORE);
-  const latest = allDates[allDates.length - 1];
+  const latest = addBusinessDays(
+    allDates[allDates.length - 1],
+    TRADE_SETTLEMENT_BUSINESS_DAYS,
+  );
 
   const startDate = toDateString(earliest);
   const endDate = toDateString(latest);

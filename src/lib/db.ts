@@ -51,6 +51,8 @@ export interface SessionRecord {
   showDividendsInPitZg?: boolean;
   /** Subtract parsed ADR/GDR fees from matched dividend income. Disabled by default. */
   reduceAdrFeesFromDividends?: boolean;
+  /** Use estimated T+2 settlement dates for trade NBP rate lookups. Disabled by default. */
+  useSettlementDateForTradeRates?: boolean;
 }
 
 export interface ImportedFileRecord {

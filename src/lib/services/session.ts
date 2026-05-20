@@ -16,6 +16,7 @@ export async function createSession(args: {
     status: 'draft',
     showDividendsInPitZg: false,
     reduceAdrFeesFromDividends: false,
+    useSettlementDateForTradeRates: false,
   };
   await db.sessions.add(session);
   return session;
@@ -48,6 +49,7 @@ export async function updateSession(args: {
       | 'calculatedAt'
       | 'showDividendsInPitZg'
       | 'reduceAdrFeesFromDividends'
+      | 'useSettlementDateForTradeRates'
     >
   >;
 }): Promise<void> {

@@ -6,13 +6,13 @@ Complete list of planned features, organized by priority tier.
 
 ## P0: High priority issues
 
-| ID       | Feature                 | Brief Description                                                                                                                                  | Status |
-| -------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| **P0.1** | Loss Carry-Forward      | 5-year loss deduction window with 50%-per-year cap (art. 9 ust. 3 updof). Replace single-number input with tracked list. UI: `/prior-losses` CRUD. | ✅     |
-| **P0.2** | W-8BEN Lapse Warnings   | Warn per-dividend when broker withheld rate exceeds treaty rate (e.g. 30% vs. 15% for USA). Surface non-recoverable excess.                        | ✅     |
-| **P0.3** | Warsaw TZ Conversion    | Convert IBKR NY timestamps to Warsaw TZ at parse time. Fixes tax-year assignment and D-1 NBP lookups.                                              |        |
-| **P0.4** | Settlement-Date D-1 NBP | Use settlement date (T+0/1/2 offset) instead of trade date for rate lookups. Aligns with art. 17 ust. 1ab updof. UI toggle on `/settings`.         |        |
-| **P0.5** | Fail-Loud IBKR Sections | Enumerate all IBKR statement sections; warn on unsupported (Options, Futures) or unknown. Prevent silent under-reporting.                          |        |
+| ID       | Feature                 | Brief Description                                                                                                                                                   | Status |
+| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **P0.1** | Loss Carry-Forward      | 5-year loss deduction window with 50%-per-year cap (art. 9 ust. 3 updof). Replace single-number input with tracked list. UI: `/prior-losses` CRUD.                  | ✅     |
+| **P0.2** | W-8BEN Lapse Warnings   | Warn per-dividend when broker withheld rate exceeds treaty rate (e.g. 30% vs. 15% for USA). Surface non-recoverable excess.                                         | ✅     |
+| **P0.3** | Warsaw TZ Conversion    | Convert IBKR NY timestamps to Warsaw TZ at parse time. Fixes tax-year assignment and D-1 NBP lookups.                                                               |        |
+| **P0.4** | Settlement-Date D-1 NBP | Optional `/settings` toggle uses an estimated T+2 business-day settlement date for trade NBP rate lookups; exact broker settlement-date import remains future work. | ✅     |
+| **P0.5** | Fail-Loud IBKR Sections | Enumerate all IBKR statement sections; warn on unsupported (Options, Futures) or unknown. Prevent silent under-reporting.                                           |        |
 
 ---
 
@@ -33,9 +33,9 @@ Ready-to-file tax outputs and performance optimizations.
 
 Income categories and audit extensions for Interactive Brokers (primary broker).
 
-| ID       | Feature         | Brief Description                                                                                                                     | Status |
-| -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| **P2.1** | Interest Income | Tax brokerage credit interest at 19% flat (art. 30a ust. 1 pkt 3). Combine with PIT-38 Section G dividend values.                     | ✅     |
+| ID       | Feature         | Brief Description                                                                                                 | Status |
+| -------- | --------------- | ----------------------------------------------------------------------------------------------------------------- | ------ |
+| **P2.1** | Interest Income | Tax brokerage credit interest at 19% flat (art. 30a ust. 1 pkt 3). Combine with PIT-38 Section G dividend values. | ✅     |
 
 ---
 

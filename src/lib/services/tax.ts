@@ -13,7 +13,11 @@ import type {
 } from '../../core/types.js';
 import { db } from '../db.js';
 import { createLogger } from '../state/logger.svelte.js';
-import { fetchRatesForSession, getFixingRate } from './rates.js';
+import {
+  fetchRatesForSession,
+  getFixingRate,
+  getTradeSettlementFixingRate,
+} from './rates.js';
 import { updateSession } from './session.js';
 
 const log = createLogger('tax');
@@ -35,9 +39,13 @@ async function tryGetFixingRate(args: {
   currency: string;
   date: string;
   scope: string;
+  useTradeSettlementDate?: boolean;
 }): Promise<{ rate: number; date: string } | undefined> {
   try {
-    const rate = await getFixingRate({
+    const getRate = args.useTradeSettlementDate
+      ? getTradeSettlementFixingRate
+      : getFixingRate;
+    const rate = await getRate({
       currency: args.currency,
       date: args.date,
     });
@@ -122,11 +130,13 @@ export async function calculateSessionTaxes(args: {
         currency: trade.currency,
         date: dateStr,
         scope: 'trade',
+        useTradeSettlementDate: session.useSettlementDateForTradeRates ?? false,
       });
       const comRate = await tryGetFixingRate({
         currency: trade.commissionCurrency,
         date: dateStr,
         scope: 'trade.commission',
+        useTradeSettlementDate: session.useSettlementDateForTradeRates ?? false,
       });
       return {
         ...trade,
