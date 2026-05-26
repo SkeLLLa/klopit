@@ -51,8 +51,9 @@ async function tryGetFixingRate(args: {
     });
     return { rate: rate.rate, date: rate.date };
   } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
     log.warn(
-      `tryGetFixingRate(${args.scope}): no rate for ${args.currency} on ${args.date}`,
+      `tryGetFixingRate(${args.scope}): no rate for ${args.currency} on ${args.date}: ${message}`,
       e,
     );
     return undefined;
