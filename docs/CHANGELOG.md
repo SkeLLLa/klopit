@@ -1,3 +1,17 @@
+## [1.24.5](https://github.com/SkeLLLa/klopit/compare/v1.24.4...v1.24.5) (2026-05-26)
+
+### 🛠 Fixes
+
+* **deps:** bump the all-minor-patch group with 8 updates ([21a2c40](https://github.com/SkeLLLa/klopit/commit/21a2c40275498aa13f5c7b1fae392965c3d56a28))
+
+### 🧾 Other
+
+* relax body-max-line-length rule in commitlint config ([d0c1424](https://github.com/SkeLLLa/klopit/commit/d0c1424bc9200f52a7a1fb83be02766f95a4021b))
+* **deps-dev:** bump @commitlint/config-conventional ([7868e01](https://github.com/SkeLLLa/klopit/commit/7868e013aef1289a6f7b55bfb5207812bc9a832b))
+* **deps-dev:** bump @commitlint/config-conventional ([a13533f](https://github.com/SkeLLLa/klopit/commit/a13533fe34b9456b0a51840d3ac75803cec2595d))
+* **deps-dev:** bump the all-minor-patch group with 6 updates ([03be20a](https://github.com/SkeLLLa/klopit/commit/03be20afc6a7188ae24fb4f11ba1d297d9d1e234))
+* **deps:** bump the all-actions group with 2 updates ([d61d088](https://github.com/SkeLLLa/klopit/commit/d61d08847b9fa7deac3f4105c738e6e3b76457b3))
+
 ## [1.24.4](https://github.com/SkeLLLa/klopit/compare/v1.24.3...v1.24.4) (2026-05-17)
 
 ### 🛠 Fixes
