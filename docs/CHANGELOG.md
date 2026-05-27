@@ -1,3 +1,9 @@
+## [1.25.0](https://github.com/SkeLLLa/klopit/compare/v1.24.5...v1.25.0) (2026-05-27)
+
+### 🚀 Features
+
+* add settlement-date trade NBP option ([f484cdd](https://github.com/SkeLLLa/klopit/commit/f484cdd53d49fb92999b86b00570a8d918e3463c))
+
 ## [1.24.5](https://github.com/SkeLLLa/klopit/compare/v1.24.4...v1.24.5) (2026-05-26)
 
 ### 🛠 Fixes
