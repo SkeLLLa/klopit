@@ -1,3 +1,15 @@
+## [1.25.2](https://github.com/SkeLLLa/klopit/compare/v1.25.1...v1.25.2) (2026-06-22)
+
+### 🧾 Other
+
+* **deps:** bump actions/checkout from 6 to 7 in the all-actions group ([0f5a4ab](https://github.com/SkeLLLa/klopit/commit/0f5a4ab1bbdf5bcf44c4bfd608f064ce03c36f71))
+* **deps:** bump codecov/codecov-action in the all-actions group ([6828373](https://github.com/SkeLLLa/klopit/commit/6828373457d7ecabd6d64ad682d4f330d64a9174))
+
+### 🛠 Fixes
+
+* **deps:** bump the all-minor-patch group across 1 directory with 11 updates ([1ac15ad](https://github.com/SkeLLLa/klopit/commit/1ac15ade4cf109b496283125d6fc6983ef23db99))
+* **deps:** bump the all-minor-patch group with 9 updates ([f7e5cc4](https://github.com/SkeLLLa/klopit/commit/f7e5cc4ce9261f648d5434df94e8457fa7559762))
+
 ## [1.25.1](https://github.com/SkeLLLa/klopit/compare/v1.25.0...v1.25.1) (2026-06-01)
 
 ### 🛠 Fixes
