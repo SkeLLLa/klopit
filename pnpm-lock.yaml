@@ -129,8 +129,8 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(svelte@5.56.3(@typescript-eslint/types@8.61.1))
       svelte-sitemap:
-        specifier: ^3.2.0
-        version: 3.2.0
+        specifier: ^4.0.3
+        version: 4.0.3(vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.4))
       tailwindcss:
         specifier: ^4.3.1
         version: 4.3.1
@@ -3765,10 +3765,15 @@ packages:
       svelte:
         optional: true
 
-  svelte-sitemap@3.2.0:
-    resolution: {integrity: sha512-229lnnP+ILx+lagMmGnqck+wXx78lLTBprTX0plCkx2dkdUTXw9vW3w/pDd5WQy4Ks9yIbU8/Y1lly5jYg/sjQ==}
+  svelte-sitemap@4.0.3:
+    resolution: {integrity: sha512-qLcx/7lZsJoMCP4eXFsKALNem8I+4rj05SZB+C8Bl/9QHCRbBQyOi+1rG7oA3jAn12k9EKuI1+K4oJOPSLVDeA==}
     engines: {node: '>= 14.17.0'}
     hasBin: true
+    peerDependencies:
+      vite: '>=5.0.0'
+    peerDependenciesMeta:
+      vite:
+        optional: true
 
   svelte@5.56.3:
     resolution: {integrity: sha512-w7JvrM5IFl5cmfbY0TLik9o7mjRUJmRMhOR51tBPu708Gr/MjbGs7VnJnr/B0CaXeI4vtnOh7RKxDr0cwhMdDA==}
@@ -7840,12 +7845,14 @@ snapshots:
     optionalDependencies:
       svelte: 5.56.3(@typescript-eslint/types@8.61.1)
 
-  svelte-sitemap@3.2.0:
+  svelte-sitemap@4.0.3(vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.4)):
     dependencies:
       fast-glob: 3.3.3
       jiti: 2.7.0
       minimist: 1.2.8
       xmlbuilder2: 4.0.3
+    optionalDependencies:
+      vite: 8.0.16(@types/node@25.9.2)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.4)
 
   svelte@5.56.3(@typescript-eslint/types@8.61.1):
     dependencies:
@@ -8148,7 +8155,7 @@ snapshots:
       '@oozcitak/dom': 2.0.2
       '@oozcitak/infra': 2.0.2
       '@oozcitak/util': 10.0.0
-      js-yaml: 4.1.1
+      js-yaml: 4.2.0
 
   xtend@4.0.2: {}
 
