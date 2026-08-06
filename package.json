@@ -72,7 +72,7 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@skellla/lint-config": "^3.0.5",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.66.0",
+    "@sveltejs/kit": "^2.69.1",
     "@tailwindcss/vite": "^4.3.1",
     "@tsconfig/node-lts": "^24.0.0",
     "@tsconfig/strictest": "^2.0.8",
