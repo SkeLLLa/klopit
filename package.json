@@ -33,7 +33,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm run build:app",
-    "build:app": "pnpm run generate:ai && vite build && svelte-sitemap",
+    "build:app": "pnpm run generate:ai && vite build",
     "build:clean": "rm -rf build",
     "dev": "vite dev",
     "generate:ai": "node --import @oxc-node/core/register scripts/generate-ai-metadata.ts",

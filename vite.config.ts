@@ -4,6 +4,7 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
+import { svelteSitemap } from 'svelte-sitemap/vite';
 import { defineConfig } from 'vite';
 
 const pkg: unknown = JSON.parse(readFileSync('package.json', 'utf-8'));
@@ -62,6 +63,37 @@ export default defineConfig(({ command }) => {
         outdir: './src/lib/paraglide',
         strategy: ['url', 'cookie', 'baseLocale'],
         emitTsDeclarations: true,
+      }),
+      // Writes build/sitemap.xml after the static adapter has written build/
+      svelteSitemap({
+        domain: 'https://klopit.co.pl',
+        trailingSlashes: true,
+        ignore: [
+          'data/**',
+          'dashboard/**',
+          'tax-form/**',
+          'settings/**',
+          'prior-losses/**',
+          'rates/**',
+          'docs/brokerzy/**',
+          'docs/dywidendy/**',
+          'pl/data/**',
+          'pl/dashboard/**',
+          'pl/tax-form/**',
+          'pl/settings/**',
+          'pl/prior-losses/**',
+          'pl/rates/**',
+          'pl/docs/brokerzy/**',
+          'pl/docs/dywidendy/**',
+          'uk/data/**',
+          'uk/dashboard/**',
+          'uk/tax-form/**',
+          'uk/settings/**',
+          'uk/prior-losses/**',
+          'uk/rates/**',
+          'uk/docs/brokerzy/**',
+          'uk/docs/dywidendy/**',
+        ],
       }),
     ],
   };
