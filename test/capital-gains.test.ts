@@ -1819,4 +1819,182 @@ void describe('carry-in snapshots (regressions)', () => {
     assert.equal(result[0].costRateUnavailable, true);
     assert.equal(result[0].costBasisMissing, undefined);
   });
+  void it('N1: an inconsistent later snapshot is reported', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [sell(10, new Date(2024, 2, 1))],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({ quantity: 10, year: 2022 }),
+        carryIn({ quantity: 5, year: 2023 }),
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.equal(result.length, 1);
+    assert.deepEqual(
+      warnings.map((w) => w.kind),
+      ['carry-in-inconsistent'],
+    );
+  });
+
+  void it('N2: shares sold before a dated carry-in are seeded at the sell', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        sell(2, new Date(2023, 5, 1)),
+        plnTrade({
+          type: 'buy',
+          quantity: 8,
+          price: 40,
+          datetime: new Date(2023, 8, 15),
+        }),
+        sell(8, new Date(2024, 2, 1)),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({ quantity: 8, acquisitionDate: new Date(2023, 8, 1) }),
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costPln, 320); // the imported buy, not the carry-in
+    assert.equal(result[0].costBasisMissing, undefined);
+    const overlap = warnings.find((w) => w.kind === 'carry-in-overlap');
+    assert.ok(overlap?.kind === 'carry-in-overlap');
+    assert.equal(overlap.coveredQuantity, 8);
+    assert.equal(overlap.year, 2023);
+  });
+
+  void it('N4: merger lots reach a target keyed by ISIN without targetIsin', () => {
+    const merger: EnrichedCorporateAction = {
+      type: 'merger',
+      symbol: 'OLD',
+      isin: 'US0000000001',
+      targetSymbol: 'NEW',
+      datetime: new Date(2024, 0, 10),
+      numerator: 0,
+      denominator: 0,
+      conversionRatio: 1,
+      cashExchangeRate: 1,
+      cashRateUnavailable: false,
+    };
+    const result = calculateCapitalGains({
+      trades: [
+        plnTrade({
+          symbol: 'OLD',
+          isin: 'US0000000001',
+          type: 'buy',
+          quantity: 10,
+          price: 40,
+          datetime: new Date(2023, 2, 1),
+        }),
+        plnTrade({
+          symbol: 'NEW',
+          isin: 'US0000000002',
+          type: 'sell',
+          quantity: 10,
+          price: 100,
+          proceeds: 1000,
+          datetime: new Date(2024, 2, 1),
+        }),
+      ],
+      corporateActions: [merger],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    const sold = result.find((r) => r.symbol === 'NEW' && r.type === 'sell');
+    assert.ok(sold);
+    assert.equal(sold.costPln, 400);
+  });
+
+  void it('N5: a fully covered snapshot warns and seeds nothing', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        plnTrade({
+          type: 'buy',
+          quantity: 10,
+          price: 40,
+          datetime: new Date(2023, 2, 1),
+        }),
+        sell(10, new Date(2024, 2, 1)),
+      ],
+      corporateActions: [],
+      carryInPositions: [carryIn({ quantity: 10 })],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.equal(result[0].costPln, 400);
+    assert.equal(result[0].costBasisMissing, undefined);
+    const overlap = warnings.find((w) => w.kind === 'carry-in-overlap');
+    assert.ok(overlap?.kind === 'carry-in-overlap');
+    assert.equal(overlap.coveredQuantity, 10);
+  });
+
+  void it('N6: a corporate-action ISIN does not split symbol-keyed trades', () => {
+    const split: EnrichedCorporateAction = {
+      type: 'stock-split',
+      symbol: 'AAPL',
+      isin: ISIN,
+      datetime: new Date(2020, 0, 10),
+      numerator: 2,
+      denominator: 1,
+      cashExchangeRate: 0,
+      cashRateUnavailable: false,
+    };
+    const result = calculateCapitalGains({
+      trades: [
+        plnTrade({
+          isin: undefined,
+          type: 'sell',
+          quantity: 10,
+          price: 100,
+          proceeds: 1000,
+          datetime: new Date(2024, 2, 1),
+        }),
+      ],
+      corporateActions: [split],
+      carryInPositions: [carryIn({ isin: undefined, quantity: 10 })],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('N7: no cost pro-rated warning for a row that seeds nothing', () => {
+    const warnings: CarryInWarning[] = [];
+    calculateCapitalGains({
+      trades: [
+        plnTrade({
+          type: 'buy',
+          quantity: 5,
+          price: 40,
+          datetime: new Date(2023, 6, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({
+          quantity: 5,
+          acquisitionDate: new Date(2022, 0, 10),
+          costPln: 500,
+          costMissing: false,
+        }),
+        carryIn({
+          quantity: 5,
+          acquisitionDate: new Date(2023, 5, 10),
+          costPln: 600,
+          costMissing: false,
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.deepEqual(
+      warnings.map((w) => w.kind),
+      ['carry-in-overlap'],
+    );
+  });
 });

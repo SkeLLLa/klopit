@@ -805,3 +805,36 @@ void describe('calculateTaxes — missingRateCount', () => {
     assert.equal(result.summary.missingRateCount, 0);
   });
 });
+
+void describe('calculateTaxes — inconsistentCarryInCount', () => {
+  void it('counts carry-in snapshots that contradict the imported history', () => {
+    const base = {
+      symbol: 'AAPL',
+      costPln: 0,
+      rateUnavailable: false,
+      costMissing: true,
+    };
+    const result = calculateTaxes({
+      trades: [
+        makeTrade({
+          datetime: new Date(2024, 2, 1),
+          type: 'sell',
+          quantity: 10,
+          price: 120,
+          proceeds: 1200,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [
+        { ...base, quantity: 10, year: 2022 },
+        { ...base, quantity: 5, year: 2023 },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.summary.inconsistentCarryInCount, 1);
+    assert.equal(result.summary.missingCostCount, 1);
+  });
+});

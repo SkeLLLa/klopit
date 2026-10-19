@@ -173,4 +173,14 @@ void describe('v14 migration: migrateCarryInPositionV14', () => {
     assert.equal(old.isin, 'US0000000001');
     assert.equal(renamed.isin, 'US0000000002');
   });
+
+  void it('ignores a corporate-action ISIN for a symbol traded without ISIN', () => {
+    const isinMap = buildSessionSymbolIsinMap(
+      [{ sessionId: 's1', symbol: 'OLD' }],
+      [{ sessionId: 's1', symbol: 'OLD', isin: 'US0000000001' }],
+    );
+    const row: LegacyCarryInRow = { sessionId: 's1', symbol: 'OLD' };
+    migrateCarryInPositionV14(row, isinMap);
+    assert.equal(row.isin, undefined);
+  });
 });

@@ -120,6 +120,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     creditInterestResults,
     year: taxPeriod.year,
     lossDeduction,
+    carryInWarnings,
   });
 
   const pit38 = buildPit38({
@@ -154,6 +155,7 @@ function buildSummary(args: {
   creditInterestResults: CreditInterestResult[];
   year: number;
   lossDeduction: ApplyLossCarryForwardResult;
+  carryInWarnings: CarryInWarning[];
 }): TaxSummary {
   const totalProceedsPln = sumProceeds({ rows: args.tradeResults });
   const totalCostPln = sumCost({ rows: args.tradeResults });
@@ -202,5 +204,8 @@ function buildSummary(args: {
       args.creditInterestResults.filter((r) => r.rateUnavailable).length,
     missingCostCount: args.tradeResults.filter((r) => r.costBasisMissing)
       .length,
+    inconsistentCarryInCount: args.carryInWarnings.filter(
+      (w) => w.kind === 'carry-in-inconsistent',
+    ).length,
   };
 }

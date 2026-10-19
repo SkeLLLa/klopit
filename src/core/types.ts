@@ -393,6 +393,12 @@ export interface TaxSummary {
    * carry-in lot whose acquisition cost is unknown (counted as 0).
    */
   missingCostCount: number;
+  /**
+   * Number of carry-in snapshots that contradict the imported history (it
+   * implies more shares than the broker reported). They are skipped, so the
+   * holdings may contain shares that no longer exist.
+   */
+  inconsistentCarryInCount: number;
 }
 
 /**

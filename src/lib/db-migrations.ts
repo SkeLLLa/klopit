@@ -93,19 +93,26 @@ function sessionSymbolKey(sessionId: string, symbol: string): string {
 
 /**
  * First non-empty ISIN per (session, upper-cased symbol) from trades, then from
- * corporate actions (source and merger-target sides).
+ * corporate actions (source and merger-target sides). A corporate-action ISIN
+ * is skipped for a symbol that has trades without an ISIN: those trades are
+ * keyed by symbol in FIFO, so the carry-in must be too.
  */
 export function buildSessionSymbolIsinMap(
   trades: Iterable<LegacyTradeIsinRow>,
   corporateActions: Iterable<LegacyCorporateActionIsinRow> = [],
 ): Map<string, string> {
   const map = new Map<string, string>();
+  const symbolKeyed = new Set<string>();
+  for (const trade of trades) {
+    const key = sessionSymbolKey(trade.sessionId, trade.symbol);
+    if (!trade.isin) symbolKeyed.add(key);
+    else if (!map.has(key)) map.set(key, trade.isin);
+  }
   const add = (sessionId: string, symbol?: string, isin?: string) => {
     if (!symbol || !isin) return;
     const key = sessionSymbolKey(sessionId, symbol);
-    if (!map.has(key)) map.set(key, isin);
+    if (!map.has(key) && !symbolKeyed.has(key)) map.set(key, isin);
   };
-  for (const trade of trades) add(trade.sessionId, trade.symbol, trade.isin);
   for (const action of corporateActions) {
     add(action.sessionId, action.symbol, action.isin);
     add(action.sessionId, action.targetSymbol, action.targetIsin);
