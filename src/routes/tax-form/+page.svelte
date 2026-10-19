@@ -14,6 +14,7 @@
 
   const log = createLogger('tax-form');
   import { isSessionStale } from '$lib/utils/stale.js';
+  import { oppTaxDueBase } from '../../core/tax/opp.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
   import PitZgView from './PitZgView.svelte';
@@ -274,7 +275,7 @@
             <SectionH {pit38} />
             <OppDonation
               sessionId={session.id}
-              taxDueBase={pit38[35]}
+              taxDueBase={oppTaxDueBase({ pit38 })}
               krs={session.oppKrs ?? ''}
               details={session.oppDetails ?? ''}
               consent={session.oppConsent ?? false}

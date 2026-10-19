@@ -6,6 +6,7 @@
   import { updateSession } from '$lib/services/session.js';
   import { taxSupportFunds } from '$lib/constants/support-funds.js';
   import { debounce } from '$lib/utils/debounce.js';
+  import { oppAmountPln } from '../../core/tax/opp.js';
 
   let {
     sessionId,
@@ -44,8 +45,9 @@
     selectedFundId === CUSTOM || selectedFundId === '',
   );
 
-  // Twój e-PIT PIT-38 bases this value on poz. 35, rounded down to full 10 groszy.
-  const oppAmount = $derived(Math.floor(taxDueBase * 0.015 * 10) / 10);
+  // Art. 45c updof / PIT-38(18) poz. 67: 1.5% of poz. 35 + poz. 45,
+  // rounded down to full 10 groszy.
+  const oppAmount = $derived(oppAmountPln({ taxDuePln: taxDueBase }));
 
   const oppAmountRaw = $derived(oppAmount.toFixed(2));
   const consentRaw = $derived(consentValue ? 'X' : '');

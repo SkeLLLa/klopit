@@ -579,12 +579,13 @@ Where `round_to_groszy` uses `Math.round(amount × 100) / 100` (standard roundin
 
 ```
 poz66 = selected OPP KRS
-poz67 = floor((poz35 + supported poz45) × 0.015 × 10) / 10
+poz67 = 1.5% × (poz35 + supported poz45), rounded down to full 10 groszy
 poz68 = optional specific purpose
 poz69 = consent to pass taxpayer details and poz67 amount to the OPP
 ```
 
 kloPIT does not currently calculate crypto Section F, so supported `poz45` is always 0 and `poz67` is effectively based on `poz35`.
+The amount is computed in integer grosze (`src/core/tax/opp.ts`) so float error can never drop it by 10 groszy (e.g. 180 zł → 2.70, not 2.60).
 
 #### Sections H & I — Monthly Flat-Rate Tax (placeholders, all zeros)
 
