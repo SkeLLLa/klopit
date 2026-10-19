@@ -490,6 +490,7 @@ void describe('calculateCapitalGains', () => {
           type: 'sell',
           quantity: 10,
           proceeds: 2000,
+          commission: 0,
           datetime: new Date(2024, 3, 1),
         }),
       ],
