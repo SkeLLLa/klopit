@@ -967,17 +967,18 @@ The app supports **three languages:**
 GitHub Pages cannot set response headers, so SvelteKit's `kit.csp` (hash mode, configured in `vite.config.ts`) writes the policy as a `<meta http-equiv>` tag into every prerendered page and hashes its own inline bootstrap script:
 
 ```
-default-src 'self'; worker-src 'self' blob:; connect-src 'self' https://api.nbp.pl;
+default-src 'self'; worker-src 'self'; connect-src 'self' https://api.nbp.pl;
 font-src 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self' 'sha256-…';
 style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self'
 ```
 
-- Data cannot leave the browser except to `api.nbp.pl` (exchange rates). `frame-ancestors`, `report-uri` and `sandbox` are not possible in a meta tag.
+- Data cannot leave the browser except to `api.nbp.pl` (exchange rates). Clickjacking stays unmitigated: `frame-ancestors`, `report-uri` and `sandbox` cannot be set through a meta tag and GitHub Pages sends no headers.
 - The theme/sidebar pre-paint script lives in `static/theme-init.js` and loads via `<script src>`, so scripts need no `'unsafe-inline'`.
 - `'unsafe-inline'` stays for styles only: Unovis (emotion) injects `<style>` elements at runtime. Fonts are never inlined as `data:` URIs (`build.assetsInlineLimit` in `vite.config.ts`), so `font-src` is `'self'`.
-- unpdf (pdf.js) parses PDFs on the main thread and needs no `'wasm-unsafe-eval'`; `blob:` workers are allowed as a precaution.
+- unpdf (pdf.js) parses PDFs on the main thread (no `Worker` is created) and needs neither `worker-src blob:` nor `'wasm-unsafe-eval'`. pdf.js registers the PDF's embedded fonts through the `FontFace` API, including a `data:` font URL; headless Firefox 158 reported no violation for that, and text extraction does not depend on the fonts. If a browser enforces `font-src` there, expect at most a console message, not a failed import.
+- Verified in headless Firefox 158 against the built site: the IBKR sample and fixture CSVs, a Schwab equity-awards CSV, a PDF generated from the IBI RSU fixture, an NBP rate fetch (tax form), and theme and locale switching produced zero CSP violations.
 - Redirect stubs (`/docs/brokerzy`, `/docs/dywidendy/usa-15-czy-19`) contain no app code and carry no CSP.
-- `test/app-bundle.test.ts` asserts every prerendered page has the meta tag with this `connect-src` and no unsafe `script-src`.
+- `test/app-bundle.test.ts` asserts every prerendered page has the meta tag with this `connect-src` and no unsafe `script-src`, and that the client bundle references only allow-listed external hosts.
 
 ### Backup and restore
 
