@@ -2,3 +2,10 @@ allowBuilds:
   maplibre-gl: false
 overrides:
   uuid: ^14.0.0
+audit:
+  ignore:
+    # braces <=3.0.3 stack-exhaustion DoS (CVE-2026-93687), no patched release; maintainer disputes
+    # (micromatch/braces#70). Dev-only: semantic-release*, svelte-sitemap>fast-glob>micromatch.
+    # Not in build/ output; patterns come only from repo config (trusted). `pnpm audit --prod` is clean.
+    # Review by 2027-01-19 or when braces/micromatch/fast-glob publish a fix.
+    - GHSA-vfj7-8cjw-p6xm

@@ -65,6 +65,7 @@ Keep `engines`/`devEngines` and `packageManager` in `package.json` in step with 
 - **CSP** — `kit.csp` in `vite.config.ts` limits `connect-src` to `'self'` and `https://api.nbp.pl`. A new outbound host or inline script needs a matching directive and an update to `test/app-bundle.test.ts`.
 - **Svelte 5 only** — use runes (`$state`, `$derived`, `$effect`). Do not use legacy `$:` reactive statements or Svelte stores.
 - **Object arguments** — prefer `function foo(args: { bar: string; baz: number })` over multiple positional parameters.
+- **Security advisories** — `pnpm audit --prod` must stay clean. A dev-only advisory with no patched release may be ignored through `audit.ignore` in `pnpm-workspace.yaml` (not the deprecated `auditConfig.ignoreGhsas`), but only with the GHSA id, a rationale comment, a review date, and proof it is dev-only (`pnpm audit --prod` clean and a grep of `build/` finding nothing). Prefer a real fix over an ignore, and never add an `overrides` entry that points at an unvetted fork.
 - **No over-engineering** — add only what is requested or clearly necessary. Avoid adding helpers, error handling, or abstractions for one-time use.
 
 ---

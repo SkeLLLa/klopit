@@ -64,6 +64,7 @@ void describe('docs consistency', () => {
       'run',
       'update',
       'remove',
+      'audit',
     ]);
     const unknown: string[] = [];
     for (const file of DOC_FILES) {
