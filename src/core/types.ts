@@ -98,6 +98,16 @@ export interface RawDividend {
   date: Date;
   /** Signed amount: positive = dividend paid, negative = reversal/correction. */
   amount: number;
+  /**
+   * Instrument is an ADR (broker `Type` column); its source state is the
+   * issuer's.
+   */
+  isAdr?: boolean;
+  /**
+   * Issuer country (ISO alpha-2) read from the broker's WHT description, ADRs
+   * only.
+   */
+  adrCountry?: string;
 }
 
 /** Raw withholding tax on dividends */

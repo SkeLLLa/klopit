@@ -32,3 +32,44 @@ void describe('buildSymbolCountryMap', () => {
     assert.equal(result.get('AAPL'), 'IE');
   });
 });
+
+void describe('buildSymbolCountryMap ADR issuer country', () => {
+  const adr = {
+    symbol: 'TSM',
+    isin: 'US8740391003',
+    adrCountry: 'TW',
+  };
+
+  void it('uses the ADR issuer country over the ISIN country', () => {
+    const result = buildSymbolCountryMap({
+      trades: [{ symbol: 'TSM', isin: 'US8740391003' }],
+      dividends: [adr],
+    });
+    assert.equal(result.get('TSM'), 'TW');
+  });
+
+  void it('keeps the ISIN country for an ADR without an issuer country', () => {
+    const result = buildSymbolCountryMap({
+      trades: [],
+      dividends: [{ symbol: 'TSM', isin: 'US8740391003' }],
+    });
+    assert.equal(result.get('TSM'), 'US');
+  });
+
+  void it('lets a user override beat the ADR issuer country', () => {
+    const result = buildSymbolCountryMap({
+      trades: [],
+      dividends: [adr],
+      overrides: [{ symbol: 'TSM', country: 'US' }],
+    });
+    assert.equal(result.get('TSM'), 'US');
+  });
+
+  void it('leaves a non-ADR US stock unchanged', () => {
+    const result = buildSymbolCountryMap({
+      trades: [],
+      dividends: [{ symbol: 'AAPL', isin: 'US0378331005' }],
+    });
+    assert.equal(result.get('AAPL'), 'US');
+  });
+});

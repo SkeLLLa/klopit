@@ -176,7 +176,13 @@ export function calculateDividends(
     }
 
     // Check for W-8BEN lapse: withheld rate exceeds treaty rate
-    if (taxableAmountOriginal > 0 && withholdingTaxOriginal > 0) {
+    // W-8BEN is a US form: it cannot lapse for an ADR whose issuer is not US.
+    const isNonUsAdr = divRows.some((row) => row.isAdr) && country !== 'US';
+    if (
+      !isNonUsAdr &&
+      taxableAmountOriginal > 0 &&
+      withholdingTaxOriginal > 0
+    ) {
       const withheldRate = withholdingTaxOriginal / taxableAmountOriginal;
       const treatyRate = getDividendCreditCapRate({ country });
       const tolerance = 0.005; // ±0.5% tolerance for rounding

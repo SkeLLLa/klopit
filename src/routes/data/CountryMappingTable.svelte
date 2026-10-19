@@ -82,6 +82,15 @@
       .uniqueKeys();
   });
 
+  // ADR issuer countries stamped at import (non-indexed field, so filter in memory).
+  const adrDividendsQuery = useLiveQuery(() =>
+    db.dividends
+      .where('sessionId')
+      .equals(sessionId)
+      .filter((d) => !!d.adrCountry)
+      .toArray(),
+  );
+
   const overridesQuery = useLiveQuery(() =>
     db.symbolCountryOverrides.where('sessionId').equals(sessionId).toArray(),
   );
@@ -112,7 +121,13 @@
     const overrideMap = new Map(overrides.map((o) => [o.symbol, o.country]));
     const detectedMap = buildSymbolCountryMap({
       trades: tradeSymbolIsins,
-      dividends: dividendSymbolIsins,
+      dividends: [
+        ...dividendSymbolIsins,
+        ...(adrDividendsQuery.current ?? []).map((d) => ({
+          symbol: d.symbol,
+          adrCountry: d.adrCountry,
+        })),
+      ],
     });
     const symbolMap = new Map<string, { isin?: string }>();
 

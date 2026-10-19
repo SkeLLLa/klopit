@@ -741,3 +741,82 @@ void describe('InteractiveBrokersParser', () => {
     });
   });
 });
+
+void describe('IBKR ADR detection', () => {
+  const header =
+    'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Listing Exch,Multiplier,Type,Code';
+  const legacyHeader =
+    'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Listing Exch,Multiplier,Code';
+  const period = 'Statement,Data,Period,"January 1, 2024 - December 31, 2024"';
+  const divHeader = 'Dividends,Header,Currency,Date,Description,Amount';
+  const whtHeader =
+    'Withholding Tax,Header,Currency,Date,Description,Amount,Code';
+  const tsmFii =
+    'Financial Instrument Information,Data,Stocks,TSM,TSMC ADR,1,US8740391003,NYSE,1,ADR,';
+  const tsmDiv =
+    'Dividends,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share (Ordinary Dividend),5';
+
+  void it('uses the WHT suffix country for an ADR', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share - TW Tax,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.dividends[0].adrCountry, 'TW');
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('warns and keeps the ISIN country when the ADR has no suffix', () => {
+    const r = parseLines([period, header, tsmFii, divHeader, tsmDiv]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.equal(r.warnings.length, 1);
+    assert.match(
+      r.warnings[0].message,
+      /ADR detected for TSM, country assumed US from ISIN/,
+    );
+  });
+
+  void it('rejects a malformed suffix', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share - tw Tax,-1.05,',
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Cash Dividend USD 0.5 per Share - TWN Tax,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+  });
+
+  void it('does not mark non-ADR stocks', () => {
+    const r = parseLines([
+      period,
+      header,
+      'Financial Instrument Information,Data,Stocks,AAPL,APPLE,2,US0378331005,NASDAQ,1,COMMON,',
+      divHeader,
+      'Dividends,Data,USD,2024-06-15,AAPL(US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend),2.5',
+    ]);
+    assert.equal(r.dividends[0].isAdr, undefined);
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('treats statements without a Type column as non-ADR', () => {
+    const r = parseLines([
+      period,
+      legacyHeader,
+      'Financial Instrument Information,Data,Stocks,TSM,TSMC ADR,1,US8740391003,NYSE,1,ADR',
+      divHeader,
+      tsmDiv,
+    ]);
+    assert.equal(r.dividends[0].isAdr, undefined);
+    assert.equal(r.warnings.length, 0);
+  });
+});

@@ -609,3 +609,50 @@ void describe('calculateDividends — reversals & refunds', () => {
     assert.equal(r[0].rateUnavailable, true);
   });
 });
+
+void describe('calculateDividends ADR country', () => {
+  const adrDiv = makeDiv({ symbol: 'TSM', isAdr: true, amount: 10 });
+  // 21% withheld by Taiwan: above the 10% treaty cap but not a W-8BEN issue.
+  const wht = makeTax({ symbol: 'TSM', amount: -2.1 });
+
+  void it('caps credit by the issuer-country treaty and skips the W-8BEN warning', () => {
+    const [r] = calculateDividends({
+      dividends: [adrDiv],
+      withholdingTaxes: [wht],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['TSM', 'TW']]),
+    });
+    assert.equal(r.country, 'TW');
+    assert.equal(r.creditCapRate, 0.1);
+    assert.equal(
+      r.warnings?.some((w) => w.kind === 'wht-lapse') ?? false,
+      false,
+    );
+  });
+
+  void it('still warns about a W-8BEN lapse for an ADR resolved to US', () => {
+    const [r] = calculateDividends({
+      dividends: [adrDiv],
+      withholdingTaxes: [wht],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['TSM', 'US']]),
+    });
+    assert.equal(
+      r.warnings?.some((w) => w.kind === 'wht-lapse'),
+      true,
+    );
+  });
+
+  void it('still warns about a lapse for a non-ADR non-US row', () => {
+    const [r] = calculateDividends({
+      dividends: [makeDiv({ symbol: 'X', amount: 10 })],
+      withholdingTaxes: [makeTax({ symbol: 'X', amount: -2.1 })],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['X', 'TW']]),
+    });
+    assert.equal(
+      r.warnings?.some((w) => w.kind === 'wht-lapse'),
+      true,
+    );
+  });
+});

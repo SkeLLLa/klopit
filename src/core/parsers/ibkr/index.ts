@@ -1,3 +1,4 @@
+import { isinToCountry } from '../../tax/country.js';
 import { BrokerId } from '../../types.js';
 import type { ParsedStatement, RawDividend } from '../../types.js';
 import { CsvStatementParser } from '../shared/csv-parser.js';
@@ -14,6 +15,8 @@ import { classifySection } from './sections.js';
  * Regex to extract symbol and ISIN from dividend/tax descriptions:
  * "AAPL(US0378331005) ..."
  */
+/** Source-state suffix IBKR appends to withholding descriptions: "... - TW Tax". */
+const WHT_COUNTRY_RE = /\s-\s([A-Z]{2})\s+Tax\s*$/;
 const SYMBOL_ISIN_RE = /^\s*(\S+)\s*\(([^)]+)\)/;
 
 /**
@@ -48,6 +51,10 @@ const MERGER_RE =
 class InteractiveBrokersParser extends CsvStatementParser {
   private warnedHeaders = new Set<string>();
   private trimmedHeaders = new WeakMap<string[], string[]>();
+  /** Symbols the Financial Instrument Information `Type` column marks as ADR. */
+  private adrSymbols = new Set<string>();
+  /** Source country parsed from the "- XX Tax" withholding description suffix. */
+  private whtCountryBySymbol = new Map<string, string>();
 
   protected getBrokerId(): string {
     return 'ibkr';
@@ -245,7 +252,33 @@ class InteractiveBrokersParser extends CsvStatementParser {
     if (id !== '' && !this.accounts.includes(id)) this.accounts.push(id);
   }
 
+  /**
+   * Stamps ADR dividends with the issuer country (art. 30a ust. 9 updof credits
+   * tax by the treaty with the source state, which for an ADR is the issuer's
+   * residence, not the US listing). Without a suffix the ISIN country stays and
+   * the user is warned.
+   */
+  private stampAdrDividends(): void {
+    const warned = new Set<string>();
+    for (const div of this.dividends) {
+      if (!this.adrSymbols.has(div.symbol)) continue;
+      div.isAdr = true;
+      const country = this.whtCountryBySymbol.get(div.symbol);
+      if (country) {
+        div.adrCountry = country;
+      } else if (!warned.has(div.symbol)) {
+        warned.add(div.symbol);
+        const isin = div.isin ?? this.symbolToIsin.get(div.symbol);
+        this.addWarning({
+          section: 'Dividends',
+          message: `ADR detected for ${div.symbol}, country assumed ${isinToCountry({ isin })} from ISIN — set the issuer country on the country mapping page`,
+        });
+      }
+    }
+  }
+
   override finish(): ParsedStatement {
+    this.stampAdrDividends();
     const fallback = this.defaultAccount();
     if (fallback) {
       let fallbackRows = 0;
@@ -336,6 +369,12 @@ class InteractiveBrokersParser extends CsvStatementParser {
     const securityId = this.field(fields, ix('Security ID'));
     if (symbol && securityId) {
       this.symbolToIsin.set(symbol, securityId);
+    }
+
+    // Optional column: absent in older statements, which means "not an ADR".
+    const typeIdx = this.col({ section, names: ['Type'], fallbackIdx: -1 });
+    if (symbol && this.field(fields, typeIdx).toUpperCase() === 'ADR') {
+      this.adrSymbols.add(symbol);
     }
   }
 
@@ -499,6 +538,10 @@ class InteractiveBrokersParser extends CsvStatementParser {
     const rawDate = this.field(fields, ix('Date'));
     const description = this.field(fields, ix('Description'));
     const match = SYMBOL_ISIN_RE.exec(description);
+    if (section === 'Withholding Tax' && match) {
+      const whtCountry = WHT_COUNTRY_RE.exec(description)?.[1];
+      if (whtCountry) this.whtCountryBySymbol.set(match[1], whtCountry);
+    }
     const failure = {
       section,
       rawLine,

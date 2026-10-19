@@ -3,6 +3,8 @@ import { isinToCountry } from './country.js';
 export interface SymbolCountrySource {
   symbol: string;
   isin?: string;
+  /** Issuer country of an ADR, from the broker's withholding description. */
+  adrCountry?: string;
 }
 
 function setDetectedCountry(args: {
@@ -39,6 +41,11 @@ export function buildSymbolCountryMap(args: {
       symbol: div.symbol,
       isin: div.isin,
     });
+  }
+
+  // Derived ADR issuer country beats the ISIN (US for ADRs), but never a user override.
+  for (const div of args.dividends) {
+    if (div.adrCountry) symbolCountryMap.set(div.symbol, div.adrCountry);
   }
 
   for (const override of args.overrides ?? []) {
