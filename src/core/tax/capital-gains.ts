@@ -1372,6 +1372,7 @@ function processTrade(args: {
     totalCostPln += sellCommissionPln;
 
     if (isInPeriod({ datetime: trade.datetime, taxPeriod })) {
+      const foreignTaxOriginal = Math.max(trade.foreignTax ?? 0, 0);
       results.push({
         symbol: trade.symbol,
         datetime: trade.datetime,
@@ -1391,8 +1392,8 @@ function processTrade(args: {
         rateUnavailable: trade.rateUnavailable || costRateUnavailable,
         costRateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
-        foreignTaxPln: 0,
-        foreignTaxOriginal: 0,
+        foreignTaxPln: foreignTaxOriginal * (trade.foreignTaxExchangeRate ?? 0),
+        foreignTaxOriginal,
         ...(costMissing ? { costBasisMissing: true } : {}),
       });
     }

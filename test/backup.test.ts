@@ -327,6 +327,45 @@ void describe('backup export / import', () => {
     );
   });
 
+  void it('round-trips and validates trade foreign tax (sells only, >= 0)', async () => {
+    await seed(database);
+    const good = JSON.parse(
+      await exportBackup({ appVersion: 'x', database }),
+    ) as BackupFile;
+    const trade = asObject((good.tables['trades'] ?? [])[0]);
+    const withTrade = (row: object): string =>
+      JSON.stringify({
+        ...good,
+        tables: { ...good.tables, trades: [row] },
+      });
+    const sell = {
+      ...trade,
+      type: 'sell',
+      foreignTax: 12.5,
+      foreignTaxDate: { $date: '2025-03-05T00:00:00.000Z' },
+    };
+    const parsed = parseBackup(withTrade(sell), database.verno);
+    const row = (parsed.tables['trades'] ?? [])[0] as Record<string, unknown>;
+    assert.equal(row['foreignTax'], 12.5);
+    assert.ok(row['foreignTaxDate'] instanceof Date);
+
+    assert.equal(
+      await importCode(withTrade({ ...sell, foreignTax: -1 })),
+      'invalid',
+      'negative foreign tax',
+    );
+    assert.equal(
+      await importCode(withTrade({ ...sell, type: 'buy' })),
+      'invalid',
+      'foreign tax on a buy',
+    );
+    assert.equal(
+      await importCode(withTrade({ ...sell, foreignTaxDate: '2025-03-05' })),
+      'invalid',
+      'untagged foreign tax date',
+    );
+  });
+
   void it('rejects malformed $date tags and invalid dates', async () => {
     await seed(database);
     const text = await exportBackup({ appVersion: 'x', database });

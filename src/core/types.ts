@@ -88,6 +88,16 @@ export interface Trade {
    * ust. 10 updof requires FIFO per account). Absent on legacy rows.
    */
   account?: string | undefined;
+  /**
+   * Foreign tax paid on this sale, in the trade currency (>= 0, sells only).
+   * User claim; creditable only up to the treaty and art. 30b ust. 5a limits.
+   */
+  foreignTax?: number | undefined;
+  /**
+   * Payment date of `foreignTax`. Its D-1 NBP rate converts the tax (art. 11a
+   * ust. 3 updof). Defaults to the date the sell's own rate uses.
+   */
+  foreignTaxDate?: Date | undefined;
 }
 
 /** Raw dividend income */
@@ -652,6 +662,8 @@ export interface EnrichedTrade extends Trade {
    */
   incomeRateUnavailable?: boolean | undefined;
   commissionExchangeRate: number;
+  /** NBP rate for `foreignTax` (art. 11a ust. 3); set only when it is > 0. */
+  foreignTaxExchangeRate?: number | undefined;
   rateUnavailable: boolean;
 }
 

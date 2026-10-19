@@ -171,6 +171,18 @@ export async function calculateSessionTaxes(args: {
             scope: 'trade.incentive',
           })
         : undefined;
+      // Foreign tax on the sale: art. 11a ust. 3, D-1 of the payment date
+      // (default: the date the sell's own rate uses).
+      const hasForeignTax =
+        trade.type === 'sell' && (trade.foreignTax ?? 0) > 0;
+      const foreignTaxRate =
+        hasForeignTax && trade.foreignTaxDate
+          ? await tryGetFixingRate({
+              currency: trade.currency,
+              date: toDateString(trade.foreignTaxDate),
+              scope: 'trade.foreignTax',
+            })
+          : rate;
       // A missing rate becomes 0 here; rateUnavailable propagates through
       // FIFO lots to every sell that consumes them (capital-gains.ts).
       return {
@@ -181,7 +193,13 @@ export async function calculateSessionTaxes(args: {
         ...(needsIncomeRate && !incomeRate
           ? { incomeRateUnavailable: true }
           : {}),
-        rateUnavailable: rate === undefined || comRate === undefined,
+        ...(hasForeignTax
+          ? { foreignTaxExchangeRate: foreignTaxRate?.rate ?? 0 }
+          : {}),
+        rateUnavailable:
+          rate === undefined ||
+          comRate === undefined ||
+          (hasForeignTax && foreignTaxRate === undefined),
       };
     }),
   );

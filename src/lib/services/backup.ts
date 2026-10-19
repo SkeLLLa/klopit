@@ -49,7 +49,10 @@ type BackupTables = Record<string, unknown[]>;
  */
 export const BACKUP_MIGRATIONS: Partial<
   Record<number, (tables: BackupTables) => BackupTables>
-> = {};
+> = {
+  // v17 changes no row shape (calculation-only bump).
+  17: (tables) => tables,
+};
 
 const DATE_TAG = '$date';
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
@@ -129,8 +132,11 @@ const ROW_SPECS: Record<(typeof INPUT_TABLES)[number], RowSpec> = {
     numbers: { req: ['year'] },
   },
   trades: {
-    dates: { req: ['datetime'] },
-    numbers: { req: ['quantity', 'price', 'proceeds', 'commission'] },
+    dates: { req: ['datetime'], opt: ['foreignTaxDate'] },
+    numbers: {
+      req: ['quantity', 'price', 'proceeds', 'commission'],
+      opt: ['foreignTax'],
+    },
   },
   dividends: { dates: { req: ['date'] }, numbers: { req: ['amount'] } },
   withholdingTaxes: { dates: { req: ['date'] }, numbers: { req: ['amount'] } },
@@ -206,6 +212,26 @@ function validateRows(tables: BackupTables): void {
       const spec = ROW_SPECS[name];
       checkFields(name, row, spec.dates, isDate, 'date');
       checkFields(name, row, spec.numbers, isFiniteNumber, 'number');
+      if (name === 'trades') {
+        const foreignTax = row['foreignTax'];
+        if (typeof foreignTax === 'number' && foreignTax < 0) {
+          throw new BackupError(
+            'invalid',
+            'Table "trades": field "foreignTax" must be >= 0.',
+          );
+        }
+        if (
+          (typeof foreignTax === 'number' && foreignTax > 0) ||
+          row['foreignTaxDate'] !== undefined
+        ) {
+          if (row['type'] !== 'sell') {
+            throw new BackupError(
+              'invalid',
+              'Table "trades": foreign tax is allowed on sells only.',
+            );
+          }
+        }
+      }
       if (name === 'sessions') {
         if (typeof row['id'] !== 'string' || row['id'] === '') {
           throw new BackupError('invalid', 'A session has no string id.');

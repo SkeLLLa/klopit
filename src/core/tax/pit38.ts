@@ -24,6 +24,7 @@ import {
   applyLossCarryForward,
   type ApplyLossCarryForwardResult,
 } from './loss-carry-forward.js';
+import { buildPitZg, creditableGainsForeignTaxPln } from './pit-zg.js';
 import { roundToGrosz } from './rounding.js';
 
 export interface BuildPit38Args {
@@ -135,7 +136,16 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
     gainPostLcfPln: Math.max(f[28] - f[30], 0),
   });
   f[33] = capitalGainsTax({ base: f[31] });
-  f[34] = 0; // No foreign tax on capital gains
+  // Art. 30b ust. 5a updof: foreign tax on gains, capped per country and overall.
+  f[34] = creditableGainsForeignTaxPln(
+    buildPitZg({
+      trades,
+      dividends: [],
+      showDividends: false,
+      taxBeforeCreditPln: f[33],
+      totalIncomePln: f[28],
+    }),
+  );
   f[35] = roundedCapitalGainsTaxDue({ tax: f[33], foreignCredit: f[34] });
 
   // Section E — Crypto (placeholders)

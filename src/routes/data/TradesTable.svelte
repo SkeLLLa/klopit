@@ -147,6 +147,14 @@
                   <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {trade.type === 'buy' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">
                     {trade.type === 'buy' ? m.data_type_buy() : m.data_type_sell()}
                   </span>
+                  {#if trade.type === 'sell' && (trade.foreignTax ?? 0) > 0}
+                    <span
+                      class="ml-1 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
+                      title={m.data_foreign_tax_indicator({ amount: (trade.foreignTax ?? 0).toFixed(2), currency: trade.currency })}
+                    >
+                      {m.data_foreign_tax_badge()}
+                    </span>
+                  {/if}
                 </td>
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{trade.quantity}</td>
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{trade.price.toFixed(2)}</td>
