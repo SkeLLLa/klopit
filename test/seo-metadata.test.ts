@@ -116,3 +116,53 @@ for (const locale of LOCALES) {
     );
   });
 }
+
+const NEW_KEYS = [
+  'seo_site_description',
+  'og_image_alt',
+  'error_404_title',
+  'error_404_body',
+  'error_404_link_home',
+  'error_404_link_docs',
+  'error_404_link_faq',
+  'error_generic_title',
+  'docs_last_updated',
+  'docs_maintained_by',
+  'docs_community',
+];
+
+for (const locale of LOCALES) {
+  const messages = JSON.parse(
+    readFileSync(resolve(root, `messages/${locale}.json`), 'utf8'),
+  ) as Record<string, string>;
+
+  void test(`${locale}: every *_meta_description fits 158 chars`, () => {
+    const keys = Object.keys(messages).filter((k) =>
+      k.endsWith('_meta_description'),
+    );
+    assert.ok(keys.length > 10, `${locale}.json has too few meta descriptions`);
+    for (const key of keys) {
+      const len = (messages[key] ?? '').length;
+      assert.ok(len <= 158, `${locale}.json ${key} too long (${String(len)})`);
+    }
+  });
+
+  void test(`${locale}: head, error and byline keys present`, () => {
+    for (const key of NEW_KEYS) {
+      assert.ok(messages[key], `${locale}.json missing key: ${key}`);
+    }
+    assert.ok(
+      (messages['seo_site_description'] ?? '').length <= 158,
+      `${locale}.json seo_site_description too long`,
+    );
+  });
+
+  void test(`${locale}: brokers section does not promise a step-by-step Schwab import`, () => {
+    const desc = messages['page_docs_section_brokers_desc'] ?? '';
+    const stepByStep = /step-by-step|krok po kroku|покроков/i.test(desc);
+    assert.ok(
+      !(stepByStep && /schwab/i.test(desc)),
+      `${locale}.json page_docs_section_brokers_desc over-claims Schwab: ${desc}`,
+    );
+  });
+}
