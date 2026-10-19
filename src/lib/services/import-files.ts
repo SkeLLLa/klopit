@@ -9,6 +9,8 @@ export interface ImportFileResult {
   message: string;
   warnings: ImportWarning[];
   skippedRows: SkippedRow[];
+  incentiveSymbolsMissingRegime: string[];
+  sellToCoverCount: number;
 }
 
 export async function importFiles(args: {
@@ -40,6 +42,8 @@ export async function importFiles(args: {
         }),
         warnings: result.warnings,
         skippedRows: result.skippedRows,
+        incentiveSymbolsMissingRegime: result.incentiveSymbolsMissingRegime,
+        sellToCoverCount: result.sellToCoverCount,
       });
     } catch (err) {
       results.push({
@@ -51,6 +55,8 @@ export async function importFiles(args: {
         }),
         warnings: [],
         skippedRows: [],
+        incentiveSymbolsMissingRegime: [],
+        sellToCoverCount: 0,
       });
     }
   }

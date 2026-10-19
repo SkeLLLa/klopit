@@ -5,6 +5,11 @@
     mergeImportWarnings,
   } from '$lib/services/import.js';
   import { isCarryInCostMissing, isCarryInIgnored } from '$lib/services/carry-in.js';
+  import {
+    needsSchwabFmvNotice,
+    symbolsMissingIncentiveRegime,
+  } from '$lib/services/incentive.js';
+  import { updateSession } from '$lib/services/session.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { db, type SessionRecord } from '$lib/db.js';
@@ -96,6 +101,22 @@
           .map((row) => row.symbol),
       ),
     ];
+  });
+  // RSU / ESPP lots without a chosen regime make the result a draft.
+  const incentiveMissingRegime = useLiveQuery<string[]>(async () => {
+    if (!activeSessionId) return [];
+    return symbolsMissingIncentiveRegime(
+      await db.trades.where('sessionId').equals(activeSessionId).toArray(),
+    );
+  });
+  const schwabFmvNotice = useLiveQuery<boolean>(async () => {
+    if (!activeSessionId) return false;
+    const session = await db.sessions.get(activeSessionId);
+    if (!session || session.schwabFmvNoticeDismissed) return false;
+    return needsSchwabFmvNotice({
+      files: session.files,
+      trades: await db.trades.where('sessionId').equals(activeSessionId).toArray(),
+    });
   });
   const inMemorySkippedRows = $derived(
     activeSessionId ? skippedRowsStore.getSkippedRows({ sessionId: activeSessionId }) : [],
@@ -205,6 +226,34 @@
           {m.import_warning_carry_in_cost_missing({
             symbols: (carryInsMissingCost.current ?? []).join(', '),
           })}
+        </div>
+      {/if}
+
+      {#if (incentiveMissingRegime.current ?? []).length > 0}
+        <div
+          class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          {m.import_warning_incentive_regime_missing({
+            symbols: (incentiveMissingRegime.current ?? []).join(', '),
+          })}
+        </div>
+      {/if}
+
+      {#if schwabFmvNotice.current}
+        <div
+          class="flex items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
+        >
+          <span>{m.data_schwab_fmv_notice()}</span>
+          <button
+            onclick={() =>
+              updateSession({
+                id: activeSession.id,
+                changes: { schwabFmvNoticeDismissed: true },
+              })}
+            class="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-800/40"
+          >
+            {m.data_incentive_dismiss()}
+          </button>
         </div>
       {/if}
 

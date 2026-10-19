@@ -160,6 +160,17 @@ Following the fail-loud principle (see [Fail-Loud Import Warnings](#design-decis
 
 ---
 
+## Design Decision: Employee Incentive Shares Have No Default Regime
+
+### The Decision
+
+- RSU / ESPP buy lots carry a per-lot regime: `qualifying` or `taxed-at-acquisition`. Until the user picks one the lot is flagged cost-missing, so affected sales are flagged and the tax form stays a draft (copying disabled).
+- Cost on sale: `qualifying` = price paid + commission; `taxed-at-acquisition` = price paid + commission + income already taxed (entered in PLN, or derived from FMV at the buy-date NBP rate).
+
+### Why No Default?
+
+The regime depends on facts the broker statement does not contain: whether the programme is of the company or its parent under a shareholders' resolution (art. 24 ust. 11–12b updof), and whether the vest or purchase was taxed as income (art. 23 ust. 1 pkt 38, shown on the PIT-11). Defaulting to either would silently overstate tax (zero cost when income was already taxed) or understate it (a taxed cost for a qualifying programme). This follows the fail-loud principle used for carry-in costs. The UI help text stays neutral and sends the user to their PIT-11 and employer programme.
+
 ## Design Decision: Conservative ADR/GDR Fee Treatment
 
 ### The Problem

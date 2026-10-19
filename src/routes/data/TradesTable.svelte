@@ -6,13 +6,16 @@
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { listSessionAccounts } from '$lib/services/accounts.js';
   import { addTrade, updateTrade, deleteTrade } from '$lib/services/data.js';
-  import type { Trade } from '../../core/types.js';
+  import { withIncentiveRegime, withTaxedIncomePln } from '$lib/services/incentive.js';
+  import { isIncentiveBuy } from '../../core/tax/incentive.js';
+  import type { IncentiveRegime, Trade } from '../../core/types.js';
   import type { TradeRecord } from '$lib/db.js';
   import { formatDatetime } from '$lib/utils/format-date.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import TradeForm from './TradeForm.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
+  import IncentiveRegimeBar from './IncentiveRegimeBar.svelte';
 
   let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();
 
@@ -34,6 +37,26 @@
   async function handleUpdate(id: number, trade: Trade) {
     await updateTrade({ id, changes: trade });
     editingId = null;
+  }
+
+  const hasIncentiveLots = $derived((trades.current ?? []).some((t) => isIncentiveBuy(t)));
+  const colCount = $derived(hasIncentiveLots ? 12 : 10);
+
+  async function handleRegimeChange(trade: TradeRecord, value: string) {
+    const regime = value === '' ? undefined : (value as IncentiveRegime);
+    await updateTrade({
+      id: trade.id as number,
+      changes: { incentive: withIncentiveRegime(trade.incentive, regime) },
+    });
+  }
+
+  async function handleTaxedIncomeChange(trade: TradeRecord, value: string) {
+    const parsed = value.trim() === '' ? undefined : Number(value);
+    if (parsed !== undefined && (!Number.isFinite(parsed) || parsed < 0)) return;
+    await updateTrade({
+      id: trade.id as number,
+      changes: { incentive: withTaxedIncomePln(trade.incentive, parsed) },
+    });
   }
 
   async function handleDelete() {
@@ -63,6 +86,10 @@
     </div>
   {/if}
 
+  {#if hasIncentiveLots}
+    <IncentiveRegimeBar {sessionId} trades={trades.current ?? []} />
+  {/if}
+
   {#if !trades.current || trades.current.length === 0}
     <EmptyState message={m.data_empty_trades()} />
   {:else}
@@ -79,6 +106,10 @@
             <th class="px-3 py-2 text-right">{m.data_proceeds()}</th>
             <th class="px-3 py-2 text-right">{m.data_commission()}</th>
             <th class="px-3 py-2">{m.data_currency()}</th>
+            {#if hasIncentiveLots}
+              <th class="px-3 py-2">{m.data_incentive_regime()}</th>
+              <th class="px-3 py-2 text-right">{m.data_incentive_taxed_income()}</th>
+            {/if}
             <th class="px-3 py-2">{m.data_actions()}</th>
           </tr>
         </thead>
@@ -86,7 +117,7 @@
           {#each trades.current as trade (trade.id)}
             {#if editingId === trade.id}
               <tr>
-                <td colspan="10" class="p-2">
+                <td colspan={colCount} class="p-2">
                   {#key editingId}
                     <TradeForm
                       initial={trade}
@@ -118,6 +149,40 @@
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{trade.proceeds.toFixed(2)}</td>
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{trade.commission.toFixed(2)}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-400">{trade.currency}</td>
+                {#if hasIncentiveLots}
+                  {#if isIncentiveBuy(trade)}
+                    <td class="px-3 py-2">
+                      <select
+                        value={trade.incentive?.regime ?? ''}
+                        onchange={(e) => handleRegimeChange(trade, e.currentTarget.value)}
+                        aria-label={m.data_incentive_regime()}
+                        class="rounded-md border px-2 py-1 text-xs dark:bg-slate-800 {trade.incentive?.regime
+                          ? 'border-slate-300 dark:border-slate-600'
+                          : 'border-amber-400 bg-amber-50 dark:border-amber-600'}"
+                      >
+                        <option value="">—</option>
+                        <option value="qualifying">{m.data_incentive_regime_qualifying()}</option>
+                        <option value="taxed-at-acquisition">{m.data_incentive_regime_taxed()}</option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={trade.incentive?.taxedIncomePln ?? ''}
+                        disabled={trade.incentive?.regime !== 'taxed-at-acquisition'}
+                        placeholder={trade.incentive?.fmvPerShare !== undefined ? m.data_incentive_from_fmv() : ''}
+                        onchange={(e) => handleTaxedIncomeChange(trade, e.currentTarget.value)}
+                        aria-label={m.data_incentive_taxed_income()}
+                        class="w-28 rounded-md border border-slate-300 px-2 py-1 text-right text-xs tabular-nums disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800"
+                      />
+                    </td>
+                  {:else}
+                    <td></td>
+                    <td></td>
+                  {/if}
+                {/if}
                 <td class="px-3 py-2">
                   <div class="flex gap-1">
                     <button

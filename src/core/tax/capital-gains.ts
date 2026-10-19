@@ -11,6 +11,7 @@ import {
   applyStockSplit,
   type FifoLot,
 } from './corporate-actions.js';
+import { incentiveExtraCost, isIncentiveBuy } from './incentive.js';
 import { isInTaxPeriod } from './period.js';
 
 export interface CalculateCapitalGainsArgs {
@@ -664,7 +665,15 @@ function processTrade(args: {
   const lots = getOrCreateLots(lotQueues, key);
 
   if (trade.type === 'buy') {
-    const costPerSharePln = trade.price * trade.exchangeRate;
+    // Incentive shares: income taxed at acquisition is part of the cost.
+    const incentive = isIncentiveBuy(trade)
+      ? incentiveExtraCost(trade)
+      : undefined;
+    const costPerSharePln =
+      trade.price * trade.exchangeRate +
+      (trade.quantity > 0 && incentive
+        ? incentive.extraCostPln / trade.quantity
+        : 0);
     const commissionPln = trade.commission * trade.commissionExchangeRate;
     const commissionPerSharePln =
       trade.quantity > 0 ? commissionPln / trade.quantity : 0;
@@ -674,6 +683,7 @@ function processTrade(args: {
       costPerSharePln,
       commissionPerSharePln,
       rateUnavailable: trade.rateUnavailable,
+      ...(incentive?.costMissing ? { costMissing: true } : {}),
     });
 
     if (isInPeriod({ datetime: trade.datetime, taxPeriod })) {

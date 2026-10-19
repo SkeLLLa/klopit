@@ -277,6 +277,17 @@ totalCostPln = 73,120 PLN + buy commissions + 40.50 sell commission
 gainLossPln = 82,620 − totalCostPln
 ```
 
+#### Employee incentive shares (RSU / ESPP)
+
+Polish law has two regimes for shares received under an employee incentive programme, and the app cannot tell which one applies to you. You choose it per lot on **Data → Trades** (a bulk action sets it for all RSU / ESPP lots of a symbol):
+
+- **Qualifying** — a programme of the company or its parent under a shareholders' resolution ([art. 24 ust. 11–12b](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). There is no income at acquisition; the cost on sale is the price actually paid plus commission (0 for RSU, the discounted price for ESPP).
+- **Taxed at acquisition** — the vest or purchase was taxed as income (for example on a PIT-11). The cost on sale is the price paid plus commission plus the income already taxed ([art. 23 ust. 1 pkt 38](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-23/)). Enter that income in PLN (`taxedIncomePln`, total for the lot); if left empty it is derived as (FMV per share − price) × quantity × the NBP rate of the buy date. With neither, the cost is missing.
+
+There is **no default**. A buy lot with source `rsu` / `espp` and no regime costs only the price paid (0 for RSU) and is flagged as cost-missing, exactly like a carry-in without a cost: every sale that consumes it is `costBasisMissing`, the tax form is a draft and copying is disabled. Rows saved before this feature have no regime, so they become cost-missing until you choose. The extra cost is folded into the lot's per-share cost, so splits and mergers carry it, and the missing flag, unchanged.
+
+The Schwab parser records the vest FMV (`incentive.fmvPerShare`) for RSU lapses (price paid 0) and ESPP deposits, and warns when shares were sold or withheld for taxes (sell-to-cover). IBI statements carry no FMV, so only the price paid is imported. Sessions imported before this feature show a one-time notice to re-import Schwab statements.
+
 ---
 
 ### 3. Corporate Actions

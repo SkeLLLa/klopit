@@ -26,6 +26,31 @@ export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];
  */
 export type TradeSource = 'trade' | 'espp' | 'rsu';
 
+/**
+ * Tax regime of employee-incentive shares (RSU / ESPP), chosen per lot.
+ *
+ * - `qualifying` — programme of the company or its parent under a shareholders'
+ *   resolution (art. 24 ust. 11-12b updof): no income at acquisition, the cost
+ *   on sale is the price actually paid.
+ * - `taxed-at-acquisition` — the vest / purchase was taxed as income (e.g.
+ *   PIT-11): the cost on sale is the price paid plus the income already taxed
+ *   (art. 23 ust. 1 pkt 38 updof).
+ */
+export type IncentiveRegime = 'qualifying' | 'taxed-at-acquisition';
+
+/** Employee-incentive data of a buy lot; see {@link IncentiveRegime}. */
+export interface TradeIncentive {
+  /** Absent until the user chooses; the lot's cost is then flagged missing. */
+  regime?: IncentiveRegime;
+  /**
+   * Income already taxed at acquisition, total for the lot in PLN. When absent
+   * it is derived from `fmvPerShare`.
+   */
+  taxedIncomePln?: number;
+  /** Fair market value per share at vest / purchase, in the trade currency. */
+  fmvPerShare?: number;
+}
+
 /** Raw trade from broker statement */
 export interface Trade {
   symbol: string;
@@ -51,6 +76,8 @@ export interface Trade {
    * symbol/ISIN value.
    */
   lotId?: string;
+  /** Employee-incentive regime of an RSU / ESPP buy lot. Not indexed. */
+  incentive?: TradeIncentive;
   /**
    * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no effect on
    * tax computation. Currently set only by the IBI parsers.
@@ -203,6 +230,8 @@ export interface ParseWarning {
   line: number;
   section: string;
   message: string;
+  /** Set for warnings the import UI reports in its own words. */
+  kind?: 'sell-to-cover';
 }
 
 /** Classification of a CSV row that the parser intentionally skipped. */

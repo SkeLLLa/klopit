@@ -17,6 +17,7 @@ import {
 } from '../db.js';
 import { isCarryInCostMissing } from './carry-in.js';
 import { deriveImportWarnings } from './import-warnings.js';
+import { symbolsMissingIncentiveRegime } from './incentive.js';
 import { addImportedFile, appendImportWarnings } from './session.js';
 
 export {
@@ -41,6 +42,10 @@ export async function importFile(args: ImportFileArgs): Promise<{
   creditInterestCount: number;
   warnings: ImportWarning[];
   skippedRows: SkippedRow[];
+  /** Symbols whose RSU / ESPP lots in this file have no regime yet. */
+  incentiveSymbolsMissingRegime: string[];
+  /** Vests where the broker sold or withheld shares for taxes. */
+  sellToCoverCount: number;
 }> {
   const definition = getParserDefinition({ brokerId: args.brokerId });
   const result: ParsedStatement = await runParser({
@@ -159,6 +164,9 @@ export async function importFile(args: ImportFileArgs): Promise<{
     creditInterestCount: result.creditInterests.length,
     warnings,
     skippedRows: result.skippedRows,
+    incentiveSymbolsMissingRegime: symbolsMissingIncentiveRegime(result.trades),
+    sellToCoverCount: result.warnings.filter((w) => w.kind === 'sell-to-cover')
+      .length,
   };
 }
 

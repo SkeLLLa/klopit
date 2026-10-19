@@ -66,6 +66,8 @@ export interface SessionRecord {
    * default.
    */
   useSettlementDateForTradeRates?: boolean;
+  /** The "re-import Schwab statements for FMV data" notice was dismissed. */
+  schwabFmvNoticeDismissed?: boolean;
 }
 
 export interface ImportedFileRecord {

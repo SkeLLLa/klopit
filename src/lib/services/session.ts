@@ -52,6 +52,7 @@ export async function updateSession(args: {
       | 'showDividendsInPitZg'
       | 'reduceAdrFeesFromDividends'
       | 'useSettlementDateForTradeRates'
+      | 'schwabFmvNoticeDismissed'
     >
   >;
 }): Promise<void> {
