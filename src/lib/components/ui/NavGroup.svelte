@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { localizeHref } from '#lib/paraglide/runtime.js';
   import type { NavSection } from '#lib/nav.js';
-  import { m } from '#lib/paraglide/messages.js';
+  import { navLabels } from '#lib/nav-labels.js';
   import NavItem from './NavItem.svelte';
   import { sidebar } from '#lib/state/sidebar.svelte.js';
 
@@ -12,7 +12,7 @@
   let expandedItems = $state<Record<string, boolean>>({});
 
   function t(key: string): string {
-    return (m as Record<string, (...args: unknown[]) => string>)[key]?.() ?? key;
+    return navLabels[key]?.() ?? key;
   }
 
   function isActive(href: string): boolean {
