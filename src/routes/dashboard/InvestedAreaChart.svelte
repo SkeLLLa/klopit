@@ -55,6 +55,7 @@
     }
 
     for (const div of dividendResults) {
+      if (div.isInfo) continue;
       events.push({
         date: new Date(div.date),
         investedDelta: 0,

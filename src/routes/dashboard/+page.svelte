@@ -307,7 +307,7 @@
       {taxSummary}
       prevYearSummary={prevYearData.current?.summary}
       {sellTradeCount}
-      dividendCount={dividendResults.length}
+      dividendCount={dividendResults.filter((d) => !d.isInfo).length}
       creditInterestCount={creditInterestResults.length}
     />
 

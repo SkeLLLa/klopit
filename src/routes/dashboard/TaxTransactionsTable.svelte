@@ -4,6 +4,7 @@
   import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '#lib/db.js';
   import { formatDatetime, formatDate } from '#lib/utils/format-date.js';
   import { formatPlnValue } from '#lib/utils/format-pln.js';
+  import { mergeBadges, type WarningBadge } from '#lib/utils/merge-badges.js';
   import { localizeHref } from '#lib/paraglide/runtime.js';
   import { TAX_RATE, type DividendWarning } from '../../core/types.js';
   import {
@@ -23,12 +24,6 @@
   } = $props();
 
   const TAX_PCT = TAX_RATE * 100;
-
-  interface WarningBadge {
-    badge: string;
-    title: string;
-    description: string;
-  }
 
   /** Badge, tooltip title and description for the cross-date matching warnings. */
   function matchingBadge(
@@ -89,13 +84,21 @@
             amount: formatPlnValue(div.addBackPln ?? 0),
           }),
         };
+      case 'wht-refund-unmatched':
+        return {
+          badge: m.dividend_warning_wht_refund_unmatched_badge(),
+          title: m.dividend_warning_wht_refund_unmatched_title(),
+          description: m.dividend_warning_wht_refund_unmatched_description(),
+        };
       default:
         return undefined;
     }
   }
 
   function matchingBadges(div: DividendResultRecord): WarningBadge[] {
-    return (div.warnings ?? []).flatMap((w) => matchingBadge(w, div) ?? []);
+    return mergeBadges({
+      badges: (div.warnings ?? []).flatMap((w) => matchingBadge(w, div) ?? []),
+    });
   }
 
   const sellTrades = $derived.by(() => {
@@ -144,7 +147,7 @@
   );
   const divTotalTaxPl = $derived(sumDividendTaxGross({ rows: dividendResults }));
   const divTotalWithholding = $derived(
-    dividendResults.reduce((s, d) => s + d.withholdingTaxPln, 0),
+    dividendResults.reduce((s, d) => (d.isInfo ? s : s + d.withholdingTaxPln), 0),
   );
   const divTotalDeductible = $derived(sumDeductibleWithholding({ rows: dividendResults }));
   const divTotalWithholdingPct = $derived(
@@ -455,7 +458,9 @@
                         : undefined}
             {@const badges = matchingBadges(div)}
             {@const isUnmatched =
-              div.warnings?.some((w) => w.kind === 'wht-unmatched') ?? false}
+              div.warnings?.some(
+                (w) => w.kind === 'wht-unmatched' || w.kind === 'wht-refund-unmatched',
+              ) ?? false}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}
