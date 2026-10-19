@@ -469,9 +469,9 @@ Planned future tests using Svelte testing utilities for:
 ```
 UI Components
   ├── → svelte/components (Tailwind + @lucide/svelte)
-  └── → $lib/services/
-      ├── → $lib/db.ts (Dexie)
-      ├── → $lib/utils/ (formatting, live-query bridge)
+  └── → #lib/services/
+      ├── → #lib/db.ts (Dexie)
+      ├── → #lib/utils/ (formatting, live-query bridge)
       └── → src/core/ (pure TS logic)
 
 src/core

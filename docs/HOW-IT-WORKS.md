@@ -962,6 +962,23 @@ The app supports **three languages:**
 - Clear browser cache/cookies = entire local database is lost
 - Recommend: export a backup (Settings → Backup) or screenshot your tax form before clearing
 
+### Content-Security-Policy
+
+GitHub Pages cannot set response headers, so SvelteKit's `kit.csp` (hash mode, configured in `vite.config.ts`) writes the policy as a `<meta http-equiv>` tag into every prerendered page and hashes its own inline bootstrap script:
+
+```
+default-src 'self'; worker-src 'self' blob:; connect-src 'self' https://api.nbp.pl;
+font-src 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self' 'sha256-…';
+style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self'
+```
+
+- Data cannot leave the browser except to `api.nbp.pl` (exchange rates). `frame-ancestors`, `report-uri` and `sandbox` are not possible in a meta tag.
+- The theme/sidebar pre-paint script lives in `static/theme-init.js` and loads via `<script src>`, so scripts need no `'unsafe-inline'`.
+- `'unsafe-inline'` stays for styles only: Unovis (emotion) injects `<style>` elements at runtime. Fonts are never inlined as `data:` URIs (`build.assetsInlineLimit` in `vite.config.ts`), so `font-src` is `'self'`.
+- unpdf (pdf.js) parses PDFs on the main thread and needs no `'wasm-unsafe-eval'`; `blob:` workers are allowed as a precaution.
+- Redirect stubs (`/docs/brokerzy`, `/docs/dywidendy/usa-15-czy-19`) contain no app code and carry no CSP.
+- `test/app-bundle.test.ts` asserts every prerendered page has the meta tag with this `connect-src` and no unsafe `script-src`.
+
 ### Backup and restore
 
 Settings → Backup exports every input table (sessions, trades, dividends, withholding taxes, carry-in positions, fees, credit interest, corporate actions including transfers, prior losses and country overrides, with all account fields and manual entries) to a JSON file. Dates are stored as tagged ISO strings and revived on import. Calculated results and the NBP rate cache are not exported; they are recomputed.
