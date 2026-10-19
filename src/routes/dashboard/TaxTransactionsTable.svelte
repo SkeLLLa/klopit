@@ -5,7 +5,7 @@
   import { formatDatetime, formatDate } from '#lib/utils/format-date.js';
   import { formatPlnValue } from '#lib/utils/format-pln.js';
   import { localizeHref } from '#lib/paraglide/runtime.js';
-  import { TAX_RATE } from '../../core/types.js';
+  import { TAX_RATE, type DividendWarning } from '../../core/types.js';
   import {
     sumDividendTaxGross,
     sumDeductibleWithholding,
@@ -23,6 +23,80 @@
   } = $props();
 
   const TAX_PCT = TAX_RATE * 100;
+
+  interface WarningBadge {
+    badge: string;
+    title: string;
+    description: string;
+  }
+
+  /** Badge, tooltip title and description for the cross-date matching warnings. */
+  function matchingBadge(
+    warning: DividendWarning,
+    div: DividendResultRecord,
+  ): WarningBadge | undefined {
+    switch (warning.kind) {
+      case 'reversed-later':
+        return {
+          badge: m.dividend_warning_reversed_later_badge(),
+          title: m.dividend_warning_reversed_later_title(),
+          description: warning.crossYear
+            ? m.dividend_warning_reversed_later_cross_year_description({
+                date: warning.reversalDate,
+              })
+            : m.dividend_warning_reversed_later_description({
+                date: warning.reversalDate,
+              }),
+        };
+      case 'reverses-prior-year':
+        return {
+          badge: m.dividend_warning_reverses_prior_year_badge(),
+          title: m.dividend_warning_reverses_prior_year_title(),
+          description: m.dividend_warning_reverses_prior_year_description({
+            date: warning.originalDate,
+          }),
+        };
+      case 'wht-matched-by-symbol':
+        return {
+          badge: m.dividend_warning_wht_matched_by_symbol_badge(),
+          title: m.dividend_warning_wht_matched_by_symbol_title(),
+          description: m.dividend_warning_wht_matched_by_symbol_description({
+            date: warning.whtDate,
+          }),
+        };
+      case 'wht-unmatched':
+        return {
+          badge: m.dividend_warning_wht_unmatched_badge(),
+          title: m.dividend_warning_wht_unmatched_title(),
+          description: warning.likelySaleTax
+            ? m.dividend_warning_wht_unmatched_sale_description()
+            : m.dividend_warning_wht_unmatched_description(),
+        };
+      case 'wht-refunded-later':
+        return {
+          badge: m.dividend_warning_wht_refunded_later_badge(),
+          title: m.dividend_warning_wht_refunded_later_title(),
+          description: m.dividend_warning_wht_refunded_later_description({
+            date: warning.refundDate,
+          }),
+        };
+      case 'wht-refund-add-back':
+        return {
+          badge: m.dividend_warning_wht_refund_add_back_badge(),
+          title: m.dividend_warning_wht_refund_add_back_title(),
+          description: m.dividend_warning_wht_refund_add_back_description({
+            date: warning.originalDate,
+            amount: formatPlnValue(div.addBackPln ?? 0),
+          }),
+        };
+      default:
+        return undefined;
+    }
+  }
+
+  function matchingBadges(div: DividendResultRecord): WarningBadge[] {
+    return (div.warnings ?? []).flatMap((w) => matchingBadge(w, div) ?? []);
+  }
 
   const sellTrades = $derived.by(() => {
     const out = tradeResults
@@ -379,19 +453,32 @@
                       : hasPilSubstitute
                         ? m.dividend_warning_pil_substitute_description({ country: div.country })
                         : undefined}
+            {@const badges = matchingBadges(div)}
+            {@const isUnmatched =
+              div.warnings?.some((w) => w.kind === 'wht-unmatched') ?? false}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}
             <tr
-              class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+              class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 {isUnmatched
+                ? 'italic text-slate-500 dark:text-slate-400'
+                : ''}"
             >
               <td class="px-3 py-2 text-slate-600 dark:text-slate-300"
                 >{formatDate(div.date)}</td
               >
               <td
                 class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100"
-                >{div.symbol}</td
               >
+                {div.symbol}
+                {#each badges as b (b.badge)}
+                  <span
+                    class="ml-1 cursor-help rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal not-italic text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                    title={b.description}
+                    aria-label="{b.title}: {b.description}">{b.badge}</span
+                  >
+                {/each}
+              </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
               >
@@ -409,7 +496,7 @@
               </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
-                >{formatPlnValue(taxPl)}</td
+                >{isUnmatched ? '—' : formatPlnValue(taxPl)}</td
               >
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"

@@ -350,7 +350,10 @@
             <SectionD {pit38} lossDeduction={taxSummary?.lossDeduction} />
             <SectionE {pit38} />
             <SectionF {pit38} />
-            <SectionG {pit38} />
+            <SectionG
+              {pit38}
+              dividendAddBackPln={taxSummary?.totalDividendAddBackPln ?? 0}
+            />
             <SectionH {pit38} />
             <OppDonation
               sessionId={session.id}

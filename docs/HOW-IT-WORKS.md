@@ -401,9 +401,19 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 
 **Exact algorithm** (`dividends.ts` + `treaty-rates.ts`):
 
-**Step 1 — Group rows per dividend event and match withholding taxes.**
+**Step 1 — Pair reversals, group rows per dividend event and match withholding taxes.**
 
-Dividend rows, withholding tax rows and (optionally) ADR fees are grouped by a composite key: `YYYY-MM-DD:ISIN:CURRENCY` (or `YYYY-MM-DD:SYMBOL:CURRENCY` if ISIN is unavailable). All dividend rows with the same key form one dividend event, so a payment that the broker posts, reverses and re-posts on the same day (`100`, `-100`, `100`) is netted to a single event of `100`. Matched withholding taxes and ADR fees are counted once per event, regardless of how many dividend rows it has.
+Rows from every imported year take part in matching, and the tax period is applied only afterwards, to events.
+
+1. **Pair dividend reversals.** Each negative dividend row pairs with one unconsumed positive row with the same `ISIN ?? symbol`, currency and kind, dated on or before it (at most 366 days earlier) and with the exact opposite amount. The most recent such row wins; ties go to the same date, then input order. Approximate amounts are never paired across dates: the tool does not cut income on a guess. A paired reversal takes the original's date **and NBP rate**, so the pair cancels to exactly 0 PLN (a reversal annuls a receipt, it is not one). A re-post is its own receipt on its own date, at that date's D-1 rate ([art. 11a ust. 1](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)).
+2. **Pair WHT refunds** with the withholding they undo, on the same rules. If several withholdings qualify, one on an event whose dividend was reversed the same day ranks first, then one on an event whose dividend nets to 0 or less, then the most recent. A paired refund takes the withholding's date and rate.
+3. **Group** the legs by key `YYYY-MM-DD:ISIN:CURRENCY:KIND` of their effective date (`SYMBOL` if no ISIN), so a payment that is posted, reversed and re-posted on the same day (`100`, `-100`, `100`) is netted to a single event of `100`. ADR fees are counted once per event.
+4. **Attach unmatched WHT.** A withholding group whose date has no dividend event goes to the most recent earlier event of the same instrument within 366 days, otherwise to the earliest event up to 7 days later (WHT posted before its dividend). Attached withholding keeps its own date and rate ([art. 11a ust. 3](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/): day of payment); an attached partial refund uses the event's withholding rate. The event shows `wht-matched-by-symbol`.
+5. **Unmatched WHT is never dropped.** If nothing qualifies, a row with amount 0 and the withheld tax shown is emitted with `wht-unmatched`; nothing is credited (art. 30a ust. 9 credits only tax on income in the base). When a same-symbol sale is within 3 days, `likelySaleTax` points to US §1446(f) withholding on a partnership sale, which is not dividend tax.
+
+**Year assignment.** The original's date decides the year. A reversal in a later year nets the event to 0 in the original year (`reversed-later`, `crossYear`): if that return is already filed, correct it under art. 81 of the Tax Ordinance (a justification is required when the overpayment exceeds PLN 10,000). In the later year the reversal is an info row (`reverses-prior-year`, amounts 0) and is not deducted there, because art. 30a income has no current-period correction. A later-year reversal whose original is not in the data stays floored with `net-negative`.
+
+**Refund of WHT in a later year ([art. 45 ust. 3a](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)).** A refund received in a later year than a still-valid dividend is not netted into the earlier year, which keeps the credit (`wht-refunded-later`). In the year of the refund an info row carries `addBackPln`: the earlier year's deductible withholding minus the same with the refund netted in. A refund of the part above the treaty cap, which was never deducted, adds back 0. PIT-38 section G reduces poz. 48 by the add-back and adds any remainder to poz. 47; the Ministry of Finance gives no field placement for it, but poz. 49 comes out the same either way.
 
 **Dividend country (ADRs and payments in lieu).** Art. 30a ust. 9 updof limits the credit by the treaty with the _source state_ of the dividend:
 
@@ -424,7 +434,7 @@ For each dividend event in the tax period:
 
 Only the dividend actually received is income ([art. 30a ust. 1 pkt 4](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)) and only tax actually paid abroad can be credited ([art. 30a ust. 9](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)), so a refunded withholding (`-15`, `+15`) nets to 0. Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date). If dividend rows in one event have different rates, PLN amounts are summed per row.
 
-Two non-fatal warnings flag suspicious nets: **net-negative** (the event's dividend rows sum below zero — usually a reversal dated differently from the original payment; the amount is floored to 0) and **wht-net-refund** (refunds exceed withholding — often a withheld amount entered as a positive number; withholding is floored to 0). Reversals posted on a different date than the original payment are not netted yet.
+Two non-fatal warnings flag suspicious nets: **net-negative** (the event's dividend rows sum below zero — probably a reversal of a payment from an earlier period that is not in the data; the amount is floored to 0) and **wht-net-refund** (refunds exceed withholding — often a withheld amount entered as a positive number; withholding is floored to 0).
 
 **Step 3 — Per-dividend credit cap** (applied in `calculateDividends`, `dividends.ts`):
 
@@ -435,7 +445,7 @@ capRate               = min(treatyRate(country) ?? 0.19, 0.19)
 deductibleWithholding = min(withholdingTaxPln, amountPln × capRate)
 
 totalDeductibleWithholdingPln = sum of deductibleWithholding for all dividends
-dividendTaxOwedPln = max(totalDividendsPln × 0.19 − totalDeductibleWithholdingPln, 0)
+dividendTaxOwedPln = max(totalDividendsPln × 0.19 − totalDeductibleWithholdingPln, 0) + totalDividendAddBackPln
 ```
 
 Mapped treaty rates (portfolio / default column — the higher rate from each "X/Y" treaty entry, since individual investors virtually never hold the ≥10–25 % stakes required to unlock the reduced rate). Data source: [PwC Worldwide Tax Summaries — Poland, Withholding taxes](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes). Cross-reference the full official list: [Wykaz umów o unikaniu podwójnego opodatkowania — Ministerstwo Finansów](https://www.podatki.gov.pl/podatkowa-wspolpraca-miedzynarodowa/wykaz-umow-o-unikaniu-podwojnego-opodatkowania/).

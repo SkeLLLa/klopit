@@ -12,7 +12,7 @@ Open and partially done work, organized by priority tier. Finished items are rem
 | -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | **P0.3** | Warsaw TZ Conversion        | Convert IBKR NY timestamps to Warsaw TZ at parse time. Fixes tax-year assignment and D-1 NBP lookups. `parseDateTime` (`src/core/parsers/shared/csv-utils.ts`) still builds a local-time `Date` from the statement string without any conversion. |        |
 | **P0.6** | A6 Schwab parser check      | Verify the Schwab parser against a real export. Blocked on a sample statement. Schwab rows have no ISIN, so their country resolves to `XX` (unknown) until the user maps it in the country table.                                                 |        |
-| **P0.7** | Dividend reversal leftovers | Plan 05 follow-ups: reversals that fall on a different date than the original dividend are not netted against it (cross-date reversals), and a withholding row with no matching dividend is dropped silently instead of being surfaced.           |        |
+| **P0.7** | Dividend reversal leftovers | Done: cross-date reversals are paired with their original and unmatched withholding is attached or surfaced (plan 13, track A). Remove at release.                                                                                                | Done   |
 
 ---
 
