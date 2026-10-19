@@ -7,7 +7,8 @@
     BackupError,
     exportBackup,
     importBackup,
-    parseBackup,
+    readBackupFile,
+    type BackupFile,
     type BackupErrorCode,
   } from '$lib/services/backup.js';
   import { localizeHref } from '$lib/paraglide/runtime';
@@ -76,7 +77,7 @@
   let backupBusy = $state(false);
   let backupError: string | null = $state(null);
   let backupMessage: string | null = $state(null);
-  let pendingBackupText: string | null = $state(null);
+  let pendingBackup: BackupFile | null = $state(null);
 
   const BACKUP_ERROR_MESSAGES: Record<BackupErrorCode, () => string> = {
     corrupt: () => m.settings_backup_error_corrupt(),
@@ -84,6 +85,7 @@
     formatVersion: () => m.settings_backup_error_format_version(),
     schemaNewer: () => m.settings_backup_error_schema_newer(),
     schemaOlder: () => m.settings_backup_error_schema_older(),
+    tooLarge: () => m.settings_backup_error_too_large(),
     invalid: () => m.settings_backup_error_invalid(),
   };
 
@@ -106,8 +108,10 @@
       const link = document.createElement('a');
       link.href = url;
       link.download = `klopit-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (e) {
       backupError = describeBackupError(e);
     } finally {
@@ -122,23 +126,30 @@
     backupError = null;
     backupMessage = null;
     if (!file) return;
+    backupBusy = true;
     try {
-      const text = await file.text();
       // Validate before asking, so a bad file never reaches the confirmation.
-      parseBackup(text, db.verno);
-      pendingBackupText = text;
+      pendingBackup = await readBackupFile(file);
     } catch (err) {
       backupError = describeBackupError(err);
+    } finally {
+      backupBusy = false;
     }
   }
 
   async function handleBackupConfirm() {
-    const text = pendingBackupText;
-    pendingBackupText = null;
-    if (text === null) return;
+    const backup = pendingBackup;
+    pendingBackup = null;
+    if (backup === null) return;
     backupBusy = true;
     try {
-      await importBackup({ text });
+      await importBackup({ backup });
+      // Re-resolve the active session; falls back to the first one when the
+      // previous id is no longer in the restored data.
+      sessionState.init(
+        // oxlint-disable-next-line unicorn/no-array-reverse -- Dexie Collection#reverse(), not Array#reverse()
+        await db.sessions.orderBy('year').reverse().toArray(),
+      );
       backupMessage = m.settings_backup_success();
     } catch (e) {
       backupError = describeBackupError(e);
@@ -377,7 +388,6 @@
             type="button"
             onclick={handleBackupExport}
             disabled={backupBusy}
-            aria-label={m.settings_backup_export_aria()}
             class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             {m.settings_backup_export()}
@@ -386,7 +396,6 @@
             type="button"
             onclick={() => backupFileInput?.click()}
             disabled={backupBusy}
-            aria-label={m.settings_backup_import_aria()}
             class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             {m.settings_backup_import()}
@@ -417,9 +426,9 @@
 
     <DeleteConfirm
       message={m.settings_backup_confirm()}
-      open={pendingBackupText !== null}
+      open={pendingBackup !== null}
       onconfirm={handleBackupConfirm}
-      oncancel={() => (pendingBackupText = null)}
+      oncancel={() => (pendingBackup = null)}
     />
 
     <section

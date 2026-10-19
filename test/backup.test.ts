@@ -7,7 +7,12 @@ import { KlopitDB } from '../src/lib/db.js';
 import {
   BackupError,
   exportBackup,
+  BACKUP_MAX_BYTES,
+  BACKUP_MIGRATIONS,
+  BACKUP_MIN_SCHEMA_VERSION,
   importBackup,
+  parseBackup,
+  readBackupFile,
   type BackupFile,
 } from '../src/lib/services/backup.js';
 import { isSessionStale } from '../src/lib/utils/stale.js';
@@ -58,6 +63,10 @@ const SEED: Record<(typeof INPUT_TABLES)[number], object[]> = {
       sessionId,
       symbol: 'AAPL',
       datetime: d('2025-03-03T15:30:00Z'),
+      quantity: 1,
+      price: 2,
+      proceeds: 2,
+      commission: 0,
       broker: 'ibkr',
       account: 'U123',
     },
@@ -65,6 +74,10 @@ const SEED: Record<(typeof INPUT_TABLES)[number], object[]> = {
       sessionId,
       symbol: 'MSFT',
       datetime: d('2025-04-03T15:30:00Z'),
+      quantity: 1,
+      price: 2,
+      proceeds: 2,
+      commission: 0,
       broker: 'schwab',
       account: '__unassigned__',
     },
@@ -75,24 +88,32 @@ const SEED: Record<(typeof INPUT_TABLES)[number], object[]> = {
       symbol: 'AAPL',
       date: d('2025-05-01T00:00:00Z'),
       withholdingTax: 1,
+      amount: 5,
       account: 'U123',
     },
   ],
   withholdingTaxes: [
-    { sessionId, symbol: 'AAPL', date: d('2025-05-01T00:00:00Z') },
+    { sessionId, symbol: 'AAPL', date: d('2025-05-01T00:00:00Z'), amount: -1 },
   ],
   carryInPositions: [
     {
       sessionId,
       symbol: 'KO',
+      quantity: 3,
+      year: 2024,
       acquisitionDate: d('2020-01-01T00:00:00Z'),
       account: 'U123',
     },
   ],
   transactionFees: [
-    { sessionId, symbol: 'AAPL', datetime: d('2025-03-04T00:00:00Z') },
+    {
+      sessionId,
+      symbol: 'AAPL',
+      datetime: d('2025-03-04T00:00:00Z'),
+      amount: 1,
+    },
   ],
-  creditInterests: [{ sessionId, date: d('2025-06-01T00:00:00Z') }],
+  creditInterests: [{ sessionId, date: d('2025-06-01T00:00:00Z'), amount: 2 }],
   corporateActions: [
     {
       sessionId,
@@ -104,7 +125,9 @@ const SEED: Record<(typeof INPUT_TABLES)[number], object[]> = {
       manual: true,
     },
   ],
-  priorLosses: [{ sessionId, year: 2023, amount: 100 }],
+  priorLosses: [
+    { sessionId, year: 2023, totalLossPln: 100, alreadyDeductedPln: 0 },
+  ],
   symbolCountryOverrides: [
     { sessionId, symbol: 'AAPL', country: 'US', scope: 'gains' },
   ],
@@ -149,9 +172,15 @@ async function clearAll(db: KlopitDB): Promise<void> {
   );
 }
 
+const asObject = (v: unknown): object =>
+  typeof v === 'object' && v !== null ? v : {};
+
 async function importCode(text: string): Promise<string> {
   try {
-    await importBackup({ text, database });
+    await importBackup({
+      backup: parseBackup(text, database.verno),
+      database,
+    });
   } catch (e) {
     assert.ok(e instanceof BackupError);
     return e.code;
@@ -178,7 +207,7 @@ void describe('backup export / import', () => {
     );
 
     await clearAll(database);
-    await importBackup({ text, database });
+    await importBackup({ backup: parseBackup(text, database.verno), database });
     assert.deepStrictEqual(await dump(database), before);
     const [trade] = await database.trades.toArray();
     assert.ok(trade.datetime instanceof Date);
@@ -190,7 +219,7 @@ void describe('backup export / import', () => {
     await seed(database);
     const text = await exportBackup({ appVersion: 'x', database });
     await database.table('trades').add({ sessionId, symbol: 'EXTRA' });
-    await importBackup({ text, database });
+    await importBackup({ backup: parseBackup(text, database.verno), database });
     assert.equal(
       await database.trades.where('symbol').equals('EXTRA').count(),
       0,
@@ -201,7 +230,7 @@ void describe('backup export / import', () => {
     await seed(database);
     const text = await exportBackup({ appVersion: 'x', database });
     await clearAll(database);
-    await importBackup({ text, database });
+    await importBackup({ backup: parseBackup(text, database.verno), database });
     const session = await database.sessions.get('s1');
     assert.ok(session);
     assert.ok(
@@ -235,7 +264,10 @@ void describe('backup export / import', () => {
     );
     assert.equal(
       await importCode(
-        JSON.stringify({ ...good, schemaVersion: database.verno - 1 }),
+        JSON.stringify({
+          ...good,
+          schemaVersion: BACKUP_MIN_SCHEMA_VERSION - 1,
+        }),
       ),
       'schemaOlder',
     );
@@ -247,6 +279,161 @@ void describe('backup export / import', () => {
     );
     // Rejected imports leave existing data untouched.
     assert.equal(await database.trades.count(), 2);
+  });
+
+  void it('rejects invalid rows', async () => {
+    await seed(database);
+    const good = JSON.parse(
+      await exportBackup({ appVersion: 'x', database }),
+    ) as BackupFile;
+    const withTable = (name: string, rows: object[]): string =>
+      JSON.stringify({ ...good, tables: { ...good.tables, [name]: rows } });
+    const sessions = good.tables['sessions'] ?? [];
+    const trades = good.tables['trades'] ?? [];
+    const session = asObject(sessions[0]);
+    const trade = asObject(trades[0]);
+
+    assert.equal(
+      await importCode(withTable('sessions', [{ ...session, id: 5 }])),
+      'invalid',
+      'session id must be a string',
+    );
+    assert.equal(
+      await importCode(withTable('sessions', [session, session])),
+      'invalid',
+      'duplicate session ids',
+    );
+    assert.equal(
+      await importCode(withTable('trades', [{ ...trade, sessionId: 'nope' }])),
+      'invalid',
+      'orphan child row',
+    );
+    assert.equal(
+      await importCode(withTable('trades', [{ ...trade, quantity: 'x' }])),
+      'invalid',
+      'non-numeric quantity',
+    );
+    assert.equal(
+      await importCode(withTable('trades', [{ ...trade, price: null }])),
+      'invalid',
+      'null price',
+    );
+    assert.equal(
+      await importCode(
+        withTable('trades', [{ ...trade, datetime: '2025-01-01' }]),
+      ),
+      'invalid',
+      'untagged date',
+    );
+  });
+
+  void it('rejects malformed $date tags and invalid dates', async () => {
+    await seed(database);
+    const text = await exportBackup({ appVersion: 'x', database });
+    const iso = '2025-03-03T15:30:00.000Z';
+    assert.ok(text.includes(iso));
+    assert.equal(
+      await importCode(
+        text.replace(`{"$date":"${iso}"}`, '{"$date":"garbage"}'),
+      ),
+      'invalid',
+    );
+    assert.equal(
+      await importCode(
+        text.replace(
+          `{"$date":"${iso}"}`,
+          '{"$date":"2025-13-45T99:00:00.000Z"}',
+        ),
+      ),
+      'invalid',
+    );
+    assert.equal(
+      await importCode(text.replace(`{"$date":"${iso}"}`, '{"$date":null}')),
+      'invalid',
+    );
+    assert.equal(
+      await importCode(text.replace(`{"$date":"${iso}"}`, '{"$date":5}')),
+      'invalid',
+    );
+    // Objects that merely contain a "$date" key next to others are left alone.
+    assert.equal(
+      JSON.stringify(
+        parseBackup(
+          text.replace(
+            '"files":[]',
+            '"files":[],"extra":{"$date":"x","other":1}',
+          ),
+          database.verno,
+        ).tables['sessions']?.[1],
+      ).includes('"other":1'),
+      true,
+    );
+  });
+
+  void it('refuses to export an invalid date', async () => {
+    await seed(database);
+    await database.table('trades').add({
+      sessionId,
+      symbol: 'BAD',
+      datetime: new Date(NaN),
+      quantity: 1,
+      price: 1,
+      proceeds: 1,
+      commission: 0,
+    });
+    await assert.rejects(
+      exportBackup({ appVersion: 'x', database }),
+      BackupError,
+    );
+  });
+
+  void it('rejects files over the size limit before reading them', async () => {
+    const big = {
+      size: BACKUP_MAX_BYTES + 1,
+      text: () => Promise.reject(new Error('read')),
+    };
+    await assert.rejects(
+      readBackupFile(big as unknown as Blob, database.verno),
+      (e: unknown) => e instanceof BackupError && e.code === 'tooLarge',
+    );
+  });
+
+  void it('has a backup migration for every version after the minimum', () => {
+    for (let v = BACKUP_MIN_SCHEMA_VERSION + 1; v <= database.verno; v++) {
+      assert.equal(
+        typeof BACKUP_MIGRATIONS[v],
+        'function',
+        `database v${String(v)} needs a BACKUP_MIGRATIONS entry in src/lib/services/backup.ts (identity if row shapes are unchanged)`,
+      );
+    }
+  });
+
+  void it('migrates older supported backups up to the current version', () => {
+    const migrations = BACKUP_MIGRATIONS as Record<number, unknown>;
+    const next = database.verno + 1;
+    migrations[next] = (t: Record<string, object[]>) => ({
+      ...t,
+      trades: (t['trades'] ?? []).map((r) => ({ ...r, migrated: true })),
+    });
+    try {
+      const raw = {
+        format: 'klopit-backup',
+        formatVersion: 1,
+        schemaVersion: database.verno,
+        tables: Object.fromEntries(
+          INPUT_TABLES.map((n) => [n, [] as object[]]),
+        ),
+      };
+      const parsed = parseBackup(JSON.stringify(raw), next);
+      assert.equal(parsed.schemaVersion, next);
+      assert.equal(
+        parseBackup(JSON.stringify({ ...raw, schemaVersion: next }), next)
+          .schemaVersion,
+        next,
+      );
+    } finally {
+      delete migrations[next];
+    }
   });
 
   void it('classifies every table of db.ts as input or derived', () => {
