@@ -592,9 +592,14 @@ export interface EnrichedTrade extends Trade {
   /**
    * NBP rate of the vest / purchase date itself, for valuing income taxed at
    * acquisition. Set when `exchangeRate` is a settlement-date rate; falls back
-   * to `exchangeRate`.
+   * to `exchangeRate` (which is then the vest-date rate itself).
    */
   incomeExchangeRate?: number;
+  /**
+   * The vest-date rate was required (settlement-date rates on) but could not be
+   * fetched; `incomeExchangeRate` is unset and must not fall back.
+   */
+  incomeRateUnavailable?: boolean;
   commissionExchangeRate: number;
   rateUnavailable: boolean;
 }

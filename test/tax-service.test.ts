@@ -48,6 +48,57 @@ async function seedCarryInSession(args: {
   return session.id;
 }
 
+async function seedIncentiveSession(settlement: boolean) {
+  mock.timers.enable({
+    apis: ['Date'],
+    now: new Date('2026-10-14T08:00:00Z'),
+  });
+  const session = await createSession({ year: 2026 });
+  await updateSession({
+    id: session.id,
+    changes: { useSettlementDateForTradeRates: settlement },
+  });
+  const trade = {
+    sessionId: session.id,
+    symbol: 'ACME',
+    currency: 'USD',
+    quantity: 1,
+    commission: 0,
+    commissionCurrency: 'USD',
+  };
+  // Vest Thu 10-01: T+2 settlement rate is Fri 10-02's, vest rate 10-01's.
+  await db.trades.add({
+    ...trade,
+    datetime: new Date(2026, 9, 1, 10, 0, 0),
+    price: 10,
+    proceeds: 0,
+    type: 'buy',
+    source: 'rsu',
+    incentive: { regime: 'taxed-at-acquisition', fmvPerShare: 50 },
+  });
+  // Sell Thu 10-08: settlement rate of 10-09, trade-date rate of 10-07.
+  await db.trades.add({
+    ...trade,
+    datetime: new Date(2026, 9, 8, 10, 0, 0),
+    price: 0,
+    proceeds: 120,
+    type: 'sell',
+  });
+  return session.id;
+}
+
+async function runIncentiveSession(id: string, rates: Record<string, number>) {
+  mock.method(globalThis, 'fetch', fakeNbp({ today: '2026-10-14', rates }));
+  await calculateSessionTaxes({ sessionId: id });
+  const rows = await db.tradeResults.where('sessionId').equals(id).toArray();
+  const sell = rows.find((r) => r.type === 'sell');
+  assert.ok(sell);
+  return {
+    sell,
+    summary: await db.taxSummaries.get(id),
+  };
+}
+
 void describe('tax service', () => {
   afterEach(async () => {
     mock.restoreAll();
@@ -267,6 +318,44 @@ void describe('tax service near "today" (NBP publication)', () => {
     assert.equal(sell.exchangeRate, 0);
     const summary = await db.taxSummaries.get(session.id);
     assert.equal(summary?.missingRateCount, 1);
+  });
+
+  void describe('incentive vest-date income rate', () => {
+    void it('uses the vest-date rate for the taxed income when available', async () => {
+      const id = await seedIncentiveSession(true);
+      const { sell, summary } = await runIncentiveSession(id, {
+        '2026-09-30': 3.8,
+        '2026-10-02': 3.9,
+        '2026-10-09': 4.0,
+      });
+      // 10 * 3.9 paid + (50 - 10) * 3.8 taxed income
+      assert.equal(sell.rateUnavailable, false);
+      assert.ok(Math.abs(sell.costPln - 191) < 1e-9);
+      assert.equal(summary?.missingRateCount, 0);
+    });
+
+    void it('flags a draft instead of falling back when the vest-date rate is missing', async () => {
+      const id = await seedIncentiveSession(true);
+      // Settlement rate (10-02) exists; nothing at or before the vest date.
+      const { sell, summary } = await runIncentiveSession(id, {
+        '2026-10-02': 3.9,
+        '2026-10-09': 4.0,
+      });
+      assert.equal(sell.rateUnavailable, true);
+      assert.ok((summary?.missingRateCount ?? 0) > 0);
+    });
+
+    void it('without settlement-date rates the trade rate is the vest rate', async () => {
+      const id = await seedIncentiveSession(false);
+      const { sell, summary } = await runIncentiveSession(id, {
+        '2026-09-30': 3.8,
+        '2026-10-07': 4.0,
+      });
+      // (10 + 40) * 3.8
+      assert.equal(sell.rateUnavailable, false);
+      assert.ok(Math.abs(sell.costPln - 190) < 1e-9);
+      assert.equal(summary?.missingRateCount, 0);
+    });
   });
 
   void it('marks the summary complete when every rate is available', async () => {

@@ -443,12 +443,13 @@ export async function fetchRatesForSession(args: {
 }): Promise<void> {
   await prefetchCarryInRates(args);
 
-  const [trades, dividends, creditInterests, corporateActions] =
+  const [trades, dividends, creditInterests, corporateActions, withholdings] =
     await Promise.all([
       db.trades.where('sessionId').equals(args.sessionId).toArray(),
       db.dividends.where('sessionId').equals(args.sessionId).toArray(),
       db.creditInterests.where('sessionId').equals(args.sessionId).toArray(),
       db.corporateActions.where('sessionId').equals(args.sessionId).toArray(),
+      db.withholdingTaxes.where('sessionId').equals(args.sessionId).toArray(),
     ]);
 
   // Collect unique currencies (excluding PLN)
@@ -461,6 +462,10 @@ export async function fetchRatesForSession(args: {
   }
   for (const d of dividends) {
     const cur = d.currency.toUpperCase();
+    if (cur !== 'PLN') currencies.add(cur);
+  }
+  for (const w of withholdings) {
+    const cur = w.currency.toUpperCase();
     if (cur !== 'PLN') currencies.add(cur);
   }
   for (const interest of creditInterests) {
@@ -484,6 +489,7 @@ export async function fetchRatesForSession(args: {
   for (const t of trades) allDates.push(t.datetime);
   for (const d of dividends) allDates.push(d.date);
   for (const interest of creditInterests) allDates.push(interest.date);
+  for (const w of withholdings) allDates.push(w.date);
   for (const ca of corporateActions) allDates.push(ca.datetime);
 
   if (allDates.length === 0) return;

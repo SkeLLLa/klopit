@@ -124,6 +124,41 @@ void describe('incentive shares cost basis', () => {
     assert.equal(result.costPln, 2200);
   });
 
+  void it('flags the lot when the needed vest-date rate is unavailable', () => {
+    const [result] = run([
+      makeTrade({
+        source: 'espp',
+        price: 40,
+        exchangeRate: 4.5,
+        incomeRateUnavailable: true,
+        incentive: { regime: 'taxed-at-acquisition', fmvPerShare: 50 },
+      }),
+      sell(),
+    ]);
+    // No silent fallback to the settlement-date rate: income left out, draft.
+    assert.equal(result.costPln, 1800);
+    assert.equal(result.rateUnavailable, true);
+  });
+
+  void it('an unavailable vest-date rate is irrelevant when income is not derived from FMV', () => {
+    const [qualifying, explicit] = [
+      run([
+        rsuBuy({ regime: 'qualifying' }, { incomeRateUnavailable: true }),
+        sell(),
+      ])[0],
+      run([
+        rsuBuy(
+          { regime: 'taxed-at-acquisition', taxedIncomePln: 500 },
+          { incomeRateUnavailable: true },
+        ),
+        sell(),
+      ])[0],
+    ];
+    assert.equal(qualifying.rateUnavailable, false);
+    assert.equal(explicit.rateUnavailable, false);
+    assert.equal(explicit.costPln, 500);
+  });
+
   void it('explicit taxedIncomePln wins over the FMV derivation', () => {
     const [result] = run([
       rsuBuy({

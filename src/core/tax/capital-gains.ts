@@ -1263,6 +1263,8 @@ function processTrade(args: {
     const incentive = isIncentiveBuy(trade)
       ? incentiveExtraCost(trade)
       : undefined;
+    const rateUnavailable =
+      trade.rateUnavailable || (incentive?.rateUnavailable ?? false);
     const costPerSharePln =
       trade.price * trade.exchangeRate +
       (trade.quantity > 0 && incentive
@@ -1276,7 +1278,7 @@ function processTrade(args: {
       quantity: trade.quantity,
       costPerSharePln,
       commissionPerSharePln,
-      rateUnavailable: trade.rateUnavailable,
+      rateUnavailable,
       ...(incentive?.costMissing ? { costMissing: true } : {}),
       acquiredAt: trade.datetime,
     });
@@ -1297,7 +1299,7 @@ function processTrade(args: {
         costPln: 0,
         gainLossPln: 0,
         taxPln: 0,
-        rateUnavailable: trade.rateUnavailable,
+        rateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
         foreignTaxPln: 0,
         foreignTaxOriginal: 0,

@@ -161,14 +161,16 @@ export async function calculateSessionTaxes(args: {
       });
       // Income taxed at vest is valued at the vest-date rate even when the
       // trade itself uses the settlement-date rate.
-      const incomeRate =
-        session.useSettlementDateForTradeRates && isIncentiveBuy(trade)
-          ? await tryGetFixingRate({
-              currency: trade.currency,
-              date: dateStr,
-              scope: 'trade.incentive',
-            })
-          : undefined;
+      const needsIncomeRate =
+        (session.useSettlementDateForTradeRates ?? false) &&
+        isIncentiveBuy(trade);
+      const incomeRate = needsIncomeRate
+        ? await tryGetFixingRate({
+            currency: trade.currency,
+            date: dateStr,
+            scope: 'trade.incentive',
+          })
+        : undefined;
       // A missing rate becomes 0 here; rateUnavailable propagates through
       // FIFO lots to every sell that consumes them (capital-gains.ts).
       return {
@@ -176,6 +178,9 @@ export async function calculateSessionTaxes(args: {
         exchangeRate: rate?.rate ?? 0,
         commissionExchangeRate: comRate?.rate ?? 0,
         ...(incomeRate ? { incomeExchangeRate: incomeRate.rate } : {}),
+        ...(needsIncomeRate && !incomeRate
+          ? { incomeRateUnavailable: true }
+          : {}),
         rateUnavailable: rate === undefined || comRate === undefined,
       };
     }),
