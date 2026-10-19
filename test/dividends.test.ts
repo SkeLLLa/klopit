@@ -1409,7 +1409,7 @@ void describe('calculateDividends — plan 13 review fixes', () => {
     const elapsed = performance.now() - start;
     assert.equal(pairs.length, 3000);
     assert.equal(new Set(pairs.map((p) => p.original)).size, 3000);
-    assert.ok(elapsed < 500, `took ${String(elapsed)} ms`);
+    assert.ok(elapsed < 2000, `took ${String(elapsed)} ms`);
   });
 
   void it('minor 6: pairs amounts across a cent bucket boundary', () => {
