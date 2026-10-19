@@ -2,6 +2,7 @@
   import { m } from '#lib/paraglide/messages.js';
   import { localizeHref } from '#lib/paraglide/runtime.js';
   import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { navLabels } from '#lib/nav-labels.js';
   import { navigation, type NavItem } from '#lib/nav.js';
   import { ArrowRight, BookOpen, FileText, HelpCircle } from '@lucide/svelte';
 
@@ -31,7 +32,7 @@
   };
 
   function t(key: string): string {
-    return (m as Record<string, (...args: unknown[]) => string>)[key]?.() ?? key;
+    return navLabels[key]?.() ?? key;
   }
 
   function getDescription(item: NavItem): string | undefined {

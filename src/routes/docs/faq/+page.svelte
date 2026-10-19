@@ -4,7 +4,8 @@
   import { m } from '#lib/paraglide/messages.js';
   import { getLocale } from '#lib/paraglide/runtime.js';
   import { pageTitle } from '#lib/state/page-title.svelte.js';
-  import { FAQ_ITEMS, type FaqMessageKey } from '#lib/constants/faq.js';
+  import { FAQ_ITEMS } from '#lib/constants/faq.js';
+  import { faqMessages } from '#lib/faq-messages.js';
   import { ChevronDown } from '@lucide/svelte';
 
   pageTitle.set(m.nav_faq());
@@ -15,12 +16,10 @@
     uk: 'Джерела',
   }[getLocale()];
 
-  const messages: Readonly<Record<FaqMessageKey, () => string>> = m;
-
   const faqs = FAQ_ITEMS.map((faq) => ({
     id: faq.id,
-    question: messages[faq.questionKey],
-    answer: messages[faq.answerKey],
+    question: faqMessages[faq.questionKey],
+    answer: faqMessages[faq.answerKey],
   }));
 
   const sources: GroundingSource[] = [

@@ -43,3 +43,32 @@ for (const page of ['index.html', 'pl/index.html']) {
     );
   });
 }
+
+// Measured 2026-10 after removing dynamic message lookups from docs/support:
+// 35-37 preloads, 162-189 KB raw. Bounds are that + ~10%.
+const PAGE_BUDGETS: Record<string, { preloads: number; kb: number }> = {
+  'docs/index.html': { preloads: 41, kb: 193 },
+  'docs/faq/index.html': { preloads: 39, kb: 208 },
+  'pl/docs/faq/index.html': { preloads: 39, kb: 208 },
+  'docs/ibi/index.html': { preloads: 39, kb: 179 },
+  'support/index.html': { preloads: 38, kb: 200 },
+};
+
+for (const [page, budget] of Object.entries(PAGE_BUDGETS)) {
+  void test(`${page} stays within the JS preload budget`, (t) => {
+    if (!existsSync(build)) {
+      t.skip('build output not found - run `pnpm run build:app` first');
+      return;
+    }
+    const { count, bytes } = preloadSize(page);
+    assert.ok(count > 0, 'expected modulepreload links');
+    assert.ok(
+      count <= budget.preloads,
+      `${count} preloads > ${budget.preloads}`,
+    );
+    assert.ok(
+      bytes <= budget.kb * 1024,
+      `${(bytes / 1024).toFixed(0)} KB preloaded > ${budget.kb} KB`,
+    );
+  });
+}

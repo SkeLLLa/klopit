@@ -1,20 +1,11 @@
-import type { m } from '#lib/paraglide/messages.js';
-
-type NoArgMessageKey = {
-  [K in Extract<keyof typeof m, string>]: Parameters<(typeof m)[K]>[0] extends
-    | undefined
-    | Record<string, never>
-    ? K
-    : never;
-}[Extract<keyof typeof m, string>];
+import { m } from '#lib/paraglide/messages.js';
 
 export interface TaxSupportFund {
   id: string;
   name: string;
   krs: string;
   paymentDescription: string;
-  /** I18n key — must exist in all locale message files */
-  descriptionKey: NoArgMessageKey;
+  description: () => string;
   taxDonationUrl: string;
   websiteUrl: string;
 }
@@ -22,8 +13,7 @@ export interface TaxSupportFund {
 export interface DirectDonationFund {
   id: string;
   name: string;
-  /** I18n key — must exist in all locale message files */
-  descriptionKey: NoArgMessageKey;
+  description: () => string;
   /** Locale-keyed donation URLs. Use locale code (e.g. 'uk') or '*' as fallback. */
   donationUrl: Record<string, string>;
   websiteUrl: string;
@@ -36,7 +26,7 @@ export const taxSupportFunds: TaxSupportFund[] = [
     name: 'Polska Akcja Humanitarna',
     krs: '0000136833',
     paymentDescription: 'Wplacam na pomoc Ukrainie',
-    descriptionKey: 'support_fund_pah_desc',
+    description: m.support_fund_pah_desc,
     taxDonationUrl:
       'https://www.pah.org.pl/wplac/?form=wplacam-na-pomoc-ukrainie',
     websiteUrl: 'https://www.pah.org.pl/',
@@ -47,7 +37,7 @@ export const taxSupportFunds: TaxSupportFund[] = [
     krs: '0000342283',
     paymentDescription:
       'Fundacja Ukraiński Dom — wsparcie integracji Ukraińców',
-    descriptionKey: 'support_fund_ukrainski_dom_desc',
+    description: m.support_fund_ukrainski_dom_desc,
     taxDonationUrl: 'https://ukrainskidom.pl/przekaz-1-5-procenta/',
     websiteUrl: 'https://ukrainskidom.pl/',
   },
@@ -57,7 +47,7 @@ export const taxSupportFunds: TaxSupportFund[] = [
     krs: '0000198645',
     paymentDescription:
       'Caritas Polska — akcje mające na celu wspieranie Ukrainy',
-    descriptionKey: 'support_fund_caritas_desc',
+    description: m.support_fund_caritas_desc,
     taxDonationUrl: 'https://caritas.pl/procent-podatku/',
     websiteUrl: 'https://caritas.pl/',
   },
@@ -66,7 +56,7 @@ export const taxSupportFunds: TaxSupportFund[] = [
     name: 'Fundacja Pomagam.pl',
     krs: '0000353888',
     paymentDescription: 'Fundacja Pomagam.pl — Solidarni z Ukrainą',
-    descriptionKey: 'support_fund_pomagam_desc',
+    description: m.support_fund_pomagam_desc,
     taxDonationUrl: 'https://pomagam.pl/org/fundacjastandwithukraine',
     websiteUrl: 'https://pomagam.pl/',
   },
@@ -75,7 +65,7 @@ export const taxSupportFunds: TaxSupportFund[] = [
     name: 'Fundacja Siepomaga',
     krs: '0000396361',
     paymentDescription: '0185785 Ukraina',
-    descriptionKey: 'support_fund_siepomaga_desc',
+    description: m.support_fund_siepomaga_desc,
     taxDonationUrl: 'https://www.siepomaga.pl/ukraina',
     websiteUrl: 'https://www.siepomaga.pl/',
   },
@@ -85,7 +75,7 @@ export const directDonationFunds: DirectDonationFund[] = [
   {
     id: 'savelife',
     name: 'Come Back Alive',
-    descriptionKey: 'support_direct_savelife_desc',
+    description: m.support_direct_savelife_desc,
     donationUrl: {
       'uk': 'https://savelife.in.ua/donate/',
       '*': 'https://savelife.in.ua/en/donate-en/',
@@ -95,7 +85,7 @@ export const directDonationFunds: DirectDonationFund[] = [
   {
     id: 'sternenko',
     name: 'Sternenko Fund',
-    descriptionKey: 'support_direct_sternenko_desc',
+    description: m.support_direct_sternenko_desc,
     donationUrl: {
       'uk': 'https://www.sternenkofund.org/donate',
       '*': 'https://www.sternenkofund.org/en/donate',
@@ -105,7 +95,7 @@ export const directDonationFunds: DirectDonationFund[] = [
   {
     id: 'prytula',
     name: 'Prytula Foundation',
-    descriptionKey: 'support_direct_prytula_desc',
+    description: m.support_direct_prytula_desc,
     donationUrl: {
       'uk': 'https://prytulafoundation.org/donation',
       '*': 'https://prytulafoundation.org/en/donation',

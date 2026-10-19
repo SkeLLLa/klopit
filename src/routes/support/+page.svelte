@@ -127,7 +127,7 @@
             <div class="mt-0.5 italic">{fund.paymentDescription}</div>
           </div>
 
-          <p class="text-sm text-slate-600 dark:text-slate-300">{m[fund.descriptionKey]()}</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300">{fund.description()}</p>
 
           <div class="mt-4 flex flex-wrap gap-2">
             <a
@@ -168,7 +168,7 @@
           class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
         >
           <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{fund.name}</h4>
-          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{m[fund.descriptionKey]()}</p>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{fund.description()}</p>
 
           <div class="mt-4 flex flex-wrap gap-2">
             <a
