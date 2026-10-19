@@ -966,3 +966,82 @@ void describe('per-account FIFO: joins that resolve a shortfall stay', () => {
     assert.equal(onlySell(results).costBasisMissing, undefined);
   });
 });
+
+const merger = (overrides: Partial<EnrichedCorporateAction> = {}) =>
+  ({
+    type: 'merger',
+    symbol: 'AAPL',
+    isin: ISIN,
+    datetime: new Date(2023, 5, 1),
+    numerator: 0,
+    denominator: 0,
+    conversionRatio: 2,
+    cashPerShare: 0,
+    cashCurrency: 'PLN',
+    cashExchangeRate: 1,
+    cashRateUnavailable: false,
+    targetSymbol: 'NEW',
+    targetIsin: 'NEWISIN0000',
+    ...overrides,
+  }) as EnrichedCorporateAction;
+
+void describe('per-account FIFO: unstamped rows across mergers', () => {
+  for (const [name, scope] of [
+    ['X1', undefined],
+    ['X1s', A],
+  ] as const) {
+    void it(`${name}: a merger target's sale does not make apart rows final`, () => {
+      const { results, warnings } = run({
+        trades: [
+          priced(50, new Date(2021, 0, 1)),
+          priced(40, new Date(2022, 0, 1), { account: A }),
+          {
+            ...sell(20, new Date(2024, 5, 1), A),
+            symbol: 'NEW',
+            isin: 'NEWISIN0000',
+          },
+          trade(OTHER),
+        ],
+        corporateActions: [merger({ account: scope })],
+      });
+      assert.equal(onlySell(results).symbol, 'NEW');
+      assert.ok(isDraft(warnings));
+    });
+  }
+});
+
+void describe('per-account FIFO: scale', () => {
+  void it('many unstamped instruments stay fast', () => {
+    const trades: EnrichedTrade[] = [];
+    for (let i = 0; i < 400; i++) {
+      const isin = `US${String(i).padStart(10, '0')}`;
+      for (let k = 0; k < 25; k++) {
+        const isSell = k % 3 === 2;
+        const account = i % 2 && k < 12 ? undefined : k % 2 ? A : B;
+        trades.push(
+          trade({
+            symbol: `S${String(i)}`,
+            isin,
+            account,
+            datetime: new Date(
+              2020 + Math.floor(k / 5),
+              (k % 5) * 2,
+              3 + (i % 20),
+            ),
+            quantity: isSell ? 1 : 2,
+            type: isSell ? 'sell' : 'buy',
+            proceeds: isSell ? 100 : 0,
+          }),
+        );
+      }
+    }
+    const started = performance.now();
+    calculateCapitalGains({
+      trades,
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod,
+    });
+    assert.ok(performance.now() - started < 1000);
+  });
+});

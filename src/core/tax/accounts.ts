@@ -79,9 +79,62 @@ export interface JoinDecision {
   overlap: boolean;
 }
 
-/** What a dry run says about one instrument. */
-export interface GroupStats {
-  /** Shares sold that no lot covered, over all accounts. */
+/**
+ * Connected components of instruments: names that trade, carry-in and
+ * corporate-action rows tie together (symbol <-> ISIN, merger targets). FIFO
+ * lots flow only inside a component, so a dry run needs nothing outside it.
+ * Returns the component id of a row.
+ */
+export function createComponents(args: {
+  trades: readonly { isin?: string; symbol: string }[];
+  carryInPositions: readonly { isin?: string; symbol: string }[];
+  corporateActions: readonly {
+    isin?: string;
+    symbol: string;
+    targetIsin?: string;
+    targetSymbol?: string;
+  }[];
+  symbolToIsin: Map<string, string>;
+}): (row: { isin?: string; symbol: string }) => string {
+  const parent = new Map<string, string>();
+  const find = (name: string): string => {
+    let root = name;
+    for (let next = parent.get(root); next; next = parent.get(root)) {
+      if (next === root) break;
+      root = next;
+    }
+    parent.set(name, root);
+    return root;
+  };
+  const union = (names: (string | undefined)[]) => {
+    const upper = names
+      .filter((n): n is string => !!n)
+      .map((n) => n.toUpperCase());
+    for (const name of upper) if (!parent.has(name)) parent.set(name, name);
+    for (const name of upper.slice(1)) parent.set(find(name), find(upper[0]));
+  };
+  const withIsin = (row: { isin?: string; symbol: string }) =>
+    row.isin ?? args.symbolToIsin.get(row.symbol.toUpperCase());
+  for (const row of [...args.trades, ...args.carryInPositions]) {
+    union([row.symbol, withIsin(row)]);
+  }
+  for (const action of args.corporateActions) {
+    union([
+      action.symbol,
+      withIsin(action),
+      action.targetSymbol,
+      action.targetIsin ??
+        (action.targetSymbol
+          ? args.symbolToIsin.get(action.targetSymbol.toUpperCase())
+          : undefined),
+    ]);
+  }
+  return (row) => find(row.symbol.toUpperCase());
+}
+
+/** What a dry run says about a component of instruments. */
+export interface ComponentStats {
+  /** Shares sold that no lot covered. */
   shortfall: number;
   shortfallByAccount: Map<string, number>;
   /** In-period sell results, comparable between runs. */
@@ -95,18 +148,20 @@ const EPS = 1e-9;
  * attribution is a guess (art. 24 ust. 10 updof), so a result is final only
  * when the guess cannot matter:
  *
- * - A candidate account takes the rows when joining it lowers the instrument's
+ * - A candidate account takes the rows when joining it lowers the component's
  *   total shortfall and adds none to that account (checked by a dry run).
  *   Exactly one such account: join it (`account-assumed`).
  * - Otherwise, if no shortfall exists and joining any candidate leaves the
- *   in-period sells unchanged, they stay apart and final.
+ *   in-period sells of the component unchanged, they stay apart and final.
  * - Anything else (several resolving accounts, no resolving account, or a choice
  *   that changes the result) stays unassigned and drafts the form. Instruments
- *   no account holds stay apart (nothing to confuse them with).
+ *   no account holds stay apart (nothing to confuse them with). A component is
+ *   an instrument plus whatever mergers tie to it, so a join that only shows up
+ *   after a merger is seen too.
  */
 export function decideJoins(
   groups: Map<string, UnstampedGroup>,
-  evaluate: (group: string, account?: string) => GroupStats,
+  evaluate: (group: string, account?: string) => ComponentStats,
 ): Map<string, JoinDecision> {
   const decisions = new Map<string, JoinDecision>();
   for (const [group, info] of groups) {

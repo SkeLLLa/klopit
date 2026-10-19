@@ -11,11 +11,12 @@ import {
   assignAccounts,
   createSplitDeduper,
   decideJoins,
-  type GroupStats,
+  type ComponentStats,
+  createComponents,
   instrumentBase,
   instrumentGroup,
   instrumentNames,
-  type JoinDecision,
+  UNASSIGNED_ACCOUNT,
   queueKey,
 } from './accounts.js';
 import {
@@ -206,27 +207,83 @@ export function calculateCapitalGains(
   // resolves a shortfall seen in this dry run.
   let assigned = assignAccounts(assignArgs);
   if (assigned.unstamped.size > 0) {
-    const dry = (decisions?: Map<string, JoinDecision>) =>
-      runPass({
-        ...args,
-        onWarning: undefined,
-        assigned: decisions
-          ? assignAccounts({ ...assignArgs, decisions })
-          : assigned,
+    const apart = assigned;
+    const componentOf = createComponents({
+      trades: args.trades,
+      carryInPositions: args.carryInPositions,
+      corporateActions,
+      symbolToIsin: globalIsin,
+    });
+    // Rows bucketed by component once, so each dry run sees only its own.
+    interface Bucket {
+      trades: EnrichedTrade[];
+      carryInPositions: EnrichedCarryInPosition[];
+      corporateActions: EnrichedCorporateAction[];
+    }
+    const buckets = new Map<string, Bucket>();
+    const bucketOf = (row: { isin?: string; symbol: string }): Bucket => {
+      const id = componentOf(row);
+      let bucket = buckets.get(id);
+      if (!bucket) {
+        bucket = { trades: [], carryInPositions: [], corporateActions: [] };
+        buckets.set(id, bucket);
+      }
+      return bucket;
+    };
+    for (const t of apart.trades) bucketOf(t).trades.push(t);
+    for (const c of apart.carryInPositions) {
+      bucketOf(c).carryInPositions.push(c);
+    }
+    for (const a of corporateActions) bucketOf(a).corporateActions.push(a);
+
+    const apartStats = new Map<string, ComponentStats>();
+    const dry = (group: string, account?: string): ComponentStats => {
+      const component = componentOf({
+        symbol: apart.unstamped.get(group)?.symbol ?? group,
+        isin: apart.unstamped.get(group)?.isin,
       });
-    const apartPass = dry();
-    const statsOf = (pass: ReturnType<typeof runPass>, group: string) =>
-      groupStats(pass, group, globalIsin);
+      if (!account) {
+        const known = apartStats.get(component);
+        if (known) return known;
+      }
+      const bucket = buckets.get(component);
+      if (!bucket)
+        return { shortfall: 0, shortfallByAccount: new Map(), signature: '' };
+      const remap = <
+        R extends { account?: string; isin?: string; symbol: string },
+      >(
+        row: R,
+      ): R =>
+        account &&
+        row.account === UNASSIGNED_ACCOUNT &&
+        instrumentGroup(row, globalIsin) === group
+          ? { ...row, account }
+          : row;
+      const trades = bucket.trades.map(remap);
+      const carryInPositions = bucket.carryInPositions.map(remap);
+      const stats = componentStats(
+        runPass({
+          ...args,
+          onWarning: undefined,
+          corporateActions: bucket.corporateActions,
+          assigned: {
+            trades,
+            carryInPositions,
+            accounts: [
+              ...new Set([
+                ...trades.map((t) => t.account ?? ''),
+                ...carryInPositions.map((c) => c.account ?? ''),
+              ]),
+            ].toSorted(),
+          },
+        }),
+      );
+      if (!account) apartStats.set(component, stats);
+      return stats;
+    };
     assigned = assignAccounts({
       ...assignArgs,
-      decisions: decideJoins(assigned.unstamped, (group, account) =>
-        statsOf(
-          account
-            ? dry(new Map([[group, { account, overlap: false }]]))
-            : apartPass,
-          group,
-        ),
-      ),
+      decisions: decideJoins(apart.unstamped, dry),
     });
   }
   for (const warning of assigned.warnings) args.onWarning?.(warning);
@@ -269,16 +326,11 @@ export function calculateCapitalGains(
   return pass.results;
 }
 
-/** Shortfall and in-period sells of one instrument in a dry run. */
-function groupStats(
-  pass: ReturnType<typeof runPass>,
-  group: string,
-  symbolToIsin: Map<string, string>,
-): GroupStats {
+/** Shortfall and in-period sells of a dry run (one component). */
+function componentStats(pass: ReturnType<typeof runPass>): ComponentStats {
   const shortfallByAccount = new Map<string, number>();
   let shortfall = 0;
   for (const { trade, missing } of pass.shortfalls) {
-    if (instrumentGroup(trade, symbolToIsin) !== group) continue;
     shortfall += missing;
     const account = trade.account ?? '';
     shortfallByAccount.set(
@@ -286,11 +338,11 @@ function groupStats(
       (shortfallByAccount.get(account) ?? 0) + missing,
     );
   }
-  const signature = [...pass.sellOrigins]
-    .filter(([, trade]) => instrumentGroup(trade, symbolToIsin) === group)
+  const signature = pass.results
+    .filter((r) => r.type === 'sell')
     .map(
-      ([result, trade]) =>
-        `${String(trade.datetime.getTime())}|${String(trade.quantity)}|${result.costPln.toFixed(6)}|${String(result.costBasisMissing ?? false)}`,
+      (r) =>
+        `${r.symbol}|${String(r.datetime.getTime())}|${String(r.quantity)}|${r.costPln.toFixed(6)}|${String(r.costBasisMissing ?? false)}`,
     )
     .toSorted()
     .join(';');
@@ -299,7 +351,10 @@ function groupStats(
 
 function runPass(
   args: CalculateCapitalGainsArgs & {
-    assigned: ReturnType<typeof assignAccounts>;
+    assigned: Pick<
+      ReturnType<typeof assignAccounts>,
+      'trades' | 'carryInPositions' | 'accounts'
+    >;
   },
 ): {
   results: TradeResult[];
