@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { Heart } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPlnValue } from '$lib/utils/format-pln.js';
-  import { updateSession } from '$lib/services/session.js';
-  import { taxSupportFunds } from '$lib/constants/support-funds.js';
-  import { debounce } from '$lib/utils/debounce.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPlnValue } from '#lib/utils/format-pln.js';
+  import { updateSession } from '#lib/services/session.js';
+  import { taxSupportFunds } from '#lib/constants/support-funds.js';
+  import { debounce } from '#lib/utils/debounce.js';
   import { oppAmountPln } from '../../core/tax/opp.js';
   import { copyBlockMessage, useCopyBlock } from './FormField.svelte';
 

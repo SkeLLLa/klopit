@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ExternalLink } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   let {
     symbol,

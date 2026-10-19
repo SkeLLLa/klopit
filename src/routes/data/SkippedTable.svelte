@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type SessionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { kindLabel } from '$lib/utils/skipped-row.js';
-  import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type SessionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { kindLabel } from '#lib/utils/skipped-row.js';
+  import { skippedRowsStore } from '#lib/state/skipped-rows.svelte.js';
   import type { ImportWarning, SkippedRow } from '../../core/types.js';
   import RawRowModal from './RawRowModal.svelte';
 

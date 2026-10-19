@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Info } from '@lucide/svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
-  import { db } from '$lib/db.js';
-  import { m } from '$lib/paraglide/messages.js';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
+  import { db } from '#lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
   import {
     BackupError,
     exportBackup,
@@ -10,18 +10,18 @@
     readBackupFile,
     type BackupFile,
     type BackupErrorCode,
-  } from '$lib/services/backup.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { calculateSessionTaxes } from '$lib/services/tax.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
-  import { updateSession } from '$lib/services/session.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  } from '#lib/services/backup.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { calculateSessionTaxes } from '#lib/services/tax.js';
+  import { sessionState } from '#lib/state/session.svelte.js';
+  import { updateSession } from '#lib/services/session.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
   import {
     LOG_LEVELS,
     loggerState,
     type LogLevel,
-  } from '$lib/state/logger.svelte.js';
+  } from '#lib/state/logger.svelte.js';
 
   pageTitle.set(m.settings_title());
 

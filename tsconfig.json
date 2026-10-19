@@ -2,13 +2,10 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "declaration": true,
-    "declarationMap": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "verbatimModuleSyntax": true
+    "declarationMap": true
   },
   "exclude": ["build/**/*", "coverage/**/*", "node_modules/**/*"],
-  "extends": "./.svelte-kit/tsconfig.json",
+  "extends": "$app/tsconfig",
   "include": [
     "src/**/*",
     "src/**/*.svelte",

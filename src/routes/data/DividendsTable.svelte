@@ -1,15 +1,15 @@
 <!-- src/routes/data/DividendsTable.svelte -->
 <script lang="ts">
   import { Pencil, Trash2, Plus } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type DividendRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { addDividend, updateDividend, deleteDividend } from '$lib/services/data.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type DividendRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { addDividend, updateDividend, deleteDividend } from '#lib/services/data.js';
   import type { RawDividend } from '../../core/types.js';
-  import { formatDate } from '$lib/utils/format-date.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
+  import { formatDate } from '#lib/utils/format-date.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
   import DividendForm from './DividendForm.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();

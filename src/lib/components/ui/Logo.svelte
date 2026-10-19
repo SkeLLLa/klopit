@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
+  import { KLO_ACRONYMS } from '#lib/constants/acronyms.js';
 
   let { collapsed = false }: { collapsed?: boolean } = $props();
 

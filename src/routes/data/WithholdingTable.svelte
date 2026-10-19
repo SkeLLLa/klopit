@@ -1,17 +1,17 @@
 <!-- src/routes/data/WithholdingTable.svelte -->
 <script lang="ts">
   import { Pencil, Trash2 } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type WithholdingTaxRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type WithholdingTaxRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
   import {
     updateWithholdingTax,
     deleteWithholdingTax,
-  } from '$lib/services/data.js';
-  import { formatDate, toDateInput } from '$lib/utils/format-date.js';
-  import { fromDateInput } from '$lib/utils/date-input.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  } from '#lib/services/data.js';
+  import { formatDate, toDateInput } from '#lib/utils/format-date.js';
+  import { fromDateInput } from '#lib/utils/date-input.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   let { sessionId }: { sessionId: string } = $props();

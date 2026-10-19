@@ -1,27 +1,27 @@
 <!-- src/routes/data/CarryInTable.svelte -->
 <script lang="ts">
   import { AlertTriangle, Pencil, Plus, Trash2 } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type CarryInPositionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { formatDate } from '$lib/utils/format-date.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type CarryInPositionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { formatDate } from '#lib/utils/format-date.js';
   import {
     addCarryInPosition,
     updateCarryInPosition,
     deleteCarryInPosition,
-  } from '$lib/services/data.js';
+  } from '#lib/services/data.js';
   import {
     CarryInValidationError,
     isCarryInCostMissing,
     isCarryInIgnored,
     parseDecimalInput,
     type CarryInValidationCode,
-  } from '$lib/services/carry-in.js';
-  import { listSessionAccounts } from '$lib/services/accounts.js';
+  } from '#lib/services/carry-in.js';
+  import { listSessionAccounts } from '#lib/services/accounts.js';
   import AccountField from './AccountField.svelte';
-  import { formatAccount } from '$lib/utils/account.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  import { formatAccount } from '#lib/utils/account.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
   import type { CarryInPosition } from '../../core/types.js';
 

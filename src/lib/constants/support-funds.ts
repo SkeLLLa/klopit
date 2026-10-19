@@ -1,4 +1,4 @@
-import type { m } from '$lib/paraglide/messages.js';
+import type { m } from '#lib/paraglide/messages.js';
 
 type NoArgMessageKey = {
   [K in Extract<keyof typeof m, string>]: Parameters<(typeof m)[K]>[0] extends

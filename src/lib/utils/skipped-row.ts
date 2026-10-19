@@ -1,6 +1,6 @@
-import { m } from '$lib/paraglide/messages.js';
-
 import type { SkippedRow } from '../../core/types.js';
+
+import { m } from '#lib/paraglide/messages.js';
 
 const kindLabels: Record<SkippedRow['kind'], () => string> = {
   'known-unsupported': m.data_skipped_kind_known_unsupported,

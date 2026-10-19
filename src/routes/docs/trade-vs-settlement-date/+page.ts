@@ -1,5 +1,5 @@
-import type { GroundingSource } from '$lib/components/docs/grounding';
-import { getLocale, type Locale } from '$lib/paraglide/runtime';
+import type { GroundingSource } from '#lib/components/docs/grounding.js';
+import { getLocale, type Locale } from '#lib/paraglide/runtime.js';
 
 interface TradeSettlementPageContent {
   metaTitle: string;

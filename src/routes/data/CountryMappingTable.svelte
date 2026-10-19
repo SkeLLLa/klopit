@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { IndexableTypeArray } from 'dexie';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
   import { isinToCountry } from '../../core/tax/country.js';
   import {
     buildSymbolCountryMaps,

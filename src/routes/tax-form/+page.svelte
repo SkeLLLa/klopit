@@ -3,18 +3,18 @@
   import {
     copyBlockReason,
     isTaxFormIncomplete,
-  } from '$lib/utils/tax-form-status.js';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
-  import { calculateSessionTaxes } from '$lib/services/tax.js';
-  import { createLogger } from '$lib/state/logger.svelte.js';
+  } from '#lib/utils/tax-form-status.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { db } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
+  import { calculateSessionTaxes } from '#lib/services/tax.js';
+  import { createLogger } from '#lib/state/logger.svelte.js';
 
   const log = createLogger('tax-form');
-  import { isSessionStale } from '$lib/utils/stale.js';
+  import { isSessionStale } from '#lib/utils/stale.js';
   import { oppTaxDueBase } from '../../core/tax/opp.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';

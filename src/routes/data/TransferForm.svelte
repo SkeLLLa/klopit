@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { toDatetimeLocal } from '$lib/utils/format-date.js';
-  import { fromDatetimeLocal } from '$lib/utils/date-input.js';
-  import type { TransferPrefill } from '$lib/utils/transfer-link.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { toDatetimeLocal } from '#lib/utils/format-date.js';
+  import { fromDatetimeLocal } from '#lib/utils/date-input.js';
+  import type { TransferPrefill } from '#lib/utils/transfer-link.js';
   import type { CorporateAction } from '../../core/types.js';
   import AccountField from './AccountField.svelte';
 

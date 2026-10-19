@@ -1,6 +1,6 @@
-import { db, type SessionRecord } from '$lib/db.js';
-import { sessionState } from '$lib/state/session.svelte.js';
-import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+import { db, type SessionRecord } from '#lib/db.js';
+import { sessionState } from '#lib/state/session.svelte.js';
+import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
 
 /**
  * Subscribe to the Dexie sessions table and hydrate `sessionState` on first

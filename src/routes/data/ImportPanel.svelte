@@ -1,10 +1,10 @@
 <script lang="ts">
   import { ChevronDown, ChevronUp } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { importFiles } from '$lib/services/import-files.js';
-  import type { ImportFileResult } from '$lib/services/import-files.js';
-  import { formatDate } from '$lib/utils/format-date.js';
-  import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { importFiles } from '#lib/services/import-files.js';
+  import type { ImportFileResult } from '#lib/services/import-files.js';
+  import { formatDate } from '#lib/utils/format-date.js';
+  import { skippedRowsStore } from '#lib/state/skipped-rows.svelte.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
   import { BrokerId } from '../../core/types.js';
 

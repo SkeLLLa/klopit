@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln } from '$lib/utils/format-pln.js';
-  import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln } from '#lib/utils/format-pln.js';
+  import type { TaxSummaryRecord, DividendResultRecord } from '#lib/db.js';
   import { TAX_RATE } from '../../core/types.js';
   import {
     sumDeductibleWithholding,

@@ -6,9 +6,9 @@
     VisTooltip,
   } from '@unovis/svelte';
   import { GroupedBar, Orientation } from '@unovis/ts';
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln, formatPlnValue } from '$lib/utils/format-pln.js';
-  import type { TradeResultRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln, formatPlnValue } from '#lib/utils/format-pln.js';
+  import type { TradeResultRecord } from '#lib/db.js';
 
   interface Props {
     tradeResults: TradeResultRecord[];

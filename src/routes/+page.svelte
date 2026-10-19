@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
   import {
     ArrowRight,
     BarChart3,
@@ -12,10 +12,10 @@
     Table,
     Upload,
   } from '@lucide/svelte';
-  import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
-  import WhyPillars from '$lib/components/home/WhyPillars.svelte';
-  import HowItWorks from '$lib/components/home/HowItWorks.svelte';
-  import FaqTeaser from '$lib/components/home/FaqTeaser.svelte';
+  import GitHubIcon from '#lib/components/ui/GitHubIcon.svelte';
+  import WhyPillars from '#lib/components/home/WhyPillars.svelte';
+  import HowItWorks from '#lib/components/home/HowItWorks.svelte';
+  import FaqTeaser from '#lib/components/home/FaqTeaser.svelte';
 
   pageTitle.set(m.nav_home());
 

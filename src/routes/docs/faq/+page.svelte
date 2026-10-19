@@ -1,10 +1,10 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { m } from '$lib/paraglide/messages';
-  import { getLocale } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte';
-  import { FAQ_ITEMS, type FaqMessageKey } from '$lib/constants/faq.js';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { FAQ_ITEMS, type FaqMessageKey } from '#lib/constants/faq.js';
   import { ChevronDown } from '@lucide/svelte';
 
   pageTitle.set(m.nav_faq());

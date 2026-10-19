@@ -1,9 +1,9 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { m } from '$lib/paraglide/messages.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import LegalClaim from '#lib/components/docs/LegalClaim.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
 
   pageTitle.set(m.page_docs_ibkr_w8ben());
 

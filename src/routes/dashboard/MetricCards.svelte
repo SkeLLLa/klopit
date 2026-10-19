@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln } from '$lib/utils/format-pln.js';
-  import type { TaxSummaryRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln } from '#lib/utils/format-pln.js';
+  import type { TaxSummaryRecord } from '#lib/db.js';
   import { TrendingUp, TrendingDown, Minus, Info } from '@lucide/svelte';
   import { TAX_RATE } from '../../core/types.js';
 

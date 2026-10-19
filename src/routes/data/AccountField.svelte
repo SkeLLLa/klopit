@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatAccount, manualAccount } from '$lib/utils/account.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatAccount, manualAccount } from '#lib/utils/account.js';
 
   let {
     id,

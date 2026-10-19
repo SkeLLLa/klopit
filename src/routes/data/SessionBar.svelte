@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Plus, Trash2 } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import type { SessionRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import type { SessionRecord } from '#lib/db.js';
 
   let {
     sessions,

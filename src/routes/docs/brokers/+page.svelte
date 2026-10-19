@@ -1,8 +1,8 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
   import { ArrowRight, CheckCircle2, Clock, FileText, MinusCircle } from '@lucide/svelte';
 
   let { data } = $props();

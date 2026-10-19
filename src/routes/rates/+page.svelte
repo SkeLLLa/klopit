@@ -1,17 +1,17 @@
 <script lang="ts">
   import { Calendar } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { fromDateInput } from '$lib/utils/date-input.js';
-  import { getCachedRates } from '$lib/services/rates.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { db } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { fromDateInput } from '#lib/utils/date-input.js';
+  import { getCachedRates } from '#lib/services/rates.js';
   import {
     formatDate,
     parseDate,
     toDateInput,
     datePlaceholder,
-  } from '$lib/utils/format-date.js';
+  } from '#lib/utils/format-date.js';
 
   pageTitle.set(m.page_rates());
 

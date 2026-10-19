@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { getLocale } from '$lib/paraglide/runtime';
-  import { m } from '$lib/paraglide/messages.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
   import {
     directDonationFunds,
     taxSupportFunds,
-  } from '$lib/constants/support-funds.js';
+  } from '#lib/constants/support-funds.js';
 
   const mbankAffiliateCode = 'bemyfellowm1n1on';
   const mbankAffiliateUrl =

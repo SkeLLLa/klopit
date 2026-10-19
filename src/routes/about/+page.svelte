@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
-  import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { KLO_ACRONYMS } from '#lib/constants/acronyms.js';
+  import GitHubIcon from '#lib/components/ui/GitHubIcon.svelte';
   import { ArrowRight, Bug, ChevronDown, FileText, ListChecks, Lock, Scale } from '@lucide/svelte';
 
   pageTitle.set(m.page_about());

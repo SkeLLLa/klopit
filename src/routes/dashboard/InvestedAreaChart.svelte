@@ -7,10 +7,10 @@
     VisCrosshair,
     VisTooltip,
   } from '@unovis/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln } from '$lib/utils/format-pln.js';
-  import { formatDate } from '$lib/utils/format-date.js';
-  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln } from '#lib/utils/format-pln.js';
+  import { formatDate } from '#lib/utils/format-date.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '#lib/db.js';
 
   interface Props {
     tradeResults: TradeResultRecord[];

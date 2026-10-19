@@ -8,19 +8,19 @@
   import TaxBreakdownBars from './TaxBreakdownBars.svelte';
   import InvestedAreaChart from './InvestedAreaChart.svelte';
   import TaxTransactionsTable from './TaxTransactionsTable.svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
-  import { db } from '$lib/db.js';
-  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
-  import { isSessionStale } from '$lib/utils/stale.js';
-  import { formatAccount } from '$lib/utils/account.js';
-  import { formatDate } from '$lib/utils/format-date.js';
-  import { transferHref } from '$lib/utils/transfer-link.js';
-  import { calculateSessionTaxes } from '$lib/services/tax.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { sessionState } from '#lib/state/session.svelte.js';
+  import { db } from '#lib/db.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
+  import { isSessionStale } from '#lib/utils/stale.js';
+  import { formatAccount } from '#lib/utils/account.js';
+  import { formatDate } from '#lib/utils/format-date.js';
+  import { transferHref } from '#lib/utils/transfer-link.js';
+  import { calculateSessionTaxes } from '#lib/services/tax.js';
 
   pageTitle.set(m.page_dashboard());
 

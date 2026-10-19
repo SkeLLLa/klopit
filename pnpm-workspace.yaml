@@ -1,5 +1,4 @@
 allowBuilds:
   maplibre-gl: false
 overrides:
-  cookie: ^0.7.0
   uuid: ^14.0.0

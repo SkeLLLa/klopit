@@ -1,6 +1,6 @@
-import { getLocale, type Locale } from '$lib/paraglide/runtime';
-
 import { supportedBrokers } from '../../../core/parsers/registry.js';
+
+import { getLocale, type Locale } from '#lib/paraglide/runtime.js';
 
 interface BrokerPageContent {
   metaTitle: string;

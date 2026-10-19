@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
 
   pageTitle.set(m.page_docs_ibi_rsu());
 </script>

@@ -2,8 +2,8 @@
   import { Calendar } from '@lucide/svelte';
   import { untrack } from 'svelte';
   import SveltyPicker from 'svelty-picker';
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatDate, parseDate, datePlaceholder } from '$lib/utils/format-date.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatDate, parseDate, datePlaceholder } from '#lib/utils/format-date.js';
   import type { RawDividend } from '../../core/types.js';
 
   const PICKER_FORMAT = 'yyyy-mm-dd';

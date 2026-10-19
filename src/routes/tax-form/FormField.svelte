@@ -1,7 +1,7 @@
 <script module lang="ts">
   import { createContext } from 'svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import type { CopyBlock } from '$lib/utils/tax-form-status.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import type { CopyBlock } from '#lib/utils/tax-form-status.js';
 
   /**
    * Set by the tax-form page: while it returns a reason (stale session, or
@@ -28,7 +28,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { Info } from '@lucide/svelte';
-  import { formatPlnValue } from '$lib/utils/format-pln.js';
+  import { formatPlnValue } from '#lib/utils/format-pln.js';
 
   let {
     label,

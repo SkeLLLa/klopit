@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Info } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
   import type { PitZgFields } from '../../core/types.js';
   import SectionHeader from './SectionHeader.svelte';
   import FormField from './FormField.svelte';

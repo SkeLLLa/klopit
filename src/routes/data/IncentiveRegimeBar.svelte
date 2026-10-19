@@ -1,7 +1,7 @@
 <!-- src/routes/data/IncentiveRegimeBar.svelte -->
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { setIncentiveRegimeForSymbol } from '$lib/services/incentive.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { setIncentiveRegimeForSymbol } from '#lib/services/incentive.js';
   import { isIncentiveBuy } from '../../core/tax/incentive.js';
   import type { IncentiveRegime, Trade } from '../../core/types.js';
 

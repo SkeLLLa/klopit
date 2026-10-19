@@ -1,5 +1,5 @@
-import { m } from '$lib/paraglide/messages.js';
-import { getLocale } from '$lib/paraglide/runtime';
+import { m } from '#lib/paraglide/messages.js';
+import { getLocale } from '#lib/paraglide/runtime.js';
 
 const SITE_URL = 'https://klopit.co.pl';
 const localeTags = {

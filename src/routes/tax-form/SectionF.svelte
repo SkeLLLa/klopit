@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { Pit38Fields } from '../../core/types.js';
   import SectionHeader from './SectionHeader.svelte';
   import FormField from './FormField.svelte';

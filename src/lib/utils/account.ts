@@ -1,6 +1,6 @@
-import { m } from '$lib/paraglide/messages.js';
-
 import { UNASSIGNED_ACCOUNT } from '../../core/tax/accounts.js';
+
+import { m } from '#lib/paraglide/messages.js';
 
 /** Prefix for accounts the user typed in by hand. */
 export const MANUAL_ACCOUNT_PREFIX = 'manual:';

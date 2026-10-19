@@ -1,26 +1,26 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import {
     deriveImportWarnings,
     mergeImportWarnings,
-  } from '$lib/services/import.js';
-  import { isCarryInCostMissing, isCarryInIgnored } from '$lib/services/carry-in.js';
+  } from '#lib/services/import.js';
+  import { isCarryInCostMissing, isCarryInIgnored } from '#lib/services/carry-in.js';
   import {
     needsSchwabFmvNotice,
     symbolsMissingIncentiveRegime,
-  } from '$lib/services/incentive.js';
-  import { updateSession } from '$lib/services/session.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
-  import { db, type SessionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  } from '#lib/services/incentive.js';
+  import { updateSession } from '#lib/services/session.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { skippedRowsStore } from '#lib/state/skipped-rows.svelte.js';
+  import { db, type SessionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
   import {
     parseTransferPrefill,
     TRANSFER_HASH,
     type TransferPrefill,
-  } from '$lib/utils/transfer-link.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  } from '#lib/utils/transfer-link.js';
+  import { sessionState } from '#lib/state/session.svelte.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
   import type { ImportWarning } from '../../core/types.js';
   import SessionBar from './SessionBar.svelte';
   import SessionInfo from './SessionInfo.svelte';
@@ -34,7 +34,7 @@
   import CarryInTable from './CarryInTable.svelte';
   import CreditInterestTable from './CreditInterestTable.svelte';
   import CountryMappingTable from './CountryMappingTable.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   pageTitle.set(m.page_data());

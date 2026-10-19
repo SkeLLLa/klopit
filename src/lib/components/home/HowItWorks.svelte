@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { Upload, CheckCircle2, FileText } from '@lucide/svelte';
 
   const steps = [

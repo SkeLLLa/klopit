@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { importFiles } from '$lib/services/import-files.js';
-  import type { ImportFileResult } from '$lib/services/import-files.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { importFiles } from '#lib/services/import-files.js';
+  import type { ImportFileResult } from '#lib/services/import-files.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
   import { BrokerId } from '../../core/types.js';
 

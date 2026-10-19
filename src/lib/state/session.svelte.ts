@@ -1,8 +1,8 @@
-import type { SessionRecord } from '$lib/db.js';
+import type { SessionRecord } from '#lib/db.js';
 import {
   createSession as createSessionService,
   deleteSession as deleteSessionService,
-} from '$lib/services/session.js';
+} from '#lib/services/session.js';
 
 const STORAGE_KEY = 'klopit:activeSessionId';
 

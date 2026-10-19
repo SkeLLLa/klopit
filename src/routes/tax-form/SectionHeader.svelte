@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { localizeHref } from '$lib/paraglide/runtime';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
 
   let {
     title,

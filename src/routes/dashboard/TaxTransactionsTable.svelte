@@ -1,10 +1,10 @@
 <script lang="ts">
   import { AlertTriangle } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
-  import { formatDatetime, formatDate } from '$lib/utils/format-date.js';
-  import { formatPlnValue } from '$lib/utils/format-pln.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
+  import { m } from '#lib/paraglide/messages.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '#lib/db.js';
+  import { formatDatetime, formatDate } from '#lib/utils/format-date.js';
+  import { formatPlnValue } from '#lib/utils/format-pln.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
   import { TAX_RATE } from '../../core/types.js';
   import {
     sumDividendTaxGross,

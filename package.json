@@ -31,6 +31,9 @@
     "test": "test"
   },
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
     "build": "pnpm run build:app",
     "build:app": "pnpm run generate:ai && vite build",
@@ -40,7 +43,7 @@
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations",
     "lint": "pnpm run lint:types && pnpm run lint:codestyle && pnpm run format:check",
     "lint:codestyle": "oxlint --type-aware --deny-warnings",
-    "lint:types": "svelte-check --tsconfig ./tsconfig.json",
+    "lint:types": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "preview": "vite preview",
     "release": "semantic-release",
     "test": "pnpm run lint && pnpm run test:unit",
@@ -72,8 +75,9 @@
     "@semantic-release/github": "^12.0.10",
     "@semantic-release/npm": "^13.2.0",
     "@semantic-release/release-notes-generator": "^14.1.1",
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "conventional-changelog-conventionalcommits": "^10.4.1",

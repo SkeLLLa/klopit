@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getLocale, locales, localizeHref } from '$lib/paraglide/runtime';
+  import { getLocale, locales, localizeHref } from '#lib/paraglide/runtime.js';
   import { page } from '$app/state';
 
   let { collapsed = false }: { collapsed?: boolean } = $props();

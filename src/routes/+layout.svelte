@@ -1,15 +1,15 @@
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/state';
-  import { m } from '$lib/paraglide/messages.js';
-  import { getLocale, locales, localizeHref } from '$lib/paraglide/runtime';
-  import { theme } from '$lib/state/theme.svelte.js';
-  import { sidebar } from '$lib/state/sidebar.svelte.js';
-  import { loggerState } from '$lib/state/logger.svelte.js';
-  import Sidebar from '$lib/components/layout/Sidebar.svelte';
-  import Header from '$lib/components/layout/Header.svelte';
-  import Footer from '$lib/components/layout/Footer.svelte';
-  import Breadcrumb from '$lib/components/ui/Breadcrumb.svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale, locales, localizeHref } from '#lib/paraglide/runtime.js';
+  import { theme } from '#lib/state/theme.svelte.js';
+  import { sidebar } from '#lib/state/sidebar.svelte.js';
+  import { loggerState } from '#lib/state/logger.svelte.js';
+  import Sidebar from '#lib/components/layout/Sidebar.svelte';
+  import Header from '#lib/components/layout/Header.svelte';
+  import Footer from '#lib/components/layout/Footer.svelte';
+  import Breadcrumb from '#lib/components/ui/Breadcrumb.svelte';
 
   let { children } = $props();
 

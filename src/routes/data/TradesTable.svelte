@@ -1,19 +1,19 @@
 <!-- src/routes/data/TradesTable.svelte -->
 <script lang="ts">
   import { Pencil, Trash2, Plus } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { listSessionAccounts } from '$lib/services/accounts.js';
-  import { addTrade, updateTrade, deleteTrade } from '$lib/services/data.js';
-  import { withIncentiveRegime, withTaxedIncomePln } from '$lib/services/incentive.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { listSessionAccounts } from '#lib/services/accounts.js';
+  import { addTrade, updateTrade, deleteTrade } from '#lib/services/data.js';
+  import { withIncentiveRegime, withTaxedIncomePln } from '#lib/services/incentive.js';
   import { isIncentiveBuy } from '../../core/tax/incentive.js';
   import type { IncentiveRegime, Trade } from '../../core/types.js';
-  import type { TradeRecord } from '$lib/db.js';
-  import { formatDatetime } from '$lib/utils/format-date.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
+  import type { TradeRecord } from '#lib/db.js';
+  import { formatDatetime } from '#lib/utils/format-date.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
   import TradeForm from './TradeForm.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
   import IncentiveRegimeBar from './IncentiveRegimeBar.svelte';
 

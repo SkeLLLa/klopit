@@ -2,12 +2,12 @@
   import { Calendar } from '@lucide/svelte';
   import { untrack } from 'svelte';
   import SveltyPicker from 'svelty-picker';
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import {
     formatDatetime,
     parseDatetime,
     datetimePlaceholder,
-  } from '$lib/utils/format-date.js';
+  } from '#lib/utils/format-date.js';
   import type { Trade } from '../../core/types.js';
   import AccountField from './AccountField.svelte';
 

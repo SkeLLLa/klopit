@@ -2,21 +2,21 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { Pencil, Plus, Trash2 } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type CorporateActionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type CorporateActionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
   import {
     addTransfer,
     updateCorporateAction,
     deleteCorporateAction,
-  } from '$lib/services/data.js';
-  import { formatDatetime, toDatetimeLocal } from '$lib/utils/format-date.js';
-  import { fromDatetimeLocal } from '$lib/utils/date-input.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
-  import { listSessionAccounts } from '$lib/services/accounts.js';
-  import { formatAccount } from '$lib/utils/account.js';
-  import type { TransferPrefill } from '$lib/utils/transfer-link.js';
+  } from '#lib/services/data.js';
+  import { formatDatetime, toDatetimeLocal } from '#lib/utils/format-date.js';
+  import { fromDatetimeLocal } from '#lib/utils/date-input.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
+  import { listSessionAccounts } from '#lib/services/accounts.js';
+  import { formatAccount } from '#lib/utils/account.js';
+  import type { TransferPrefill } from '#lib/utils/transfer-link.js';
   import type { CorporateAction } from '../../core/types.js';
   import AccountField from './AccountField.svelte';
   import EmptyState from './EmptyState.svelte';

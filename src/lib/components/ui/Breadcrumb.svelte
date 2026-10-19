@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref, getLocale } from '$lib/paraglide/runtime';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref, getLocale } from '#lib/paraglide/runtime.js';
   import { ChevronRight } from '@lucide/svelte';
 
   const BASE_URL = 'https://klopit.co.pl';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Scale } from '@lucide/svelte';
-  import { getLocale } from '$lib/paraglide/runtime';
+  import { getLocale } from '#lib/paraglide/runtime.js';
   import GroundingLinks from './GroundingLinks.svelte';
   import type { GroundingSource } from './grounding';
 

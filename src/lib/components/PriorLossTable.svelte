@@ -1,14 +1,14 @@
 <script lang="ts">
   import { Pencil, Trash2, Plus } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
-  import { db, type PriorYearLossRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
+  import { db, type PriorYearLossRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
   import {
     addPriorYearLoss,
     deletePriorYearLoss,
     updatePriorYearLoss,
-  } from '$lib/services/data.js';
+  } from '#lib/services/data.js';
 
   let { sessionId, sessionYear }: { sessionId: string; sessionYear: number } =
     $props();

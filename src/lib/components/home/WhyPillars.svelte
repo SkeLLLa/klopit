@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { DollarSign, Globe, GitFork, UserX } from '@lucide/svelte';
 
   const pillars = [

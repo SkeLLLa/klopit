@@ -1,10 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import type { NavSection } from '$lib/nav.js';
-  import { m } from '$lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import type { NavSection } from '#lib/nav.js';
+  import { m } from '#lib/paraglide/messages.js';
   import NavItem from './NavItem.svelte';
-  import { sidebar } from '$lib/state/sidebar.svelte.js';
+  import { sidebar } from '#lib/state/sidebar.svelte.js';
 
   let { section }: { section: NavSection } = $props();
 

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { AlertCircle, ArrowRight, Info } from '@lucide/svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
-  import PriorLossTable from '$lib/components/PriorLossTable.svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
+  import PriorLossTable from '#lib/components/PriorLossTable.svelte';
 
   pageTitle.set(m.page_prior_losses());
 
