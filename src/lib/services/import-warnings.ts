@@ -88,5 +88,5 @@ function formatImportWarningMessage(args: {
   const format = importWarningFormatters[args.kind] as
     | ((section: string, count: string) => string)
     | undefined;
-  return format?.(args.section, String(args.rowCount)) as string;
+  return format?.(args.section, String(args.rowCount)) ?? '';
 }

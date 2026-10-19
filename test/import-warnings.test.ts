@@ -129,6 +129,6 @@ void describe('unknown kind (persisted by another app version)', () => {
     assert.equal(warnings.length, 1);
     assert.equal(warnings[0]?.kind, futureKind);
     assert.equal(warnings[0]?.rowCount, 2);
-    assert.equal(warnings[0]?.message, undefined);
+    assert.equal(warnings[0]?.message, '');
   });
 });

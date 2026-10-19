@@ -11,5 +11,5 @@ const kindLabels: Record<SkippedRow['kind'], () => string> = {
 export function kindLabel(kind: SkippedRow['kind']): string {
   // `kind` may come from a row persisted by another app version.
   const label = kindLabels[kind] as (() => string) | undefined;
-  return label?.() as string;
+  return label?.() ?? '';
 }
