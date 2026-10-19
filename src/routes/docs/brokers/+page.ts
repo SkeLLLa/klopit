@@ -62,7 +62,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       schwab: {
         importType: 'CSV',
         supportedData:
-          'ESPP deposits, RSU vests and sales; dividends and withholding are not imported yet (dividends can be added by hand, withholding cannot yet)',
+          'ESPP deposits, RSU vests and sales; dividends and withholding are not imported yet (add both by hand: withholding goes into the dividend form)',
         docsHref: '/docs/schwab',
         status: 'partial',
       },
@@ -141,7 +141,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       schwab: {
         importType: 'CSV',
         supportedData:
-          'wpłaty ESPP, vesting RSU i sprzedaże; dywidendy i podatek u źródła nie są jeszcze importowane (dywidendy można dodać ręcznie, podatku u źródła jeszcze nie)',
+          'wpłaty ESPP, vesting RSU i sprzedaże; dywidendy i podatek u źródła nie są jeszcze importowane (dodaj oba ręcznie: podatek u źródła wpisuje się w formularzu dywidendy)',
         docsHref: '/docs/schwab',
         status: 'partial',
       },
@@ -224,7 +224,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       schwab: {
         importType: 'CSV',
         supportedData:
-          'надходження ESPP, vesting RSU і продажі; дивіденди та податок у джерела поки не імпортуються (дивіденди можна додати вручну, податок у джерела поки ні)',
+          'надходження ESPP, vesting RSU і продажі; дивіденди та податок у джерела поки не імпортуються (додайте обидва вручну: податок у джерела вказується у формі дивіденду)',
         docsHref: '/docs/schwab',
         status: 'partial',
       },

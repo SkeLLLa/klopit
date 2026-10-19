@@ -92,8 +92,8 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 
 - Import CSV from Interactive Brokers Activity Statements (trades, dividends, withholding tax, corporate actions).
 - Import PDF from IBI Capital for ESPP and RSU grants with per-grant FIFO lots.
-- Import CSV from Charles Schwab (ESPP deposits, RSU vests, sales). Schwab dividends are not imported (add them manually); withholding is not imported either.
-- Manual entry for trades, dividends and carry-in positions for any other broker (no manual form for withholding tax yet).
+- Import CSV from Charles Schwab (ESPP deposits, RSU vests, sales). Schwab dividends are not imported (add dividends and their withholding by hand).
+- Manual entry for trades, dividends (with the tax withheld abroad) and carry-in positions for any other broker.
 - Capital gains via FIFO per ISIN and per broker account (art. 24 ust. 10 ustawy o PIT), with lot-level isolation for ESPP grants.
 - NBP Table A average exchange rates from the business day preceding each transaction or dividend.
 - Foreign dividend withholding credit capped per dividend at the lower of 19% and the bilateral tax-treaty rate.

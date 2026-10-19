@@ -115,7 +115,6 @@
       <li>{m.docs_alt_limit2()}</li>
       <li>{m.docs_alt_limit3()}</li>
       <li>{m.docs_alt_limit4()}</li>
-      <li>{m.docs_alt_limit5()}</li>
     </ul>
   </section>
 
