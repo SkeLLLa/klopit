@@ -20,10 +20,7 @@
   import { formatAccount } from '$lib/utils/account.js';
   import { formatDate } from '$lib/utils/format-date.js';
   import { transferHref } from '$lib/utils/transfer-link.js';
-  import {
-    calculateSessionTaxes,
-    clearSessionResults,
-  } from '$lib/services/tax.js';
+  import { calculateSessionTaxes } from '$lib/services/tax.js';
 
   pageTitle.set(m.page_dashboard());
 
@@ -118,13 +115,16 @@
     }),
   );
   let recalculating = $state(false);
+  let recalcError: string | null = $state(null);
 
   async function handleRecalculate() {
     if (!sessionId) return;
     recalculating = true;
+    recalcError = null;
     try {
-      await clearSessionResults({ sessionId });
       await calculateSessionTaxes({ sessionId });
+    } catch (e) {
+      recalcError = e instanceof Error ? e.message : String(e);
     } finally {
       recalculating = false;
     }
@@ -189,18 +189,23 @@
     <!-- Stale banner -->
     {#if stale}
       <div
+        role="alert"
         class="flex items-center justify-between gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
       >
         <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-          <AlertTriangle size={16} />
+          <AlertTriangle size={16} aria-hidden="true" />
           <span>{m.tax_stale_banner()}</span>
+          {#if recalcError}
+            <p role="alert">{m.data_recalculate_error({ error: recalcError })}</p>
+          {/if}
         </div>
         <button
+          type="button"
           onclick={() => void handleRecalculate()}
           disabled={recalculating}
           class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
         >
-          <RefreshCw size={14} class={recalculating ? 'animate-spin' : ''} />
+          <RefreshCw size={14} class={recalculating ? 'animate-spin' : ''} aria-hidden="true" />
           {m.tax_recalculate()}
         </button>
       </div>

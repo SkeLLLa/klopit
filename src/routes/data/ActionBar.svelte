@@ -56,13 +56,13 @@
         class="inline-flex items-center gap-1.5 rounded border border-amber-400 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
       >
         <RefreshCw size={14} class={recalculating ? 'animate-spin' : ''} />
-        {m.data_recalculate()}
+        {m.tax_recalculate()}
       </button>
       <p class="text-xs text-amber-700 dark:text-amber-300">
         {m.data_stale_hint()}
       </p>
       {#if recalcError}
-        <p class="text-xs text-red-600 dark:text-red-400">
+        <p role="alert" class="text-xs text-red-600 dark:text-red-400">
           {m.data_recalculate_error({ error: recalcError })}
         </p>
       {/if}

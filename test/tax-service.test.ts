@@ -226,6 +226,41 @@ void describe('tax service', () => {
     assert.equal(results[0].costPln, 6000);
   });
 
+  void it('keeps the previous results when a recalculation throws', async () => {
+    const sessionId = await seedCarryInSession({
+      carryIn: {
+        acquisitionDate: new Date(2023, 4, 10),
+        costBasis: 1500,
+        currency: 'USD',
+        costBasisPln: 6000,
+        costBasisSource: 'user',
+      },
+    });
+    await calculateSessionTaxes({ sessionId });
+    const before = await db.taxSummaries.get(sessionId);
+    const calculatedAt = (await db.sessions.get(sessionId))?.calculatedAt;
+    assert.ok(before);
+    assert.ok(calculatedAt);
+
+    mock.method(db.taxSummaries, 'put', () => {
+      throw new Error('injected failure');
+    });
+    await assert.rejects(
+      calculateSessionTaxes({ sessionId }),
+      /injected failure/,
+    );
+    mock.restoreAll();
+
+    assert.deepEqual(await db.taxSummaries.get(sessionId), before);
+    const session = await db.sessions.get(sessionId);
+    assert.equal(session?.status, 'calculated');
+    assert.deepEqual(session.calculatedAt, calculatedAt);
+    assert.equal(
+      await db.tradeResults.where('sessionId').equals(sessionId).count(),
+      1,
+    );
+  });
+
   void it('flags a sell from a carry-in without cost', async () => {
     const sessionId = await seedCarryInSession({ carryIn: {} });
     await calculateSessionTaxes({ sessionId });

@@ -155,7 +155,6 @@
   "data_price": "Ціна",
   "data_proceeds": "Дохід",
   "data_quantity": "Кількість",
-  "data_recalculate": "Перерахувати",
   "data_recalculate_error": "Перерахунок не вдався: {error}",
   "data_save": "Зберегти",
   "data_session_label": "Сесія",

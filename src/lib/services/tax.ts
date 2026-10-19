@@ -379,37 +379,3 @@ export async function calculateSessionTaxes(args: {
   );
   return result;
 }
-
-/** Clear calculated results for a session (keep parsed data) */
-export async function clearSessionResults(args: {
-  sessionId: string;
-}): Promise<void> {
-  await db.transaction(
-    'rw',
-    [
-      db.tradeResults,
-      db.dividendResults,
-      db.creditInterestResults,
-      db.taxSummaries,
-      db.sessions,
-    ],
-    async () => {
-      await Promise.all([
-        db.tradeResults.where('sessionId').equals(args.sessionId).delete(),
-        db.dividendResults.where('sessionId').equals(args.sessionId).delete(),
-        db.creditInterestResults
-          .where('sessionId')
-          .equals(args.sessionId)
-          .delete(),
-        db.taxSummaries.delete(args.sessionId),
-      ]);
-      await updateSession({
-        id: args.sessionId,
-        changes: {
-          status: 'draft',
-          calculatedAt: undefined,
-        },
-      });
-    },
-  );
-}

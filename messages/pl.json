@@ -155,7 +155,6 @@
   "data_price": "Cena",
   "data_proceeds": "Przychód",
   "data_quantity": "Ilość",
-  "data_recalculate": "Przelicz ponownie",
   "data_recalculate_error": "Przeliczenie nie powiodło się: {error}",
   "data_save": "Zapisz",
   "data_session_label": "Sesja",

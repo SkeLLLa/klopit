@@ -10,10 +10,7 @@
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
-  import {
-    calculateSessionTaxes,
-    clearSessionResults,
-  } from '$lib/services/tax.js';
+  import { calculateSessionTaxes } from '$lib/services/tax.js';
   import { createLogger } from '$lib/state/logger.svelte.js';
 
   const log = createLogger('tax-form');
@@ -145,22 +142,6 @@
       calculating = false;
     }
   }
-
-  async function handleRecalculate() {
-    if (!sessionId) return;
-    calculating = true;
-    error = null;
-    try {
-      await clearSessionResults({ sessionId });
-      await calculateSessionTaxes({ sessionId });
-    } catch (e) {
-      log.error('handleRecalculate failed', e);
-      error = e instanceof Error ? e.message : String(e);
-    } finally {
-      calculating = false;
-    }
-  }
-
 </script>
 
 <h1 class="sr-only">{m.page_tax_form()}</h1>
@@ -206,7 +187,7 @@
   </div>
 {:else if calculating}
   <!-- Calculating -->
-  <div class="flex flex-col items-center justify-center py-24 text-center">
+  <div role="status" class="flex flex-col items-center justify-center py-24 text-center">
     <RefreshCw size={32} class="mb-3 animate-spin text-blue-500" />
     <p class="text-sm text-slate-600 dark:text-slate-400">
       {m.tax_calculating()}
@@ -229,23 +210,38 @@
 {:else if pit38}
   <!-- Tax form with sidebar -->
   <div class="space-y-4">
+    <!-- Header with recalculate -->
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        PIT-38 ({session.year})
+      </h2>
+      <button
+        type="button"
+        onclick={() => void runCalculation()}
+        class={[
+          'inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium',
+          stale
+            ? 'bg-amber-600 text-white hover:bg-amber-700'
+            : incomplete
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800',
+        ]}
+      >
+        <RefreshCw size={14} aria-hidden="true" />
+        {m.tax_recalculate()}
+      </button>
+    </div>
+
     <!-- Stale banner -->
     {#if stale}
       <div
         role="alert"
-        class="flex items-center justify-between gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
+        class="flex items-center gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
       >
         <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
           <AlertTriangle size={16} class="shrink-0" aria-hidden="true" />
           <span>{m.tax_form_stale_banner()}</span>
         </div>
-        <button
-          onclick={() => void handleRecalculate()}
-          class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
-        >
-          <RefreshCw size={14} />
-          {m.tax_recalculate()}
-        </button>
       </div>
     {/if}
 
@@ -309,29 +305,8 @@
             {/if}
           </div>
         </div>
-        <button
-          onclick={() => void handleRecalculate()}
-          class="inline-flex shrink-0 items-center gap-1.5 rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-        >
-          <RefreshCw size={14} />
-          {m.tax_recalculate()}
-        </button>
       </div>
     {/if}
-
-    <!-- Recalculate bar -->
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        PIT-38 ({session.year})
-      </h2>
-      <button
-        onclick={() => void handleRecalculate()}
-        class="inline-flex items-center gap-1.5 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-      >
-        <RefreshCw size={14} />
-        {m.tax_recalculate()}
-      </button>
-    </div>
 
     <!-- Transparency banner -->
     <div

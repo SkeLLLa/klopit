@@ -160,7 +160,6 @@
   "data_price": "Price",
   "data_proceeds": "Proceeds",
   "data_quantity": "Quantity",
-  "data_recalculate": "Recalculate",
   "data_recalculate_error": "Recalculation failed: {error}",
   "data_save": "Save",
   "data_session_label": "Session",
