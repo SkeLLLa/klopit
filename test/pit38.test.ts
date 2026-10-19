@@ -26,6 +26,7 @@ function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
     totalCreditInterestForeignTaxPln: 0,
     capitalGainAfterLcfPln: 0,
     capitalGainTaxPostLcfPln: 0,
+    missingRateCount: 0,
     ...overrides,
   };
 }

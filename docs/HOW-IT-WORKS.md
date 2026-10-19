@@ -185,6 +185,8 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 
 By default both rates are the average NBP Table A rate from the last business day preceding the transaction date. With the settlement-date setting enabled, trade rates use the last Polish business day preceding the estimated T+2 settlement date.
 
+**Missing rates:** If an NBP rate cannot be resolved (e.g. the fetch failed while offline), the amount is converted at rate 0 and the row is flagged `rateUnavailable`. A missing rate on a **buy** is carried on its FIFO lot (through stock splits and mergers), so every sell that consumes that lot is also flagged (`rateUnavailable` + `costRateUnavailable`), even when the buy happened in an earlier year. `TaxSummary.missingRateCount` counts all flagged trade, dividend and credit-interest rows; when it is above 0 the Tax Form page shows a red banner and marks the form as a draft that must not be filed.
+
 ---
 
 ### 2. FIFO Method (First In, First Out)

@@ -755,3 +755,54 @@ void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
     assert.equal(r.pit38[31], 950);
   });
 });
+
+void describe('calculateTaxes — missingRateCount', () => {
+  void it('summary.missingRateCount counts cost-side gaps', () => {
+    const buy = makeTrade({
+      datetime: new Date(2023, 5, 1),
+      quantity: 10,
+      price: 100,
+      exchangeRate: 0,
+      commissionExchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+    });
+    const result = calculateTaxes({
+      trades: [buy, sell],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.summary.missingRateCount, 1);
+  });
+
+  void it('missingRateCount is 0 for fully-rated data', () => {
+    const buy = makeTrade({ datetime: new Date(2023, 5, 1), quantity: 10 });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+    });
+    const result = calculateTaxes({
+      trades: [buy, sell],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.summary.missingRateCount, 0);
+  });
+});

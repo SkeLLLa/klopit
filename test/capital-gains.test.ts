@@ -1084,3 +1084,190 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
     );
   });
 });
+
+void describe('calculateCapitalGains — missing rate propagation', () => {
+  void it('flags a sell whose FIFO lot came from a rate-less buy outside the tax year', () => {
+    const buy = makeTrade({
+      datetime: new Date(2023, 5, 1),
+      quantity: 10,
+      price: 100,
+      commission: 0,
+      exchangeRate: 0,
+      commissionExchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+      commission: 0,
+    });
+    const [res] = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(res.type, 'sell');
+    assert.equal(res.costPln, 0);
+    assert.equal(res.rateUnavailable, true);
+    assert.equal(res.costRateUnavailable, true);
+  });
+
+  void it('propagates the flag through a stock split', () => {
+    const buy = makeTrade({
+      datetime: new Date(2023, 0, 10),
+      quantity: 10,
+      price: 100,
+      commission: 0,
+      exchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const split: EnrichedCorporateAction = {
+      type: 'stock-split',
+      symbol: 'AAPL',
+      datetime: new Date(2023, 6, 1),
+      numerator: 2,
+      denominator: 1,
+      cashExchangeRate: 0,
+      cashRateUnavailable: false,
+    };
+    const sell = makeTrade({
+      datetime: new Date(2024, 2, 1),
+      type: 'sell',
+      quantity: 20,
+      price: 60,
+      proceeds: 1200,
+      commission: 0,
+    });
+    const res = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [split],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(res.find((r) => r.type === 'sell')?.rateUnavailable, true);
+  });
+
+  void it('propagates the flag through a merger to the cash sell and new lots', () => {
+    const buy = makeTrade({
+      symbol: 'OLD',
+      datetime: new Date(2023, 0, 10),
+      quantity: 10,
+      price: 100,
+      commission: 0,
+      exchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const merger: EnrichedCorporateAction = {
+      type: 'merger',
+      symbol: 'OLD',
+      numerator: 0,
+      denominator: 0,
+      targetSymbol: 'NEW',
+      datetime: new Date(2024, 2, 1),
+      conversionRatio: 1,
+      cashPerShare: 5,
+      cashCurrency: 'USD',
+      newSharesValue: 1000,
+      cashExchangeRate: 4,
+      cashRateUnavailable: false,
+    };
+    const sell = makeTrade({
+      symbol: 'NEW',
+      datetime: new Date(2024, 5, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+      commission: 0,
+    });
+    const res = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [merger],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    const cashSell = res.find((r) => r.source === 'corporate-action');
+    const newSell = res.find((r) => r.symbol === 'NEW');
+    assert.equal(cashSell?.rateUnavailable, true);
+    assert.equal(cashSell?.costRateUnavailable, true);
+    assert.equal(newSell?.rateUnavailable, true);
+    assert.equal(newSell?.costRateUnavailable, true);
+  });
+
+  void it('only flags sells that actually consume the rate-less lot', () => {
+    const okBuy = makeTrade({
+      datetime: new Date(2023, 0, 1),
+      quantity: 5,
+      price: 100,
+      commission: 0,
+    });
+    const badBuy = makeTrade({
+      datetime: new Date(2023, 1, 1),
+      quantity: 5,
+      price: 100,
+      commission: 0,
+      exchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const s1 = makeTrade({
+      datetime: new Date(2024, 0, 10),
+      type: 'sell',
+      quantity: 5,
+      price: 110,
+      proceeds: 550,
+      commission: 0,
+    });
+    const s2 = makeTrade({
+      datetime: new Date(2024, 1, 10),
+      type: 'sell',
+      quantity: 5,
+      price: 110,
+      proceeds: 550,
+      commission: 0,
+    });
+    const sells = calculateCapitalGains({
+      trades: [okBuy, badBuy, s1, s2],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    }).filter((r) => r.type === 'sell');
+    assert.deepEqual(
+      sells.map((r) => r.rateUnavailable),
+      [false, true],
+    );
+    assert.deepEqual(
+      sells.map((r) => r.costRateUnavailable),
+      [false, true],
+    );
+  });
+
+  void it('flags a lot whose commission rate was missing', () => {
+    const buy = makeTrade({
+      datetime: new Date(2023, 0, 1),
+      quantity: 1,
+      price: 100,
+      commission: 5,
+      commissionExchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 0, 1),
+      type: 'sell',
+      quantity: 1,
+      price: 100,
+      proceeds: 100,
+      commission: 0,
+    });
+    const res = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(res[0].rateUnavailable, true);
+  });
+});

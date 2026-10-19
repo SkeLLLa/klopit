@@ -191,5 +191,9 @@ function buildSummary(args: {
     totalCreditInterestForeignTaxPln,
     capitalGainAfterLcfPln,
     capitalGainTaxPostLcfPln,
+    missingRateCount:
+      args.tradeResults.filter((r) => r.rateUnavailable).length +
+      args.dividendResults.filter((r) => r.rateUnavailable).length +
+      args.creditInterestResults.filter((r) => r.rateUnavailable).length,
   };
 }

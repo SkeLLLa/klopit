@@ -139,6 +139,8 @@ export async function calculateSessionTaxes(args: {
         scope: 'trade.commission',
         useTradeSettlementDate: session.useSettlementDateForTradeRates ?? false,
       });
+      // A missing rate becomes 0 here; rateUnavailable propagates through
+      // FIFO lots to every sell that consumes them (capital-gains.ts).
       return {
         ...trade,
         exchangeRate: rate?.rate ?? 0,

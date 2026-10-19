@@ -147,6 +147,11 @@ export interface TaxSummaryRecord {
   totalCreditInterestForeignTaxPln: number;
   capitalGainAfterLcfPln: number;
   capitalGainTaxPostLcfPln: number;
+  /**
+   * Results with a missing NBP rate (see TaxSummary.missingRateCount). Absent
+   * on summaries saved before this field existed — treat as unknown.
+   */
+  missingRateCount?: number;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**

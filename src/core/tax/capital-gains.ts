@@ -196,7 +196,9 @@ function processAction(args: {
         costPln,
         gainLossPln: proceedsPln - costPln,
         taxPln: Math.max(proceedsPln - costPln, 0) * TAX_RATE,
-        rateUnavailable: action.cashRateUnavailable,
+        rateUnavailable:
+          action.cashRateUnavailable || mergerResult.costRateUnavailable,
+        costRateUnavailable: mergerResult.costRateUnavailable,
         country: args.symbolCountryMap.get(action.symbol) ?? 'XX',
         foreignTaxPln: 0,
         foreignTaxOriginal: 0,
@@ -226,6 +228,7 @@ function processTrade(args: {
       quantity: trade.quantity,
       costPerSharePln,
       commissionPerSharePln,
+      rateUnavailable: trade.rateUnavailable,
     });
 
     if (isInPeriod({ datetime: trade.datetime, taxPeriod })) {
@@ -258,6 +261,7 @@ function processTrade(args: {
 
     let totalCostPln = 0;
     let remainingQty = trade.quantity;
+    let costRateUnavailable = false;
 
     if (lots.length === 0) {
       throw new Error(
@@ -276,6 +280,7 @@ function processTrade(args: {
     while (remainingQty > qtyEpsilon && lots.length > 0) {
       const lot = lots[0];
       const usedQty = Math.min(remainingQty, lot.quantity);
+      if (lot.rateUnavailable) costRateUnavailable = true;
 
       totalCostPln +=
         usedQty * (lot.costPerSharePln + lot.commissionPerSharePln);
@@ -310,7 +315,8 @@ function processTrade(args: {
         costPln: totalCostPln,
         gainLossPln: netProceedsPln - totalCostPln,
         taxPln: Math.max(netProceedsPln - totalCostPln, 0) * TAX_RATE,
-        rateUnavailable: trade.rateUnavailable,
+        rateUnavailable: trade.rateUnavailable || costRateUnavailable,
+        costRateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',
         foreignTaxPln: 0,
         foreignTaxOriginal: 0,

@@ -44,6 +44,9 @@
   );
   const taxSummary = $derived(taxSummaryQuery.current);
   const pit38 = $derived(taxSummary?.pit38);
+  // Absent on summaries saved before the field existed: show nothing until
+  // the next (re)calculation fills it in.
+  const missingRateCount = $derived(taxSummary?.missingRateCount ?? 0);
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,
@@ -224,6 +227,35 @@
       </div>
     {/if}
 
+    <!-- Missing NBP rates banner (non-dismissable) -->
+    {#if missingRateCount > 0}
+      <div
+        role="alert"
+        class="flex items-start justify-between gap-3 rounded border border-red-400 bg-red-50 px-4 py-3 dark:border-red-500/60 dark:bg-red-500/10"
+      >
+        <div class="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
+          <AlertCircle size={16} class="mt-0.5 shrink-0" />
+          <div>
+            <p class="font-semibold">{m.tax_form_missing_rates_title()}</p>
+            <p>{m.tax_form_missing_rates_body({ count: missingRateCount })}</p>
+            <a
+              href={localizeHref('/dashboard#trades')}
+              class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+            >
+              {m.taxform_see_trades()}
+            </a>
+          </div>
+        </div>
+        <button
+          onclick={() => void handleRecalculate()}
+          class="inline-flex shrink-0 items-center gap-1.5 rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+        >
+          <RefreshCw size={14} />
+          {m.tax_recalculate()}
+        </button>
+      </div>
+    {/if}
+
     <!-- Recalculate bar -->
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -254,6 +286,14 @@
       </a>
     </div>
 
+    {#if missingRateCount > 0}
+      <p
+        class="w-fit rounded border-2 border-dashed border-red-500 px-3 py-1 text-sm font-bold tracking-wider text-red-600 uppercase dark:text-red-400"
+      >
+        {m.tax_form_missing_rates_draft()}
+      </p>
+    {/if}
+
     <!-- Sidebar + Content layout -->
     <div class="flex gap-6">
       <DocumentSidebar
@@ -262,7 +302,7 @@
         onselect={(doc) => (activeDocument = doc)}
       />
 
-      <div class="min-w-0 flex-1">
+      <div class={['min-w-0 flex-1', missingRateCount > 0 && 'opacity-60']}>
         {#if typeof activeDocument === 'string'}
           <!-- PIT-38 sections -->
           <div class="space-y-4">

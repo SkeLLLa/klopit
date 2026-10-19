@@ -221,6 +221,8 @@ export interface TradeResult {
   costPln: number;
   gainLossPln: number;
   rateUnavailable: boolean;
+  /** A FIFO lot consumed by this sell had no NBP rate; its cost was counted as 0. */
+  costRateUnavailable?: boolean;
   country: string;
   /** Pre-LCF per-trade tax: max(gainLossPln, 0) * 0.19. Display-only. */
   taxPln: number;
@@ -341,6 +343,11 @@ export interface TaxSummary {
   capitalGainAfterLcfPln: number;
   /** Post-LCF capital gain tax (raw, unrounded): capitalGainAfterLcfPln * 0.19. */
   capitalGainTaxPostLcfPln: number;
+  /**
+   * Number of trade, dividend and credit-interest results with a missing NBP
+   * rate.
+   */
+  missingRateCount: number;
 }
 
 /**

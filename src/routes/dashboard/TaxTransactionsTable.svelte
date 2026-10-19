@@ -165,7 +165,17 @@
               >
               <td class="px-3 py-2">
                 {#if trade.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  {#if trade.costRateUnavailable}
+                    <span
+                      class="cursor-help"
+                      title={m.dash_rate_missing_cost()}
+                      aria-label={m.dash_rate_missing_cost()}
+                    >
+                      <AlertTriangle size={14} class="text-amber-500" />
+                    </span>
+                  {:else}
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  {/if}
                 {/if}
               </td>
             </tr>
@@ -258,7 +268,17 @@
               >
               <td class="px-3 py-2">
                 {#if trade.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  {#if trade.costRateUnavailable}
+                    <span
+                      class="cursor-help"
+                      title={m.dash_rate_missing_cost()}
+                      aria-label={m.dash_rate_missing_cost()}
+                    >
+                      <AlertTriangle size={14} class="text-amber-500" />
+                    </span>
+                  {:else}
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  {/if}
                 {/if}
               </td>
             </tr>

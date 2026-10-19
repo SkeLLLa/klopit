@@ -262,3 +262,51 @@ void describe('applyMerger', () => {
     );
   });
 });
+
+void describe('missing rate propagation', () => {
+  void it('applyStockSplit preserves rateUnavailable', () => {
+    const lots: FifoLot[] = [
+      {
+        quantity: 10,
+        costPerSharePln: 0,
+        commissionPerSharePln: 0,
+        rateUnavailable: true,
+      },
+    ];
+    const result = applyStockSplit({ lots, numerator: 3, denominator: 1 });
+    assert.equal(result[0].rateUnavailable, true);
+  });
+
+  void it('applyMerger marks costRateUnavailable when any input lot lacks a rate', () => {
+    const lots: FifoLot[] = [
+      { quantity: 10, costPerSharePln: 100, commissionPerSharePln: 0 },
+      {
+        quantity: 10,
+        costPerSharePln: 0,
+        commissionPerSharePln: 0,
+        rateUnavailable: true,
+      },
+    ];
+    const result = applyMerger({
+      lots,
+      conversionRatio: 1,
+      cashPerShare: 0,
+      cashCurrency: 'USD',
+      cashExchangeRate: 4.0,
+    });
+    assert.equal(result.costRateUnavailable, true);
+    assert.equal(result.newLots[0].rateUnavailable, true);
+  });
+
+  void it('applyMerger leaves costRateUnavailable false for fully-rated lots', () => {
+    const result = applyMerger({
+      lots: [{ quantity: 10, costPerSharePln: 100, commissionPerSharePln: 0 }],
+      conversionRatio: 1,
+      cashPerShare: 0,
+      cashCurrency: 'USD',
+      cashExchangeRate: 4.0,
+    });
+    assert.equal(result.costRateUnavailable, false);
+    assert.equal(result.newLots[0].rateUnavailable, false);
+  });
+});
