@@ -674,8 +674,8 @@ Results are sorted alphabetically by country code.
 For each priorLoss (oldest year first):
     ageInYears = currentYear − loss.year
     expired    = ageInYears > 5 || ageInYears <= 0
-    cap        = expired ? 0 : min(0.5 × loss.totalLossPln,
-                                    loss.totalLossPln − loss.alreadyDeductedPln)
+    cap        = expired ? 0 : floorToGrosz(min(0.5 × loss.totalLossPln,
+                                    loss.totalLossPln − loss.alreadyDeductedPln))
     deducted   = min(cap, remainingGain)
     remainingGain −= deducted
     loss.alreadyDeductedPln += deducted  // returned in updatedLosses
@@ -687,6 +687,8 @@ poz30 = sum of deducted across all priorLosses
 
 - Losses older than 5 years or newer than the tax session are silently skipped (a warning is attached for residuals lost to expiration).
 - The 50%-per-year cap is enforced per loss year — a user entering 100% of a loss as "already deducted" previously still has their residual constrained by `0.5 × totalLossPln`.
+- The gain being reduced is the declared, grosz-rounded poz. 28 (not the unrounded sum of trades), and each cap is floored to the grosz, so poz. 30 is always a whole zł/gr amount that never exceeds 50% of any loss.
+- `computeLossDeduction` (`src/core/tax/pit38.ts`) is the single production caller of `applyLossCarryForward`; its result feeds poz. 30, the per-year breakdown and the dashboard's post-LCF figures, so they always agree.
 - The per-year breakdown (`perYear`) is persisted on the `taxSummary.lossDeduction` record and rendered in Section D of the PIT-38 form.
 
 ---

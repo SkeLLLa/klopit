@@ -1,4 +1,5 @@
 import type { PriorYearLoss } from '../types.js';
+import { floorToGrosz, roundToGrosz } from './rounding.js';
 
 /**
  * Maximum number of tax years a loss can be carried forward (art. 9 ust. 3
@@ -97,7 +98,10 @@ export function applyLossCarryForward(
 
     const perYearCap = loss.totalLossPln * LOSS_PER_YEAR_CAP;
     const residual = Math.max(loss.totalLossPln - loss.alreadyDeductedPln, 0);
-    const cap = expired ? 0 : Math.max(Math.min(perYearCap, residual), 0);
+    // Floor to the grosz so the deduction never exceeds the 50% limit.
+    const cap = expired
+      ? 0
+      : floorToGrosz({ amount: Math.max(Math.min(perYearCap, residual), 0) });
     const deducted = Math.min(cap, remainingGain);
 
     perYearByIndex.set(index, {
@@ -136,7 +140,10 @@ export function applyLossCarryForward(
     .map((s) => perYearByIndex.get(s.index))
     .filter((entry): entry is LossDeductionEntry => entry !== undefined);
 
-  const deductedPln = perYear.reduce((sum, e) => sum + e.deductedPln, 0);
+  // Remove float noise from summing several loss years.
+  const deductedPln = roundToGrosz({
+    amount: perYear.reduce((sum, e) => sum + e.deductedPln, 0),
+  });
 
   return {
     deductedPln,

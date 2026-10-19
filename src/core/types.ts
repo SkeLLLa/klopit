@@ -334,7 +334,10 @@ export interface TaxSummary {
   dividendTaxOwedPln: number;
   totalCreditInterestPln: number;
   totalCreditInterestForeignTaxPln: number;
-  /** Capital gain after prior-year loss deduction: max(gain - lcfDeducted, 0). */
+  /**
+   * Capital gain after prior-year loss deduction: max(gain - lcfDeducted, 0),
+   * where lcfDeducted is the PIT-38 poz. 30 value (computed from poz. 28).
+   */
   capitalGainAfterLcfPln: number;
   /** Post-LCF capital gain tax (raw, unrounded): capitalGainAfterLcfPln * 0.19. */
   capitalGainTaxPostLcfPln: number;

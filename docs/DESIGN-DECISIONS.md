@@ -539,6 +539,7 @@ Art. 30a and Art. 63 as the legal grounding for the calculation itself.
 
 - User enters prior year loss amount manually
 - App ensures 50% limit per year
+- The per-year cap is rounded **down** to the grosz, so poz. 30 never exceeds 50% of the loss (rounding to nearest could overshoot by half a grosz)
 - Stores "loss used" and "loss remaining" separately
 
 ---

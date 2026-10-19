@@ -681,4 +681,77 @@ void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
     // Net WHT is 15 USD x 4.0 = 60 PLN (not 45 x 4.0 per row).
     assert.equal(result.pit38[48], 60);
   });
+
+  void it('loss deduction breakdown equals PIT-38 poz. 30 (grosz rounding)', () => {
+    const r = calculateTaxes({
+      trades: [
+        makeTrade({
+          datetime: new Date(2024, 0, 10),
+          type: 'buy',
+          quantity: 1,
+          price: 99.996,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+        makeTrade({
+          datetime: new Date(2024, 5, 10),
+          type: 'sell',
+          quantity: 1,
+          price: 200.004,
+          proceeds: 200.004,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+      ],
+      dividends: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      priorLosses: [{ year: 2023, totalLossPln: 1000, alreadyDeductedPln: 0 }],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(r.pit38[28], 100);
+    assert.equal(r.pit38[30], 100);
+    assert.equal(r.lossDeduction.deductedPln, r.pit38[30]);
+    const perYearSum = r.lossDeduction.perYear.reduce(
+      (s, e) => s + e.deductedPln,
+      0,
+    );
+    assert.equal(perYearSum, r.pit38[30]);
+  });
+
+  void it('poz. 30 is grosz-exact and never exceeds 50% of the loss', () => {
+    const r = calculateTaxes({
+      trades: [
+        makeTrade({
+          datetime: new Date(2024, 0, 10),
+          type: 'buy',
+          quantity: 1,
+          price: 100,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+        makeTrade({
+          datetime: new Date(2024, 5, 10),
+          type: 'sell',
+          quantity: 1,
+          price: 1100,
+          proceeds: 1100,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+      ],
+      dividends: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      priorLosses: [
+        { year: 2023, totalLossPln: 100.01, alreadyDeductedPln: 0 },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(r.pit38[30], 50);
+    assert.ok(r.pit38[30] <= 100.01 * 0.5);
+    assert.equal(r.pit38[31], 950);
+  });
 });

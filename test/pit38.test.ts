@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { buildPit38 } from '../src/core/tax/pit38.js';
+import { roundToFullPln } from '../src/core/tax/rounding.js';
 import type {
   CreditInterestResult,
   DividendResult,
@@ -611,5 +612,30 @@ void describe('buildPit38', () => {
 
     // Section I
     assert.equal(result[65], 0);
+  });
+
+  void it('uses provided lossDeduction instead of recomputing', () => {
+    const result = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 50000,
+          costPln: 30000,
+          gainLossPln: 20000,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      summary: makeSummary(),
+      priorLosses: [],
+      lossDeduction: {
+        deductedPln: 12.34,
+        perYear: [],
+        updatedLosses: [],
+        warnings: [],
+      },
+    });
+
+    assert.equal(result[30], 12.34);
+    assert.equal(result[31], roundToFullPln({ amount: 20000 - 12.34 }));
   });
 });

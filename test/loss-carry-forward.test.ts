@@ -217,4 +217,30 @@ void describe('applyLossCarryForward', () => {
     assert.equal(LOSS_CARRY_FORWARD_YEARS, 5);
     assert.equal(LOSS_PER_YEAR_CAP, 0.5);
   });
+
+  void it('caps are floored to the grosz', () => {
+    const result = applyLossCarryForward({
+      gainPln: 1000,
+      currentYear: 2024,
+      priorLosses: [makeLoss({ year: 2023, totalLossPln: 100.01 })],
+    });
+
+    assert.equal(result.deductedPln, 50);
+    assert.equal(result.perYear[0]?.capPln, 50);
+  });
+
+  void it('multi-year sum has no float noise', () => {
+    const result = applyLossCarryForward({
+      gainPln: 10,
+      currentYear: 2024,
+      priorLosses: [
+        makeLoss({ year: 2021, totalLossPln: 0.3 }),
+        makeLoss({ year: 2022, totalLossPln: 0.6 }),
+      ],
+    });
+
+    assert.equal(result.perYear[0]?.capPln, 0.15);
+    assert.equal(result.perYear[1]?.capPln, 0.3);
+    assert.equal(result.deductedPln, 0.45);
+  });
 });

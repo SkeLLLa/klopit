@@ -21,7 +21,10 @@ import {
   sumDividendIncome,
   sumProceeds,
 } from './aggregates.js';
-import { applyLossCarryForward } from './loss-carry-forward.js';
+import {
+  applyLossCarryForward,
+  type ApplyLossCarryForwardResult,
+} from './loss-carry-forward.js';
 import { roundToGrosz } from './rounding.js';
 
 export interface BuildPit38Args {
@@ -36,6 +39,60 @@ export interface BuildPit38Args {
    * `applyLossCarryForward`.
    */
   priorLosses?: PriorYearLoss[];
+  /**
+   * Precomputed loss deduction (from `computeLossDeduction`). When given, it is
+   * used for poz. 30 as-is so callers share a single source of truth; otherwise
+   * it is computed from `priorLosses`.
+   */
+  lossDeduction?: ApplyLossCarryForwardResult;
+}
+
+type SectionCFields = Pick<
+  Pit38Fields,
+  20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29
+>;
+
+/** Section C (poz. 20-29) — capital gains/losses, grosz-rounded. */
+export function computeSectionC(args: {
+  trades: TradeResult[];
+}): SectionCFields {
+  const f20 = 0; // No PIT-8C for foreign broker
+  const f21 = 0;
+  const f22 = roundToGrosz({ amount: sumProceeds({ rows: args.trades }) }); // Other proceeds
+  const f23 = roundToGrosz({ amount: sumCost({ rows: args.trades }) }); // Other costs
+  const f24 = 0; // No exemptions
+  const f25 = 0;
+  const f26 = roundToGrosz({ amount: f20 + f22 - f24 }); // Total proceeds
+  const f27 = roundToGrosz({ amount: f21 + f23 - f25 }); // Total costs
+  return {
+    20: f20,
+    21: f21,
+    22: f22,
+    23: f23,
+    24: f24,
+    25: f25,
+    26: f26,
+    27: f27,
+    28: roundToGrosz({ amount: Math.max(f26 - f27, 0) }), // Gain
+    29: roundToGrosz({ amount: Math.max(f27 - f26, 0) }), // Loss
+  };
+}
+
+/**
+ * Prior-year loss deduction (poz. 30) computed from the declared, grosz-
+ * rounded gain in poz. 28. The single production entry point for
+ * `applyLossCarryForward`, so the form and the per-year breakdown agree.
+ */
+export function computeLossDeduction(args: {
+  trades: TradeResult[];
+  priorLosses: PriorYearLoss[];
+  year: number;
+}): ApplyLossCarryForwardResult {
+  return applyLossCarryForward({
+    gainPln: computeSectionC({ trades: args.trades })[28],
+    priorLosses: args.priorLosses,
+    currentYear: args.year,
+  });
 }
 
 /** Map TaxSummary to PIT-38(18) form field values. Key = position on form. */
@@ -51,8 +108,6 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const f = {} as Pit38Fields;
 
-  const totalProceedsPln = sumProceeds({ rows: trades });
-  const totalCostPln = sumCost({ rows: trades });
   const totalDividendsPln = sumDividendIncome({ rows: dividends });
   const totalCreditInterestPln = sumCreditInterestIncome({
     rows: creditInterests,
@@ -65,24 +120,17 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   });
 
   // Section C — Capital gains/losses
-  f[20] = 0; // No PIT-8C for foreign broker
-  f[21] = 0;
-  f[22] = roundToGrosz({ amount: totalProceedsPln }); // Other proceeds
-  f[23] = roundToGrosz({ amount: totalCostPln }); // Other costs
-  f[24] = 0; // No exemptions
-  f[25] = 0;
-  f[26] = roundToGrosz({ amount: f[20] + f[22] - f[24] }); // Total proceeds
-  f[27] = roundToGrosz({ amount: f[21] + f[23] - f[25] }); // Total costs
-  f[28] = roundToGrosz({ amount: Math.max(f[26] - f[27], 0) }); // Gain
-  f[29] = roundToGrosz({ amount: Math.max(f[27] - f[26], 0) }); // Loss
+  Object.assign(f, computeSectionC({ trades }));
 
   // Section D — Tax calculation
   // Apply art. 9 ust. 3 updof: per-loss-year 50% cap + 5-year window.
-  const lossDeduction = applyLossCarryForward({
-    gainPln: f[28],
-    priorLosses: priorLosses ?? [],
-    currentYear: summary.year,
-  });
+  const lossDeduction =
+    args.lossDeduction ??
+    computeLossDeduction({
+      trades,
+      priorLosses: priorLosses ?? [],
+      year: summary.year,
+    });
   f[30] = lossDeduction.deductedPln;
   f[31] = roundedCapitalGainsBase({
     gainPostLcfPln: Math.max(f[28] - f[30], 0),

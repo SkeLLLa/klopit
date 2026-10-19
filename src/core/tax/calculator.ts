@@ -28,12 +28,9 @@ import {
 import { calculateCapitalGains } from './capital-gains.js';
 import { calculateCreditInterest } from './credit-interest.js';
 import { calculateDividends } from './dividends.js';
-import {
-  applyLossCarryForward,
-  type ApplyLossCarryForwardResult,
-} from './loss-carry-forward.js';
+import { type ApplyLossCarryForwardResult } from './loss-carry-forward.js';
 import { buildPitZg } from './pit-zg.js';
-import { buildPit38 } from './pit38.js';
+import { buildPit38, computeLossDeduction } from './pit38.js';
 
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
@@ -105,14 +102,12 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     taxPeriod,
   });
 
-  const gainPln = Math.max(
-    sumProceeds({ rows: tradeResults }) - sumCost({ rows: tradeResults }),
-    0,
-  );
-  const lossDeduction = applyLossCarryForward({
-    gainPln,
+  // Single source of truth for poz. 30: computed from the grosz-rounded
+  // poz. 28 and shared by the summary, the breakdown and PIT-38.
+  const lossDeduction = computeLossDeduction({
+    trades: tradeResults,
     priorLosses: priorLosses ?? [],
-    currentYear: taxPeriod.year,
+    year: taxPeriod.year,
   });
 
   const summary = buildSummary({
@@ -129,6 +124,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     creditInterests: creditInterestResults,
     summary,
     priorLosses,
+    lossDeduction,
   });
   const pitZg = buildPitZg({
     trades: tradeResults,
