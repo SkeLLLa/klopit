@@ -214,7 +214,7 @@ Carry-ins are treated as per-instrument **snapshots**: "held N shares at the end
 
 - If imported buys explain the whole snapshot, no carry-in row is seeded and a warning is shown (a later-year snapshot of the same shares, or a position fully explained by imported buys, is not double counted). Such rows need no acquisition cost and are not listed as missing one.
 - If they explain part of it, only the rest is seeded. The latest-acquired rows are reduced first, a warning is shown, and the cost of a partly seeded row is pro-rated per share (with a separate warning).
-- If the snapshot is below the implied holding, or imported sells would exceed the holding even with the unexplained shares, the imports and the snapshot disagree (missing or duplicate imports): the snapshot is skipped, a warning is shown, and the tax form is marked incomplete (copying disabled), because the calculation may still hold shares the broker no longer reports.
+- If the snapshot is below the implied holding, or imported sells would exceed the holding even with the unexplained shares, the imports and the snapshot disagree (missing or duplicate imports): the snapshot is skipped, a warning is shown, and the tax form is marked incomplete (copying disabled), because the calculation may still hold shares the broker no longer reports. If an imported sell then has no shares left to consume (e.g. a sell before the buys that the snapshot should have covered), the calculation stops with a short-sell error instead.
 
 A merger target without an ISIN is matched through the same symbol → ISIN lookup, so its lots join the target's trades.
 
