@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { classifySection } from '../src/core/parsers/ibkr/sections.js';
 
 void describe('classifySection', () => {

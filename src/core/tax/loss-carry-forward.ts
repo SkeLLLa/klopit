@@ -1,6 +1,9 @@
 import type { PriorYearLoss } from '../types.js';
 
-/** Maximum number of tax years a loss can be carried forward (art. 9 ust. 3 updof). */
+/**
+ * Maximum number of tax years a loss can be carried forward (art. 9 ust. 3
+ * updof).
+ */
 export const LOSS_CARRY_FORWARD_YEARS = 5;
 
 /** Maximum share of the original loss that can be deducted in any single year. */
@@ -24,8 +27,8 @@ export interface LossDeductionEntry {
   /** Already-deducted amount before this calculation (PLN). */
   previouslyDeductedPln: number;
   /**
-   * Maximum that could be deducted this year given the 50% cap and
-   * residual remaining after previous deductions.
+   * Maximum that could be deducted this year given the 50% cap and residual
+   * remaining after previous deductions.
    */
   capPln: number;
   /** Amount actually deducted this year (PLN). */
@@ -48,8 +51,8 @@ export interface ApplyLossCarryForwardResult {
   perYear: LossDeductionEntry[];
   /**
    * Updated `priorLosses` with `alreadyDeductedPln` advanced for entries
-   * deducted this year. Same length and order as the input. Expired entries
-   * are returned unchanged.
+   * deducted this year. Same length and order as the input. Expired entries are
+   * returned unchanged.
    */
   updatedLosses: PriorYearLoss[];
   /** Non-fatal notes (expired losses, exhausted residuals, etc.). */
@@ -60,12 +63,13 @@ export interface ApplyLossCarryForwardResult {
  * Apply prior-year losses against the current year's capital gain following
  * art. 9 ust. 3 updof:
  *
- *   "O wysokość straty ze źródła przychodów, poniesionej w roku podatkowym,
- *    można obniżyć dochód z tego źródła w najbliższych kolejno po sobie
- *    następujących pięciu latach podatkowych, z tym że wysokość obniżenia
- *    w którymkolwiek z tych lat nie może przekroczyć 50% kwoty tej straty."
+ * "O wysokość straty ze źródła przychodów, poniesionej w roku podatkowym, można
+ * obniżyć dochód z tego źródła w najbliższych kolejno po sobie następujących
+ * pięciu latach podatkowych, z tym że wysokość obniżenia w którymkolwiek z tych
+ * lat nie może przekroczyć 50% kwoty tej straty."
  *
  * Rules:
+ *
  * 1. A loss from year Y is deductible only in years Y+1 through Y+5.
  * 2. In any single year, at most 50% of the original loss may be deducted.
  * 3. The residual after prior deductions further constrains the cap.
@@ -79,7 +83,7 @@ export function applyLossCarryForward(
 
   // Stable order: oldest losses first, but keep input order for output mapping.
   const inputOrder = args.priorLosses.map((loss, index) => ({ loss, index }));
-  const sorted = [...inputOrder].sort((a, b) => a.loss.year - b.loss.year);
+  const sorted = inputOrder.toSorted((a, b) => a.loss.year - b.loss.year);
 
   const updated: PriorYearLoss[] = args.priorLosses.map((l) => ({ ...l }));
   const perYearByIndex = new Map<number, LossDeductionEntry>();

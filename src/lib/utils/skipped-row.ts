@@ -1,13 +1,13 @@
 import { m } from '$lib/paraglide/messages.js';
+
 import type { SkippedRow } from '../../core/types.js';
 
+const kindLabels: Record<SkippedRow['kind'], () => string> = {
+  'known-unsupported': m.data_skipped_kind_known_unsupported,
+  'unknown': m.data_skipped_kind_unknown,
+  'parse-failure': m.data_skipped_kind_parse_failure,
+};
+
 export function kindLabel(kind: SkippedRow['kind']): string {
-  switch (kind) {
-    case 'known-unsupported':
-      return m.data_skipped_kind_known_unsupported();
-    case 'unknown':
-      return m.data_skipped_kind_unknown();
-    case 'parse-failure':
-      return m.data_skipped_kind_parse_failure();
-  }
+  return kindLabels[kind]();
 }

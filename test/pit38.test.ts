@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { buildPit38 } from '../src/core/tax/pit38.js';
 import type {
   CreditInterestResult,

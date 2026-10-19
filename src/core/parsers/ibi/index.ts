@@ -11,12 +11,11 @@ const RSU_TITLE_RE = /Sale of Trustee Shares Activity Statement/i;
 const CONFIRMATION_TITLE_RE = /Confirmation of Sale/i;
 
 /**
- * Dispatcher for IBI PDFs. RSU-titled statements route to the RSU
- * parser; "Confirmation of Sale" documents (ESPP quick-sell receipts)
- * route to the Confirmation parser; everything else (including the
- * classic ESPP "Sale Of Stock Activity Statement" title, and test
- * fixtures that omit the title line) routes to the ESPP parser, which
- * fail-louds on missing fields.
+ * Dispatcher for IBI PDFs. RSU-titled statements route to the RSU parser;
+ * "Confirmation of Sale" documents (ESPP quick-sell receipts) route to the
+ * Confirmation parser; everything else (including the classic ESPP "Sale Of
+ * Stock Activity Statement" title, and test fixtures that omit the title line)
+ * routes to the ESPP parser, which fail-louds on missing fields.
  */
 export function parseIbiText(args: { text: string }): ParsedStatement {
   if (RSU_TITLE_RE.test(args.text)) {

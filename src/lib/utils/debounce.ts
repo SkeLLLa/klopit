@@ -5,7 +5,7 @@ export function debounce<A extends readonly unknown[]>(
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending: A | undefined;
 
-  const debounced = ((...args: A) => {
+  const debounced = (...args: A) => {
     pending = args;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
@@ -13,20 +13,20 @@ export function debounce<A extends readonly unknown[]>(
       if (pending) void fn(...pending);
       pending = undefined;
     }, waitMs);
-  }) as ((...args: A) => void) & { cancel: () => void; flush: () => void };
+  };
 
-  debounced.cancel = () => {
+  const cancel = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
     pending = undefined;
   };
 
-  debounced.flush = () => {
+  const flush = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
     if (pending) void fn(...pending);
     pending = undefined;
   };
 
-  return debounced;
+  return Object.assign(debounced, { cancel, flush });
 }

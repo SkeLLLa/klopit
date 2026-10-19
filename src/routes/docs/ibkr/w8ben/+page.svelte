@@ -59,12 +59,10 @@
     <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
       {m.docs_ibkr_w8ben_why_title()}
     </h2>
-    <!-- eslint-disable svelte/no-at-html-tags -- Paraglide messages are compile-time constants -->
     <p class="text-slate-700 dark:text-slate-300">
       {@html m.docs_ibkr_w8ben_why_body()}
       {@render citations(['irsInstructions', 'irsTreaty'])}
     </p>
-    <!-- eslint-enable svelte/no-at-html-tags -->
   </section>
 
   <section class="space-y-3">
@@ -81,11 +79,9 @@
     <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
       {m.docs_ibkr_w8ben_where_title()}
     </h2>
-    <!-- eslint-disable svelte/no-at-html-tags -- Paraglide messages are compile-time constants -->
     <p class="text-slate-700 dark:text-slate-300">
       {@html m.docs_ibkr_w8ben_where_body()}
     </p>
-    <!-- eslint-enable svelte/no-at-html-tags -->
     <p class="rounded border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200">
       {m.docs_ibkr_w8ben_renewal_note()}
       {@render citations(['w8Expiry'])}

@@ -74,9 +74,8 @@
   const tooltipTriggers = $derived({
     // Unovis prefixes selector keys with '.' internally — pass raw class name
     // D3 datum on donut segments is an arc object { data, value, startAngle, ... }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [(Donut as any).selectors.segment]: (arcDatum: any): string => {
-      const d: DonutSegment = arcDatum.data;
+    [Donut.selectors.segment]: (arcDatum: { data: DonutSegment }): string => {
+      const d = arcDatum.data;
       const pct =
         totalIncome > 0 ? ((d.value / totalIncome) * 100).toFixed(1) : '0';
       return `<div class="text-sm"><strong>${d.label}</strong><br/>${formatPln(d.value)} (${pct}%)</div>`;

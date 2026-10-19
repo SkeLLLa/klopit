@@ -14,11 +14,11 @@ export interface MergerResult {
 }
 
 /**
- * Apply a stock split to all lots for a symbol.
- * Returns a new array — does not mutate the input.
+ * Apply a stock split to all lots for a symbol. Returns a new array — does not
+ * mutate the input.
  *
- * Forward split (e.g. 10:1): numerator=10, denominator=1 → factor=10
- * Reverse split (e.g. 1:3): numerator=1, denominator=3 → factor=1/3
+ * Forward split (e.g. 10:1): numerator=10, denominator=1 → factor=10 Reverse
+ * split (e.g. 1:3): numerator=1, denominator=3 → factor=1/3
  */
 export function applyStockSplit(args: {
   lots: FifoLot[];
@@ -49,9 +49,9 @@ export function applyStockSplit(args: {
 /**
  * Apply a cash-and-stock merger to lots.
  *
- * The cash portion is a partial disposition (taxable event).
- * Cost basis is allocated proportionally between cash and stock components
- * based on their fair market values. The remaining cost transfers to new lots.
+ * The cash portion is a partial disposition (taxable event). Cost basis is
+ * allocated proportionally between cash and stock components based on their
+ * fair market values. The remaining cost transfers to new lots.
  *
  * Based on art. 24 ust. 8 ustawy o PIT.
  */

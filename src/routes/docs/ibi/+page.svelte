@@ -60,9 +60,7 @@
     {/each}
   </div>
 
-  <!-- eslint-disable svelte/no-at-html-tags -->
   <p class="border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
     {@html m.docs_more_brokers_coming()}
   </p>
-  <!-- eslint-enable svelte/no-at-html-tags -->
 </div>

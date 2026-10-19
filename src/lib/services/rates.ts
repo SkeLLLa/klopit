@@ -51,6 +51,7 @@ function addBusinessDays(d: Date, days: number): Date {
 function eachDay(start: Date, end: Date): string[] {
   const days: string[] = [];
   const current = new Date(start);
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- `current` is a Date mutated in place via setDate()
   while (current <= end) {
     days.push(toDateString(current));
     current.setDate(current.getDate() + 1);
@@ -171,6 +172,8 @@ export async function getCachedRates(args: {
     log.debug(
       `getCachedRates(${upperCurrency}): fetching ${span.start}..${span.end}`,
     );
+    // Spans are fetched sequentially on purpose to avoid hammering the rate-limited NBP API.
+    // oxlint-disable-next-line eslint/no-await-in-loop
     const fetched = await fetchRates({
       currency: upperCurrency,
       startDate: span.start,
@@ -178,6 +181,7 @@ export async function getCachedRates(args: {
     });
 
     const spanDates = eachDay(parseDate(span.start), parseDate(span.end));
+    // oxlint-disable-next-line eslint/no-await-in-loop -- persist each span before fetching the next
     await storeRates({
       currency: upperCurrency,
       dates: spanDates,
@@ -220,9 +224,9 @@ export async function getCachedRates(args: {
  * Get the NBP fixing rate for a reference date.
  *
  * Per Polish tax law, uses the average NBP rate from the last business day
- * BEFORE the reference date. Walks backwards skipping weekends and
- * confirmed holidays (cached as `rate: null`). If a date has no cache
- * entry (gap), triggers a prefetch before continuing.
+ * BEFORE the reference date. Walks backwards skipping weekends and confirmed
+ * holidays (cached as `rate: null`). If a date has no cache entry (gap),
+ * triggers a prefetch before continuing.
  */
 export async function getFixingRate(args: {
   currency: string;
@@ -253,6 +257,7 @@ export async function getFixingRate(args: {
 
     // Check cache for this specific date
     const recordId = makeRecordId({ currency: upperCurrency, date: dateStr });
+    // oxlint-disable-next-line eslint/no-await-in-loop -- walk-back is inherently sequential (stops at first business day with a rate)
     const record = await db.nbpRates.get(recordId);
 
     if (record !== undefined) {
@@ -276,6 +281,7 @@ export async function getFixingRate(args: {
     );
     const prefetchEnd = toDateString(addDays(candidate, PREFETCH_DAYS_AFTER));
 
+    // oxlint-disable-next-line eslint/no-await-in-loop -- walk-back is inherently sequential
     await getCachedRates({
       currency: upperCurrency,
       startDate: prefetchStart,
@@ -283,6 +289,7 @@ export async function getFixingRate(args: {
     });
 
     // Re-check the same date now that it's cached
+    // oxlint-disable-next-line eslint/no-await-in-loop -- walk-back is inherently sequential
     const freshRecord = await db.nbpRates.get(recordId);
 
     if (freshRecord !== undefined && freshRecord.rate !== null) {
@@ -306,7 +313,10 @@ export async function getFixingRate(args: {
   );
 }
 
-/** Get the NBP fixing rate using an estimated T+2 settlement date for securities trades. */
+/**
+ * Get the NBP fixing rate using an estimated T+2 settlement date for securities
+ * trades.
+ */
 export async function getTradeSettlementFixingRate(args: {
   currency: string;
   date: string;
@@ -317,7 +327,10 @@ export async function getTradeSettlementFixingRate(args: {
   });
 }
 
-/** Collect all unique (currency, date) pairs from session data and prefetch rates */
+/**
+ * Collect all unique (currency, date) pairs from session data and prefetch
+ * rates
+ */
 export async function fetchRatesForSession(args: {
   sessionId: string;
 }): Promise<void> {

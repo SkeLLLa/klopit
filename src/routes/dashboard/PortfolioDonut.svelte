@@ -27,7 +27,6 @@
   const segments: DonutSegment[] = $derived.by(() => {
     // Aggregate invested amount by symbol (buy trades only)
     // Buy TradeResults have costPln=0 by design — compute from price * quantity * exchangeRate
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local to $derived computation, not reactive state
     const costBySymbol = new Map<string, number>();
     for (const trade of tradeResults) {
       if (trade.type === 'buy') {
@@ -43,7 +42,7 @@
     if (total <= 0) return [];
 
     // Sort by cost descending
-    const sorted = [...costBySymbol.entries()].sort((a, b) => b[1] - a[1]);
+    const sorted = [...costBySymbol.entries()].toSorted((a, b) => b[1] - a[1]);
 
     const result: DonutSegment[] = [];
     let otherTotal = 0;
@@ -81,9 +80,8 @@
   const color = (d: DonutSegment) => d.color;
 
   const tooltipTriggers = $derived({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [(Donut as any).selectors.segment]: (arcDatum: any): string => {
-      const d: DonutSegment = arcDatum.data;
+    [Donut.selectors.segment]: (arcDatum: { data: DonutSegment }): string => {
+      const d = arcDatum.data;
       const pct =
         totalInvested > 0
           ? ((d.value / totalInvested) * 100).toFixed(1)

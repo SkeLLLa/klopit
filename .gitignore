@@ -29,9 +29,6 @@ build/Release
 # Optional npm cache directory
 .npm
 
-# Optional eslint cache
-.eslintcache
-
 # Output of 'npm pack'
 *.tgz
 
@@ -77,3 +74,6 @@ examples/**/*.private.*
 
 # Docs tmp files
 docs/**/
+
+# Dev TLS certificate (mise run certs)
+.certs/

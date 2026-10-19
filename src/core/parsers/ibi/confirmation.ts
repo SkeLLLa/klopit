@@ -13,56 +13,61 @@ import {
 /**
  * Regexes for IBI Capital "Confirmation of Sale" PDFs (ESPP quick-sell).
  *
- * This document format differs from the "Sale Of Stock Activity Statement"
- * in field names and layout:
+ * This document format differs from the "Sale Of Stock Activity Statement" in
+ * field names and layout:
  *
- *   Activity Statement field  →  Confirmation of Sale field
- *   ─────────────────────────────────────────────────────
- *   Grant Date                →  Exercise Date   (actual purchase date)
- *   Execution Date            →  Sale Date
- *   Price For Tax             →  Exercise Period Price (85% of lower)
- *   Company: <TICKER>         →  <Name>.com Ltd. in the document title
- *   Order Number              →  (absent — synthetic lot id from period)
- *   Total Amount Due to Order →  Total Consideration
- *   Total Fees (…) USD …      →  Total Fees: …
- *   Sale Price from order row →  Sale Price* $… inline on the same row
+ * Activity Statement field → Confirmation of Sale field
+ * ───────────────────────────────────────────────────── Grant Date → Exercise
+ * Date (actual purchase date) Execution Date → Sale Date Price For Tax →
+ * Exercise Period Price (85% of lower) Company: <TICKER> → <Name>.com Ltd. in
+ * the document title Order Number → (absent — synthetic lot id from period)
+ * Total Amount Due to Order → Total Consideration Total Fees (…) USD … → Total
+ * Fees: … Sale Price from order row → Sale Price* $… inline on the same row
  */
 const ENTRY_DATE_RE = /Entry Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const EXERCISE_DATE_RE = /Exercise Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const SALE_DATE_RE = /Sale Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const EXERCISE_PRICE_RE = /Exercise Period Price[^:]*:\s*([\d,]+(?:\.\d+)?)/;
 /**
- * "Shares Purchased: 82" (Calculation section) or "Shares Sold: 82"
- * (Quick Sale section). Both carry the same value; the first match wins.
+ * "Shares Purchased: 82" (Calculation section) or "Shares Sold: 82" (Quick Sale
+ * section). Both carry the same value; the first match wins.
  */
 const SHARES_RE = /Shares (?:Purchased|Sold):\s*(\d+)/;
 /**
- * "Sale Price* $140.4901" — the asterisk and dollar sign may be separated
- * from the label by spaces or appear flush; the `\s*\*?` pattern handles both.
+ * "Sale Price* $140.4901" — the asterisk and dollar sign may be separated from
+ * the label by spaces or appear flush; the `\s*\*?` pattern handles both.
  */
 const SALE_PRICE_RE = /Sale Price\s*\*?\s*\$([\d,]+(?:\.\d+)?)/;
 const TOTAL_CONSIDERATION_RE = /Total Consideration:\s*([\d,]+(?:\.\d+)?)/;
 /**
- * "Total Fees: 13.98 $" — distinct from the Activity Statement's
- * "Total Fees (…) USD …" pattern, so there is no regex collision.
+ * "Total Fees: 13.98 $" — distinct from the Activity Statement's "Total Fees
+ * (…) USD …" pattern, so there is no regex collision.
  */
 const TOTAL_FEES_RE = /Total Fees:\s*([\d,]+(?:\.\d+)?)/;
 /**
- * Extract a ticker-like symbol from the document title, e.g.
- * "Wix.com Ltd. Employee Stock Purchase Plan" → capture "Wix" → "WIX".
- * Works for <Name>.com / .co / .io / .ai companies. The result is an
- * approximation; rare mismatches (e.g. monday.com → "MONDAY" ≠ "MNDY")
- * should be corrected manually in the trade editor.
+ * Extract a ticker-like symbol from the document title, e.g. "Wix.com Ltd.
+ * Employee Stock Purchase Plan" → capture "Wix" → "WIX". Works for <Name>.com /
+ * .co / .io / .ai companies. The result is an approximation; rare mismatches
+ * (e.g. monday.com → "MONDAY" ≠ "MNDY") should be corrected manually in the
+ * trade editor.
  */
 const COMPANY_RE = /^([A-Za-z0-9]+)\.(?:com|co|io|ai|net|org)\b/im;
 
 /**
+ * Format a Date as YYYY-MM-DD using local-calendar components (not
+ * toISOString/UTC) to avoid an off-by-one date shift in non-UTC timezones.
+ */
+function formatLocalDate(d: Date): string {
+  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
  * Parse the flat text of an IBI Capital "Confirmation of Sale" PDF into a
  * ParsedStatement with two synthetic trades: a buy on Exercise Date at the
- * discounted Exercise Period Price, and a sell on Sale Date at the actual
- * sale price. Both legs are tagged `source: 'espp'` and share a `lotId`
- * derived from the exercise-period boundaries to isolate FIFO queues per
- * grant when multiple periods are imported.
+ * discounted Exercise Period Price, and a sell on Sale Date at the actual sale
+ * price. Both legs are tagged `source: 'espp'` and share a `lotId` derived from
+ * the exercise-period boundaries to isolate FIFO queues per grant when multiple
+ * periods are imported.
  */
 export function parseIbiConfirmationText(args: {
   text: string;
@@ -140,11 +145,7 @@ export function parseIbiConfirmationText(args: {
 
   // Synthetic lot ID: exercise-period boundaries uniquely identify this
   // grant. No order number appears in this document format.
-  // Use local-calendar components (not toISOString/UTC) to avoid an
-  // off-by-one date shift in non-UTC timezones.
-  const fmt = (d: Date) =>
-    `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const lotId = `${fmt(entryDate)}-${fmt(exerciseDate)}`;
+  const lotId = `${formatLocalDate(entryDate)}-${formatLocalDate(exerciseDate)}`;
 
   trades.push({
     symbol,

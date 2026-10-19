@@ -31,8 +31,8 @@ export interface BuildPit38Args {
   summary: TaxSummary;
   /**
    * Prior-year capital losses available for carry-forward (art. 9 ust. 3
-   * updof). Each entry tracks its own residual via `alreadyDeductedPln`.
-   * The 5-year window and 50%-per-year cap are enforced by
+   * updof). Each entry tracks its own residual via `alreadyDeductedPln`. The
+   * 5-year window and 50%-per-year cap are enforced by
    * `applyLossCarryForward`.
    */
   priorLosses?: PriorYearLoss[];
@@ -47,6 +47,8 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
     summary,
     priorLosses,
   } = args;
+  // Every Pit38Position is assigned below before `f` is returned.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const f = {} as Pit38Fields;
 
   const totalProceedsPln = sumProceeds({ rows: trades });

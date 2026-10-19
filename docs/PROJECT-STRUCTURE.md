@@ -119,8 +119,9 @@ klopit/
 │   └── ...
 │
 ├── build/                        # Pre-rendered static HTML (generated)
-├── svelte.config.js              # SvelteKit config
-├── vite.config.ts                # Vite/Paraglide config
+├── vite.config.ts                # Vite, SvelteKit and Paraglide config
+├── .oxlintrc.json                # oxlint config
+├── .oxfmtrc.json                 # oxfmt config
 ├── tsconfig.json                 # TypeScript config
 ├── package.json                  # Dependencies
 └── README.md
@@ -520,15 +521,15 @@ pnpm build
 
 ## Common Development Tasks
 
-| Task          | Command                      | Files                     |
-| ------------- | ---------------------------- | ------------------------- |
-| Run tests     | `node --test test/*.test.ts` | `test/`                   |
-| Type check    | `svelte-check`               | All `.ts` / `.svelte`     |
-| Lint          | `eslint .`                   | Checks all code           |
-| Format        | `prettier --write .`         | Auto-run by hooks         |
-| Build         | `pnpm build`                 | → `build/`                |
-| Dev server    | `pnpm dev`                   | → `http://localhost:5173` |
-| Generate i18n | (automatic)                  | → `src/lib/paraglide/`    |
+| Task          | Command                      | Files                               |
+| ------------- | ---------------------------- | ----------------------------------- |
+| Run tests     | `node --test test/*.test.ts` | `test/`                             |
+| Type check    | `svelte-check`               | All `.ts` / `.svelte`               |
+| Lint          | `pnpm lint`                  | svelte-check, oxlint, oxfmt --check |
+| Format        | `pnpm format`                | oxfmt, run manually                 |
+| Build         | `pnpm build`                 | → `build/`                          |
+| Dev server    | `pnpm dev`                   | → `http://localhost:5173`           |
+| Generate i18n | (automatic)                  | → `src/lib/paraglide/`              |
 
 ---
 

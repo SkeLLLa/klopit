@@ -3,6 +3,7 @@
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,
+    "isolatedModules": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
@@ -13,6 +14,7 @@
     "src/**/*.svelte",
     "package.json",
     "scripts/**/*",
-    "test/**/*"
+    "test/**/*",
+    "*.config.ts"
   ]
 }

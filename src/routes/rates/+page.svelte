@@ -79,9 +79,9 @@
       byDate[r.date][r.currency] = r.rate;
     }
 
-    const currencies = Object.keys(currencySeen).sort();
+    const currencies = Object.keys(currencySeen).toSorted();
     const pivotedRows = Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .toSorted(([a], [b]) => a.localeCompare(b))
       .map(([date, rates]) => ({
         date,
         rates: currencies.map((c) => rates[c] ?? null),

@@ -9,28 +9,35 @@ import type { CsvParserDefinition, StatementParser } from '../types.js';
 import { ibkrEntityToCountry } from './entity-country.js';
 import { classifySection } from './sections.js';
 
-/** Regex to extract symbol and ISIN from dividend/tax descriptions: "AAPL(US0378331005) ..." */
+/**
+ * Regex to extract symbol and ISIN from dividend/tax descriptions:
+ * "AAPL(US0378331005) ..."
+ */
 const SYMBOL_ISIN_RE = /^\s*(\S+)\s*\(([^)]+)\)/;
 
 /**
- * IBKR marks per-section summary rows with column 2 starting with "Total"
- * (e.g. "Total", "Total in EUR", "Total Dividends in EUR",
- * "Total (All Assets)"). These rows are aggregates of surrounding Data rows
- * and are always redundant for a per-row tax calculation.
+ * IBKR marks per-section summary rows with column 2 starting with "Total" (e.g.
+ * "Total", "Total in EUR", "Total Dividends in EUR", "Total (All Assets)").
+ * These rows are aggregates of surrounding Data rows and are always redundant
+ * for a per-row tax calculation.
  */
 function isSummaryRow(fields: string[]): boolean {
   const discriminator = fields[2]?.trim() ?? '';
   return discriminator === 'Total' || discriminator.startsWith('Total ');
 }
 
-/** Regex to match split descriptions: "NVDA(...) Split 10 for 1" or "TSLA(...) Reverse Split 1 for 3" */
+/**
+ * Regex to match split descriptions: "NVDA(...) Split 10 for 1" or "TSLA(...)
+ * Reverse Split 1 for 3"
+ */
 const SPLIT_RE =
   /^\s*(\S+)\s*\(([^)]+)\)\s+(?:Reverse\s+)?Split\s+(\d+(?:\.\d+)?)\s+for\s+(\d+(?:\.\d+)?)/;
 
 /**
- * Regex to match cash-and-stock merger descriptions:
- * "MAG(CA55903Q1046) Cash and Stock Merger (Acquisition) CA6979001089 58844257 for 100000000 and USD 4.52847757 (...)"
- * Groups: 1=source symbol, 2=source ISIN, 3=target ISIN, 4=numerator, 5=denominator, 6=cash currency, 7=cash per share
+ * Regex to match cash-and-stock merger descriptions: "MAG(CA55903Q1046) Cash
+ * and Stock Merger (Acquisition) CA6979001089 58844257 for 100000000 and USD
+ * 4.52847757 (...)" Groups: 1=source symbol, 2=source ISIN, 3=target ISIN,
+ * 4=numerator, 5=denominator, 6=cash currency, 7=cash per share
  */
 const MERGER_RE =
   /^\s*(\S+)\s*\(([^)]+)\)\s+Cash and Stock Merger\s+\(Acquisition\)\s+(\S+)\s+(\d+(?:\.\d+)?)\s+for\s+(\d+(?:\.\d+)?)\s+and\s+(\S+)\s+(\d+(?:\.\d+)?)/;
@@ -219,7 +226,6 @@ class InteractiveBrokersParser extends CsvStatementParser {
       const amount = parseDecimal({ value: fields[5] ?? '' });
 
       if (!date || amount === undefined) {
-        const description = cleanField({ value: fields[4] ?? '' });
         const match = SYMBOL_ISIN_RE.exec(description);
         this.reportParseFailure({
           section: 'Dividends',
@@ -268,7 +274,6 @@ class InteractiveBrokersParser extends CsvStatementParser {
       const amount = parseDecimal({ value: fields[5] ?? '' });
 
       if (!date || amount === undefined) {
-        const description = cleanField({ value: fields[4] ?? '' });
         const match = SYMBOL_ISIN_RE.exec(description);
         this.reportParseFailure({
           section: 'Withholding Tax',
@@ -601,11 +606,11 @@ class InteractiveBrokersParser extends CsvStatementParser {
   }
 
   /**
-   * Best-effort extraction of structured fields from a skipped Data row.
-   * Uses the section's captured Header row to map columns by name, since IBKR
+   * Best-effort extraction of structured fields from a skipped Data row. Uses
+   * the section's captured Header row to map columns by name, since IBKR
    * sections vary in column order (e.g. Trades has DataDiscriminator at col 2,
-   * Transaction Fees has Asset Category at col 2, Interest has Currency at
-   * col 2). Falls back to a tail join when no header was captured.
+   * Transaction Fees has Asset Category at col 2, Interest has Currency at col
+   * 2). Falls back to a tail join when no header was captured.
    */
   private extractBestEffortSkippedFields(args: {
     section: string;

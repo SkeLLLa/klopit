@@ -14,9 +14,10 @@ import type { StatementParser } from '../types.js';
 import { parseCsvLine } from './csv-utils.js';
 
 /**
- * Abstract base class for CSV-based broker parsers.
- * Handles CSV splitting, row filtering (Header vs Data), state accumulation, and finish() assembly.
- * Subclasses implement processRow() for section-specific parsing and getBrokerId() for identity.
+ * Abstract base class for CSV-based broker parsers. Handles CSV splitting, row
+ * filtering (Header vs Data), state accumulation, and finish() assembly.
+ * Subclasses implement processRow() for section-specific parsing and
+ * getBrokerId() for identity.
  */
 export abstract class CsvStatementParser implements StatementParser {
   protected year = 0;
@@ -45,6 +46,7 @@ export abstract class CsvStatementParser implements StatementParser {
 
   /**
    * Process a single data row. Called only for rows where column 2 is "Data".
+   *
    * @param args - The section name (column 1) and all CSV fields for this row
    */
   protected abstract processRow(args: {

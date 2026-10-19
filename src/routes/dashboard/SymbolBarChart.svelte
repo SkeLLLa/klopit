@@ -28,7 +28,6 @@
 
   const barData: BarDatum[] = $derived.by(() => {
     // Aggregate by symbol (sell trades only)
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local to $derived computation, not reactive state
     const bySymbol = new Map<
       string,
       { proceeds: number; cost: number }
@@ -47,7 +46,7 @@
     if (bySymbol.size === 0) return [];
 
     // Sort by proceeds descending
-    const sorted = [...bySymbol.entries()].sort(
+    const sorted = [...bySymbol.entries()].toSorted(
       (a, b) => b[1].proceeds - a[1].proceeds,
     );
 
@@ -95,8 +94,7 @@
 
   const tooltipTriggers = $derived({
     // Each bar within a group gets the same datum (the BarDatum object)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [(GroupedBar as any).selectors.bar]: (datum: any): string => {
+    [GroupedBar.selectors.bar]: (datum: BarDatum | undefined): string => {
       if (!datum) return '';
       const gainClass = datum.gainLoss >= 0 ? 'color: #10b981' : 'color: #ef4444';
       const sign = datum.gainLoss >= 0 ? '+' : '';

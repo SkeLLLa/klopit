@@ -259,7 +259,6 @@
   <meta name="twitter:image:alt" content="kloPIT — kalkulator PIT-38 online" />
 
   <!-- Structured Data -->
-  <!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data, no user input -->
   {@html jsonLd}
 </svelte:head>
 

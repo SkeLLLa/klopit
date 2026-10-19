@@ -1,19 +1,19 @@
 import type { m } from '$lib/paraglide/messages.js';
 
 type NoArgMessageKey = {
-  [K in keyof typeof m]: Parameters<(typeof m)[K]>[0] extends
+  [K in Extract<keyof typeof m, string>]: Parameters<(typeof m)[K]>[0] extends
     | undefined
     | Record<string, never>
     ? K
     : never;
-}[keyof typeof m];
+}[Extract<keyof typeof m, string>];
 
 export interface TaxSupportFund {
   id: string;
   name: string;
   krs: string;
   paymentDescription: string;
-  /** i18n key — must exist in all locale message files */
+  /** I18n key — must exist in all locale message files */
   descriptionKey: NoArgMessageKey;
   taxDonationUrl: string;
   websiteUrl: string;
@@ -22,7 +22,7 @@ export interface TaxSupportFund {
 export interface DirectDonationFund {
   id: string;
   name: string;
-  /** i18n key — must exist in all locale message files */
+  /** I18n key — must exist in all locale message files */
   descriptionKey: NoArgMessageKey;
   /** Locale-keyed donation URLs. Use locale code (e.g. 'uk') or '*' as fallback. */
   donationUrl: Record<string, string>;

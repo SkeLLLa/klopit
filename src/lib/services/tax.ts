@@ -31,9 +31,9 @@ function toDateString(d: Date): string {
 }
 
 /**
- * Resolve NBP fixing rate for a given currency/date, logging any error
- * before returning a sentinel. Centralizes the `rateUnavailable` fallback
- * so failures show up in the console instead of silently producing 0 PLN.
+ * Resolve NBP fixing rate for a given currency/date, logging any error before
+ * returning a sentinel. Centralizes the `rateUnavailable` fallback so failures
+ * show up in the console instead of silently producing 0 PLN.
  */
 async function tryGetFixingRate(args: {
   currency: string;

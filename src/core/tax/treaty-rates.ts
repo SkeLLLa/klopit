@@ -3,13 +3,12 @@ import { TAX_RATE } from '../types.js';
 /**
  * Maximum creditable foreign withholding tax rate on dividends, per country of
  * the dividend-paying entity (ISO 3166-1 alpha-2). Sourced from Polish
- * double-tax treaties (UPO) in force as of 2026-04. Values are decimals
- * (0.15 = 15%).
+ * double-tax treaties (UPO) in force as of 2026-04. Values are decimals (0.15 =
+ * 15%).
  *
- * Countries not present in this map fall back to the domestic 19% cap from
- * art. 30a ust. 9 ustawy o PIT. A missing entry over-credits at most by
- * (19% − treaty rate) × gross dividend; a wrong entry would under-credit
- * real tax.
+ * Countries not present in this map fall back to the domestic 19% cap from art.
+ * 30a ust. 9 ustawy o PIT. A missing entry over-credits at most by (19% −
+ * treaty rate) × gross dividend; a wrong entry would under-credit real tax.
  *
  * Rates below are the **portfolio** (default, higher) dividend rate from each
  * treaty — kloPIT targets individual investors who virtually never hold the

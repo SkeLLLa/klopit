@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { supportedBrokers } from '../src/core/parsers/registry.js';
 import { FAQ_ITEMS } from '../src/lib/constants/faq.js';
 
@@ -15,6 +16,8 @@ type JsonObject = Record<string, unknown>;
 type Messages = Record<string, string>;
 
 async function readJson<T>(path: string): Promise<T> {
+  // Inputs are repo-owned JSON files (package.json, messages/*.json) with known shapes.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return JSON.parse(await readFile(resolve(rootDir, path), 'utf8')) as T;
 }
 

@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+
 import { ibiDefinition, parseIbiText } from '../src/core/parsers/ibi/index.js';
 
 /**
  * Synthetic flat text that mirrors what `extractPdfText` emits for the IBI
  * "Confirmation of Sale" template after positional reconstruction.
  *
- * The two-column layout means some left-column and right-column tokens land
- * on the same reconstructed line (same y-band). All personal data is
- * fictional; WIX (Wix.com Ltd.) is used as the representative ESPP issuer.
+ * The two-column layout means some left-column and right-column tokens land on
+ * the same reconstructed line (same y-band). All personal data is fictional;
+ * WIX (Wix.com Ltd.) is used as the representative ESPP issuer.
  */
 const SAMPLE_CONFIRMATION_TEXT = [
   'IBI CAPITAL Confirmation of Sale',
@@ -293,14 +295,14 @@ async function generateConfirmationPdf(data: {
   return copy;
 }
 
-void describe('ibiDefinition — Confirmation of Sale end-to-end PDF parse', () => {
-  async function parseGenerated(
-    data: Parameters<typeof generateConfirmationPdf>[0],
-  ) {
-    const buffer = await generateConfirmationPdf(data);
-    return ibiDefinition.parse({ buffer });
-  }
+async function parseGenerated(
+  data: Parameters<typeof generateConfirmationPdf>[0],
+) {
+  const buffer = await generateConfirmationPdf(data);
+  return ibiDefinition.parse({ buffer });
+}
 
+void describe('ibiDefinition — Confirmation of Sale end-to-end PDF parse', () => {
   void it('parses a cross-period ESPP confirmation (exercise Aug 2025, sold Sep 2025)', async () => {
     const result = await parseGenerated({
       company: 'Wix.com Ltd.',

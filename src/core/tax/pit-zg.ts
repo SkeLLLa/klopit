@@ -54,7 +54,7 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     }
   }
 
-  return [...countries.values()].sort((a, b) =>
+  return [...countries.values()].toSorted((a, b) =>
     a.country.localeCompare(b.country),
   );
 }

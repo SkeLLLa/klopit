@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { calculateCapitalGains } from '../src/core/tax/capital-gains.js';
 import type {
   EnrichedCorporateAction,
@@ -540,12 +541,11 @@ void describe('calculateCapitalGains', () => {
   });
 
   /**
-   * FIFO across ESPP
-   * grants is semantically wrong — each grant is tracked independently at
-   * the broker and can be bought/sold in any interleaving relative to
-   * other grants. With `lotId` set per order, the FIFO engine isolates
-   * each grant's buy/sell into its own queue, so per-transaction P&L in
-   * the data table and dashboard reflects each order's own cost basis.
+   * FIFO across ESPP grants is semantically wrong — each grant is tracked
+   * independently at the broker and can be bought/sold in any interleaving
+   * relative to other grants. With `lotId` set per order, the FIFO engine
+   * isolates each grant's buy/sell into its own queue, so per-transaction P&L
+   * in the data table and dashboard reflects each order's own cost basis.
    */
   void it('partitions FIFO by lotId so ESPP grants do not commingle (same-day sells)', () => {
     const buy71 = makeTrade({
@@ -630,10 +630,10 @@ void describe('calculateCapitalGains', () => {
   });
 
   /**
-   * Covers the user-described interleaved case: one grant is bought early
-   * and sold late, while a second grant is bought and sold in between. A
-   * global FIFO would consume the first grant's lot for the interleaved
-   * sell; with `lotId` partitioning, each sell hits its own grant.
+   * Covers the user-described interleaved case: one grant is bought early and
+   * sold late, while a second grant is bought and sold in between. A global
+   * FIFO would consume the first grant's lot for the interleaved sell; with
+   * `lotId` partitioning, each sell hits its own grant.
    */
   void it('partitions FIFO by lotId across interleaved grant timelines', () => {
     const buyA = makeTrade({
@@ -723,16 +723,15 @@ void describe('calculateCapitalGains', () => {
 
 void describe('calculateCapitalGains — cross-year FIFO', () => {
   /**
-   * Buy in tax year N-1 (2023), sell in tax year N (2024).
-   * The buy trade's datetime falls before taxPeriod.from, so it is excluded
-   * from results but must still seed the FIFO queue with the correct PLN cost
-   * basis. The sell result must reflect that prior-year cost.
+   * Buy in tax year N-1 (2023), sell in tax year N (2024). The buy trade's
+   * datetime falls before taxPeriod.from, so it is excluded from results but
+   * must still seed the FIFO queue with the correct PLN cost basis. The sell
+   * result must reflect that prior-year cost.
    *
-   * Buy:  100 shares, price 150 USD, rate 4.0 PLN/USD, no commission → costPln = 60 000
-   * Sell: 100 shares, price 180 USD, rate 4.2 PLN/USD, no commission
-   *       proceedsPln = 100 * 180 * 4.2 = 75 600
-   *       gainLossPln = 75 600 - 60 000 = 15 600
-   *       taxPln      = 15 600 * 0.19   =  2 964
+   * Buy: 100 shares, price 150 USD, rate 4.0 PLN/USD, no commission → costPln =
+   * 60 000 Sell: 100 shares, price 180 USD, rate 4.2 PLN/USD, no commission
+   * proceedsPln = 100 * 180 * 4.2 = 75 600 gainLossPln = 75 600 - 60 000 = 15
+   * 600 taxPln = 15 600 * 0.19 = 2 964
    */
   void it('sell in year N uses cost basis from buy in year N-1', () => {
     const buyPriorYear = makeTrade({

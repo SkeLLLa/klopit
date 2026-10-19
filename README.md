@@ -42,15 +42,18 @@ kloPIT automates the most tedious parts of filing **PIT-38** (capital gains & di
 
 ## Tech Stack
 
-| Layer           | Technology                            |
-| --------------- | ------------------------------------- |
-| Framework       | SvelteKit + Svelte 5 (runes)          |
-| Language        | TypeScript (strict)                   |
-| Build           | Vite 8, adapter-static (SSG)          |
-| Storage         | IndexedDB via Dexie                   |
-| i18n            | Paraglide JS                          |
-| Tests           | Node.js `node:test` + `assert/strict` |
-| Package manager | pnpm                                  |
+| Layer           | Technology                                                         |
+| --------------- | ------------------------------------------------------------------ |
+| Framework       | SvelteKit + Svelte 5 (runes)                                       |
+| Language        | TypeScript (strict)                                                |
+| Build           | Vite 8 + Rolldown (oxc transform and minify), adapter-static (SSG) |
+| Storage         | IndexedDB via Dexie                                                |
+| i18n            | Paraglide JS                                                       |
+| Tests           | Node.js `node:test` + `assert/strict`                              |
+| Lint            | oxlint (type-aware via oxlint-tsgolint), svelte-check              |
+| Format          | oxfmt                                                              |
+| TS runner       | @oxc-node/core (`node --import @oxc-node/core/register`)           |
+| Package manager | pnpm 12                                                            |
 
 The `src/core/` directory is framework-agnostic pure TypeScript — tax logic, parsers, and NBP fetcher have no Svelte dependency and can be used independently.
 
@@ -59,7 +62,7 @@ The `src/core/` directory is framework-agnostic pure TypeScript — tax logic, p
 The project uses [mise](https://mise.jdx.dev/) to pin the exact Node.js and pnpm versions declared in [.mise.toml](.mise.toml). Install mise first if you don't have it, then let it set up the runtime:
 
 ```bash
-mise install # installs Node 24 + pnpm declared in .mise.toml
+mise install # installs Node 26 + pnpm 12 declared in .mise.toml
 ```
 
 Then install dependencies and start developing:

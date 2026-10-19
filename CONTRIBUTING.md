@@ -31,11 +31,14 @@ Thank you for your interest in improving kloPIT! Before opening a PR, please rea
 ## Development Setup
 
 ```bash
-mise install # pins Node 24 + pnpm via .mise.toml
+mise install  # pins Node 26 + pnpm 12 via .mise.toml
 pnpm install
-pnpm dev   # dev server → http://localhost:5173
-pnpm test  # lint + unit tests
-pnpm build # production build → build/
+pnpm dev      # dev server → http://localhost:5173
+mise run certs  # optional: HTTPS for pnpm dev (add a LAN IP as an argument)
+pnpm lint     # svelte-check + oxlint + oxfmt --check
+pnpm format   # format with oxfmt
+pnpm test     # lint + unit tests
+pnpm build    # production build → build/
 ```
 
 ---
@@ -44,7 +47,7 @@ pnpm build # production build → build/
 
 - **All tests must pass** — run `pnpm test` before opening a PR. PRs with failing tests will not be merged.
 - **Type-check** — `pnpm svelte-check` must report 0 errors.
-- **Formatting & lint** are automatic: a post-save hook runs Prettier on every edited file. Do not bypass it.
+- **Formatting & lint** — run `pnpm format` (oxfmt) before committing; `pnpm lint` (oxlint + `oxfmt --check`) must pass. There are no git hooks, so CI enforces this.
 - **Framework-agnostic core** — `src/core/` must remain pure TypeScript with no Svelte imports. Tax logic and parsers live there.
 - **Svelte 5 only** — use runes (`$state`, `$derived`, `$effect`). Do not use legacy `$:` reactive statements or Svelte stores.
 - **Object arguments** — prefer `function foo(args: { bar: string; baz: number })` over multiple positional parameters.

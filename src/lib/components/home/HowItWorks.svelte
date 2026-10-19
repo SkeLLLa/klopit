@@ -22,7 +22,6 @@
 </script>
 
 <svelte:head>
-  <!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data -->
   {@html jsonLd}
 </svelte:head>
 

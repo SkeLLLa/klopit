@@ -48,3 +48,7 @@ export const FAQ_ITEMS = [
     answerKey: 'faq_12_answer',
   },
 ] as const;
+
+export type FaqMessageKey = (typeof FAQ_ITEMS)[number][
+  | 'questionKey'
+  | 'answerKey'];

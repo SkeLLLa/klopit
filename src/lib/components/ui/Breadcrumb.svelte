@@ -82,7 +82,6 @@
   });
 </script>
 
-<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data, no user input -->
 <svelte:head>{@html jsonLd}</svelte:head>
 
 {#if crumbs.length > 0}

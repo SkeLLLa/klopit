@@ -93,6 +93,15 @@
     override: string;
   }
 
+  function shouldUseIsin(existing: { isin?: string } | undefined, isin?: string) {
+    if (!isin) return false;
+    if (!existing?.isin) return true;
+    return (
+      isinToCountry({ isin: existing.isin }) === 'XX' &&
+      isinToCountry({ isin }) !== 'XX'
+    );
+  }
+
   const entries = $derived.by(() => {
     const tradeSymbolIsins = keysToSymbolIsin(tradeSymbolIsinQuery.current ?? []);
     const dividendSymbolIsins = keysToSymbolIsin(dividendSymbolIsinQuery.current ?? []);
@@ -105,7 +114,6 @@
       trades: tradeSymbolIsins,
       dividends: dividendSymbolIsins,
     });
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable inside $derived.by, not reactive state
     const symbolMap = new Map<string, { isin?: string }>();
 
     // Seed all distinct symbols first (ensures ISIN-less symbols appear).
@@ -117,15 +125,6 @@
     }
 
     // Fill in ISINs from the compound-index results.
-    function shouldUseIsin(existing: { isin?: string } | undefined, isin?: string) {
-      if (!isin) return false;
-      if (!existing?.isin) return true;
-      return (
-        isinToCountry({ isin: existing.isin }) === 'XX' &&
-        isinToCountry({ isin }) !== 'XX'
-      );
-    }
-
     for (const { symbol, isin } of tradeSymbolIsins) {
       const existing = symbolMap.get(symbol);
       if (!existing) {
@@ -153,7 +152,7 @@
       });
     }
 
-    return result.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    return result.toSorted((a, b) => a.symbol.localeCompare(b.symbol));
   });
 
   async function handleOverrideChange(symbol: string, value: string) {

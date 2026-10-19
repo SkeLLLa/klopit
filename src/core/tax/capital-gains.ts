@@ -72,20 +72,16 @@ export function calculateCapitalGains(
 
   // Build unified timeline
   const timeline: TimelineEvent[] = [
-    ...trades.map(
-      (trade): TimelineEvent => ({
-        kind: 'trade',
-        datetime: trade.datetime,
-        trade,
-      }),
-    ),
-    ...corporateActions.map(
-      (action): TimelineEvent => ({
-        kind: 'action',
-        datetime: action.datetime,
-        action,
-      }),
-    ),
+    ...trades.map((trade): TimelineEvent => ({
+      kind: 'trade',
+      datetime: trade.datetime,
+      trade,
+    })),
+    ...corporateActions.map((action): TimelineEvent => ({
+      kind: 'action',
+      datetime: action.datetime,
+      action,
+    })),
   ];
 
   // Sort by datetime; corporate actions before trades on same datetime.

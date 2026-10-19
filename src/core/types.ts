@@ -18,11 +18,11 @@ export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];
 // ---------------------------------------------------------------------------
 
 /**
- * Origin tag attached to a parsed trade. Defaults to `'trade'` (regular
- * broker transaction) when omitted. Parsers that produce synthetic lots
- * from employee-share-purchase programs set `'espp'`; parsers that produce
- * synthetic lots from restricted stock unit plans set `'rsu'`. Both keep
- * the buy + sell legs visible and tagged in the output.
+ * Origin tag attached to a parsed trade. Defaults to `'trade'` (regular broker
+ * transaction) when omitted. Parsers that produce synthetic lots from
+ * employee-share-purchase programs set `'espp'`; parsers that produce synthetic
+ * lots from restricted stock unit plans set `'rsu'`. Both keep the buy + sell
+ * legs visible and tagged in the output.
  */
 export type TradeSource = 'trade' | 'espp' | 'rsu';
 
@@ -41,19 +41,19 @@ export interface Trade {
   /** Origin of this trade; absent means regular trade. */
   source?: TradeSource;
   /**
-   * Optional lot partition key. When set, FIFO treats this trade as living
-   * in a separate queue keyed by (symbol|isin, lotId), bypassing the global
+   * Optional lot partition key. When set, FIFO treats this trade as living in a
+   * separate queue keyed by (symbol|isin, lotId), bypassing the global
    * per-security FIFO. Used by IBI ESPP where each order pairs a specific
    * grant-purchase with its own sell — grants can be bought and sold in any
    * interleaving, so commingling them through a single FIFO queue mis-
-   * allocates per-transaction P&L even though the annual tax total is the
-   * same. Parsers that don't populate this field leave `lotKey` at its
-   * default symbol/ISIN value.
+   * allocates per-transaction P&L even though the annual tax total is the same.
+   * Parsers that don't populate this field leave `lotKey` at its default
+   * symbol/ISIN value.
    */
   lotId?: string;
   /**
-   * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no
-   * effect on tax computation. Currently set only by the IBI parsers.
+   * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no effect on
+   * tax computation. Currently set only by the IBI parsers.
    */
   plan?: string;
 }
@@ -91,7 +91,10 @@ export interface CorporateAction {
   conversionRatio?: number;
   cashPerShare?: number;
   cashCurrency?: string;
-  /** Total cash received from merger (in original currency, from CSV Proceeds column) */
+  /**
+   * Total cash received from merger (in original currency, from CSV Proceeds
+   * column)
+   */
   cashTotalProceeds?: number;
   /** FMV of new shares received (in original currency, from CSV Value column) */
   newSharesValue?: number;
@@ -108,14 +111,15 @@ export interface CarryInPosition {
 /**
  * A capital-loss carried in from a prior tax year.
  *
- * Per art. 9 ust. 3 updof, a loss reported in year `year` may be deducted
- * from gains in the next 5 tax years, with at most 50% of the original
- * loss applied in any single year.
+ * Per art. 9 ust. 3 updof, a loss reported in year `year` may be deducted from
+ * gains in the next 5 tax years, with at most 50% of the original loss applied
+ * in any single year.
  *
- * - `totalLossPln` — the original loss amount reported on PIT-38 poz29 for `year`.
+ * - `totalLossPln` — the original loss amount reported on PIT-38 poz29 for
+ *   `year`.
  * - `alreadyDeductedPln` — cumulative amount already deducted in prior years
- *   (across all sessions). Used to track the residual available for the
- *   current calculation.
+ *   (across all sessions). Used to track the residual available for the current
+ *   calculation.
  */
 export interface PriorYearLoss {
   year: number;
@@ -241,7 +245,10 @@ export interface DividendResult {
   /** Dividend amount used as the Polish tax base after optional adjustments. */
   amountOriginal: number;
   withholdingTaxOriginal: number;
-  /** ADR/GDR fees subtracted from the dividend base when the compatibility setting is enabled. */
+  /**
+   * ADR/GDR fees subtracted from the dividend base when the compatibility
+   * setting is enabled.
+   */
   adrFeeOriginal?: number;
   adrFeePln?: number;
   amountPln: number;
@@ -251,7 +258,10 @@ export interface DividendResult {
   country: string;
   /** Resolved treaty cap rate at calc time (e.g. 0.15 for US). */
   creditCapRate: number;
-  /** Treaty-capped deductible withholding: min(withholdingTaxPln, amountPln * creditCapRate). */
+  /**
+   * Treaty-capped deductible withholding: min(withholdingTaxPln, amountPln *
+   * creditCapRate).
+   */
   deductibleWithholdingPln: number;
   /** Gross PL tax on this dividend: amountPln * 0.19. */
   taxPlnGross: number;
@@ -279,10 +289,10 @@ export interface CreditInterestResult {
 /**
  * Per-country PIT/ZG attachment fields.
  *
- * PIT-38 attachments use PIT/ZG section C.3 for income and foreign tax
- * under art. 30b. Foreign dividends are art. 30a flat-rate income and stay
- * in PIT-38 section G by default. They are included here only when the
- * session's `showDividendsInPitZg` compatibility setting is enabled.
+ * PIT-38 attachments use PIT/ZG section C.3 for income and foreign tax under
+ * art. 30b. Foreign dividends are art. 30a flat-rate income and stay in PIT-38
+ * section G by default. They are included here only when the session's
+ * `showDividendsInPitZg` compatibility setting is enabled.
  */
 export interface PitZgFields {
   country: string;
@@ -321,8 +331,8 @@ export interface TaxSummary {
 }
 
 /**
- * Valid position numbers on the PIT-38(18) form.
- * Gaps (32, 42) are tax-rate display rows — not stored as fields.
+ * Valid position numbers on the PIT-38(18) form. Gaps (32, 42) are tax-rate
+ * display rows — not stored as fields.
  */
 export type Pit38Position =
   // Section C — Capital gains/losses (art. 30b ust. 1)

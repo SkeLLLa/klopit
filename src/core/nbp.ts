@@ -49,6 +49,7 @@ function daysBetween(a: Date, b: Date): number {
 function eachDay(start: Date, end: Date): string[] {
   const days: string[] = [];
   const current = new Date(start);
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- `current` is a Date mutated in place via setDate()
   while (current <= end) {
     days.push(toDateString(current));
     current.setDate(current.getDate() + 1);
@@ -77,6 +78,7 @@ function splitIntoChunks(
   const chunks: { start: string; end: string }[] = [];
   const current = new Date(start);
 
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- `current` is a Date mutated in place via setDate()
   while (current <= end) {
     const chunkEnd = new Date(current);
     chunkEnd.setDate(chunkEnd.getDate() + MAX_RANGE_DAYS - 1);
@@ -131,6 +133,8 @@ async function fetchChunk(
     });
   }
 
+  // Response shape is defined by the NBP Web API (https://api.nbp.pl/); not validated at runtime.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return (await response.json()) as NbpApiResponse;
 }
 

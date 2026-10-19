@@ -7,6 +7,7 @@ import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
  * non-undefined result. Subsequent updates are synced via `setSessions`.
  *
  * Call once per page script block:
+ *
  * ```svelte
  * <script lang="ts">
  *   useSessionBootstrap();
@@ -21,6 +22,7 @@ export function useSessionBootstrap(): {
   readonly initialized: boolean;
 } {
   const sessionsQuery = useLiveQuery(() =>
+    // oxlint-disable-next-line unicorn/no-array-reverse -- Dexie Collection#reverse(), not Array#reverse()
     db.sessions.orderBy('year').reverse().toArray(),
   );
   let initialized = $state(false);

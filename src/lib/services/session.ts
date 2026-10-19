@@ -1,7 +1,8 @@
 import { typeid } from 'typeid-js';
+
 import type { ImportWarning } from '../../core/types.js';
 import { db, type ImportedFileRecord, type SessionRecord } from '../db.js';
-import { mergeImportWarnings } from './import.js';
+import { mergeImportWarnings } from './import-warnings.js';
 
 /** Create a new tax calculation session */
 export async function createSession(args: {
@@ -24,6 +25,7 @@ export async function createSession(args: {
 
 /** Get all sessions ordered by year descending */
 export async function listSessions(): Promise<SessionRecord[]> {
+  // oxlint-disable-next-line unicorn/no-array-reverse -- Dexie Collection#reverse(), not Array#reverse()
   return db.sessions.orderBy('year').reverse().toArray();
 }
 

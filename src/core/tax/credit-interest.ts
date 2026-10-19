@@ -9,8 +9,8 @@ import { isInTaxPeriod } from './period.js';
 /**
  * Convert credit-interest rows into tax results for PIT-38 Section G.
  *
- * Foreign withholding is currently assumed to be zero for the supported
- * IBKR flow; the dedicated fields stay in the result shape for future
+ * Foreign withholding is currently assumed to be zero for the supported IBKR
+ * flow; the dedicated fields stay in the result shape for future
  * broker/entity-specific withholding support.
  */
 export function calculateCreditInterest(args: {

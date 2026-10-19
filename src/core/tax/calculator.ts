@@ -45,8 +45,8 @@ export interface CalculateTaxesArgs {
   carryInPositions: CarryInPosition[];
   /**
    * Prior-year capital losses (art. 9 ust. 3 updof). Replaces the legacy
-   * single-number `priorYearLoss` field — each year carries its own
-   * residual and 50%-per-year cap.
+   * single-number `priorYearLoss` field — each year carries its own residual
+   * and 50%-per-year cap.
    */
   priorLosses?: PriorYearLoss[];
   taxPeriod: TaxPeriod;

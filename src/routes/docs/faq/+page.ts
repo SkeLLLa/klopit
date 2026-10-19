@@ -1,4 +1,4 @@
-import { FAQ_ITEMS } from '$lib/constants/faq.js';
+import { FAQ_ITEMS, type FaqMessageKey } from '$lib/constants/faq.js';
 import { m } from '$lib/paraglide/messages.js';
 import { getLocale } from '$lib/paraglide/runtime';
 
@@ -9,7 +9,7 @@ const localeTags = {
   uk: 'uk-UA',
 } as const;
 
-const messages = m as unknown as Record<string, () => string>;
+const messages: Readonly<Record<FaqMessageKey, () => string>> = m;
 
 function localizedUrl(
   pathname: string,

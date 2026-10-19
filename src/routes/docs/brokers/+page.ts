@@ -1,4 +1,5 @@
 import { getLocale, type Locale } from '$lib/paraglide/runtime';
+
 import { supportedBrokers } from '../../../core/parsers/registry.js';
 
 interface BrokerPageContent {

@@ -1,4 +1,5 @@
-import Dexie, { type EntityTable } from 'dexie';
+import { Dexie, type EntityTable } from 'dexie';
+
 import type { ApplyLossCarryForwardResult } from '../core/tax/loss-carry-forward.js';
 import type {
   CarryInPosition,
@@ -49,9 +50,15 @@ export interface SessionRecord {
   includeAllInPitZg?: boolean;
   /** Show dividend compatibility rows in PIT/ZG. Disabled by default. */
   showDividendsInPitZg?: boolean;
-  /** Subtract parsed ADR/GDR fees from matched dividend income. Disabled by default. */
+  /**
+   * Subtract parsed ADR/GDR fees from matched dividend income. Disabled by
+   * default.
+   */
   reduceAdrFeesFromDividends?: boolean;
-  /** Use estimated T+2 settlement dates for trade NBP rate lookups. Disabled by default. */
+  /**
+   * Use estimated T+2 settlement dates for trade NBP rate lookups. Disabled by
+   * default.
+   */
   useSettlementDateForTradeRates?: boolean;
 }
 
@@ -143,8 +150,8 @@ export interface TaxSummaryRecord {
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**
-   * Per-year loss-carry-forward breakdown (art. 9 ust. 3 updof). Only set
-   * when the calculation considered prior-year losses.
+   * Per-year loss-carry-forward breakdown (art. 9 ust. 3 updof). Only set when
+   * the calculation considered prior-year losses.
    */
   lossDeduction?: ApplyLossCarryForwardResult;
 }
@@ -254,9 +261,9 @@ export class KlopitDB extends Dexie {
         'symbolCountryOverrides',
         'priorLosses',
       ];
-      for (const name of tablesAtV7) {
-        await tx.table(name).clear();
-      }
+      await Promise.all(
+        tablesAtV7.map((tableName) => tx.table(tableName).clear()),
+      );
     });
     this.version(8).stores({
       creditInterests: '++id, sessionId, date',

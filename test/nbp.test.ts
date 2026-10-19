@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it, mock } from 'node:test';
+
 import { fetchRate, fetchRates, NbpFetchError } from '../src/core/nbp.js';
 
 function mockResponse(body: unknown, status = 200): Response {

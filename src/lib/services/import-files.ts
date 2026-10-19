@@ -1,5 +1,6 @@
 import { m } from '$lib/paraglide/messages.js';
 import { importFile } from '$lib/services/import.js';
+
 import type { BrokerId, ImportWarning, SkippedRow } from '../../core/types.js';
 
 export interface ImportFileResult {
@@ -20,6 +21,8 @@ export async function importFiles(args: {
 
   for (const file of files) {
     try {
+      // Files are imported one at a time: each import read-modify-writes the session record.
+      // oxlint-disable-next-line eslint/no-await-in-loop
       const result = await importFile({
         sessionId,
         brokerId,

@@ -22,7 +22,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         id: pnpm-install
@@ -44,13 +44,13 @@ jobs:
       - name: Build
         run: pnpm run build:app
       - name: Lint
-        uses: reviewdog/action-eslint@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
-          eslint_flags: '. --ext js,jsx,ts,tsx'
+        run: pnpm i18n && pnpm exec oxlint --type-aware --deny-warnings --format github
+      - name: Format
+        run: pnpm format:check
+      - name: Type check
+        run: pnpm lint:types
       - name: Test
-        run: pnpm test
+        run: pnpm test:unit
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
@@ -90,7 +90,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         id: pnpm-install

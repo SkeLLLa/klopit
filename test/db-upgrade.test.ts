@@ -1,16 +1,18 @@
 import 'fake-indexeddb/auto';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import Dexie from 'dexie';
+
+import { Dexie } from 'dexie';
+
 import { KlopitDB } from '../src/lib/db.js';
 
 /**
- * Integration test: `KlopitDB` must be openable against a database
- * previously created at an earlier schema version. Regression guard for
- * "NotFoundError Table creditInterests not part of transaction", caused
- * by v7's upgrade iterating `tx.storeNames`, which reflected the *final*
- * (v9) schema including stores that v8 adds later — v7's upgrade ran
- * before those stores were physically created, and `clear()` threw.
+ * Integration test: `KlopitDB` must be openable against a database previously
+ * created at an earlier schema version. Regression guard for "NotFoundError
+ * Table creditInterests not part of transaction", caused by v7's upgrade
+ * iterating `tx.storeNames`, which reflected the _final_ (v9) schema including
+ * stores that v8 adds later — v7's upgrade ran before those stores were
+ * physically created, and `clear()` threw.
  */
 void describe('KlopitDB schema upgrade', () => {
   void it('opens without error when upgrading from a v6 database (no creditInterests yet)', async () => {

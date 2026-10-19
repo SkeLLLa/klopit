@@ -9,13 +9,21 @@ use_versions_host_track = false
 missing_tools = "always"
 
 [tools]
-node = "24.14.1"
-pnpm = "10.33.0"
+node = "26.11.1"
+pnpm = "12.9.1"
 mkcert = "1.4.4"
+
+[tasks.certs]
+description = "Create a dev TLS certificate in .certs/ (extra hosts as args, e.g. a LAN IP)"
+run = """
+mkdir -p .certs
+mkcert -install
+mkcert -key-file .certs/key.pem -cert-file .certs/cert.pem localhost 127.0.0.1 ::1
+"""
 
 [tasks.sync-versions]
 description = "Sync tool versions from .mise.toml to package.json"
-run = """
+run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 PNPM_VERSION=$(mise current pnpm)
@@ -31,4 +39,4 @@ pkg.devEngines = {
 fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 "
 echo "Synced: node=$NODE_VERSION pnpm=$PNPM_VERSION"
-"""
+'''

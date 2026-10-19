@@ -4,7 +4,7 @@
   import { m } from '$lib/paraglide/messages';
   import { getLocale } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte';
-  import { FAQ_ITEMS } from '$lib/constants/faq.js';
+  import { FAQ_ITEMS, type FaqMessageKey } from '$lib/constants/faq.js';
   import { ChevronDown } from 'lucide-svelte';
 
   pageTitle.set(m.nav_faq());
@@ -15,10 +15,12 @@
     uk: 'Джерела',
   }[getLocale()];
 
+  const messages: Readonly<Record<FaqMessageKey, () => string>> = m;
+
   const faqs = FAQ_ITEMS.map((faq) => ({
     id: faq.id,
-    question: m[faq.questionKey],
-    answer: m[faq.answerKey],
+    question: messages[faq.questionKey],
+    answer: messages[faq.answerKey],
   }));
 
   const sources: GroundingSource[] = [
@@ -87,7 +89,6 @@
   <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">{m.nav_faq()}</h1>
 
   <div class="space-y-3">
-    <!-- eslint-disable svelte/no-at-html-tags -- i18n messages are compile-time constants from Paraglide, not user input -->
     {#each faqs as { id, question, answer } (id)}
       <details
         {id}
@@ -112,7 +113,6 @@
         </div>
       </details>
     {/each}
-    <!-- eslint-enable svelte/no-at-html-tags -->
   </div>
 
   <section class="space-y-3">

@@ -23,7 +23,6 @@
   const MIN_SHARE = 0.02;
 
   const segments: Segment[] = $derived.by(() => {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local to $derived computation, not reactive state
     const costByCountry = new Map<string, number>();
     for (const trade of tradeResults) {
       if (trade.type === 'buy') {
@@ -39,7 +38,7 @@
     const total = [...costByCountry.values()].reduce((s, v) => s + v, 0);
     if (total <= 0) return [];
 
-    const sorted = [...costByCountry.entries()].sort((a, b) => b[1] - a[1]);
+    const sorted = [...costByCountry.entries()].toSorted((a, b) => b[1] - a[1]);
 
     const result: Segment[] = [];
     let otherTotal = 0;

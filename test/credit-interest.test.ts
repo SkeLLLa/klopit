@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { calculateCreditInterest } from '../src/core/tax/credit-interest.js';
 import type { EnrichedCreditInterest } from '../src/core/types.js';
 

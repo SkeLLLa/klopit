@@ -108,7 +108,7 @@ export function roundedDividendTax(args: { totalIncomePln: number }): number {
   return roundToGroszUp({ amount: args.totalIncomePln * TAX_RATE });
 }
 
-/** Capped foreign withholding credit (\<=rounded dividend tax). PIT-38(18) poz 48. */
+/** Capped foreign withholding credit (<=rounded dividend tax). PIT-38(18) poz 48. */
 export function roundedDividendCredit(args: {
   deductiblePln: number;
   dividendTax: number;
@@ -131,7 +131,10 @@ export function paymentSummaryAmount(args: { amountPln: number }): number {
   return Math.round((Math.max(args.amountPln, 0) + Number.EPSILON) * 100) / 100;
 }
 
-/** Capital-gains tax base (gain minus prior-year losses), full PLN. PIT-38(18) poz 31. */
+/**
+ * Capital-gains tax base (gain minus prior-year losses), full PLN. PIT-38(18)
+ * poz 31.
+ */
 export function roundedCapitalGainsBase(args: {
   gainPostLcfPln: number;
 }): number {
@@ -143,7 +146,10 @@ export function capitalGainsTax(args: { base: number }): number {
   return args.base * TAX_RATE;
 }
 
-/** Capital-gains tax due (after foreign credit), rounded to full PLN. PIT-38(18) poz 35. */
+/**
+ * Capital-gains tax due (after foreign credit), rounded to full PLN. PIT-38(18)
+ * poz 35.
+ */
 export function roundedCapitalGainsTaxDue(args: {
   tax: number;
   foreignCredit: number;

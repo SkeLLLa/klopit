@@ -97,9 +97,9 @@ const IBI_COMPANY_TO_TICKER: Record<string, string> = {
 };
 
 /**
- * Resolve a Company-field string from an IBI PDF to a ticker. Falls back
- * to the input uppercased when no mapping is known (preserves prior
- * behaviour for tickers that already appear as the Company value).
+ * Resolve a Company-field string from an IBI PDF to a ticker. Falls back to the
+ * input uppercased when no mapping is known (preserves prior behaviour for
+ * tickers that already appear as the Company value).
  */
 export function resolveIbiTicker(companyName: string): string {
   const key = companyName.trim().toLowerCase();

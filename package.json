@@ -5,118 +5,99 @@
   "private": true,
   "description": "Polish PIT tax calculator from brokerage income.",
   "keywords": [
+    "brokerage",
+    "calculator",
+    "dividends",
     "pit",
     "pit-38",
-    "tax",
-    "calculator",
     "poland",
-    "brokerage",
-    "dividends",
-    "shares"
+    "shares",
+    "tax"
   ],
   "homepage": "https://github.com/SkeLLLa/klopit/blob/master/README.md",
   "bugs": {
     "url": "https://github.com/SkeLLLa/klopit/issues"
   },
+  "license": "AGPL-3.0-only",
+  "author": "kloPIT community",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SkeLLLa/klopit.git"
   },
-  "license": "AGPL-3.0-only",
-  "author": "kloPIT community",
-  "type": "module",
   "directories": {
     "lib": "src",
     "doc": "docs",
     "example": "examples",
     "test": "test"
   },
+  "type": "module",
   "scripts": {
-    "build": "pnpm run build:app && pnpm run build:format",
+    "build": "pnpm run build:app",
     "build:app": "pnpm run generate:ai && vite build && svelte-sitemap",
     "build:clean": "rm -rf build",
-    "build:format": "pretty-quick",
     "dev": "vite dev",
-    "generate:ai": "tsx scripts/generate-ai-metadata.ts",
+    "generate:ai": "node --import @oxc-node/core/register scripts/generate-ai-metadata.ts",
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations",
-    "lint": "pnpm run lint:types && pnpm run lint:codestyle",
-    "lint:codestyle": "eslint",
+    "lint": "pnpm run lint:types && pnpm run lint:codestyle && pnpm run format:check",
+    "lint:codestyle": "oxlint --type-aware --deny-warnings",
     "lint:types": "svelte-check --tsconfig ./tsconfig.json",
     "preview": "vite preview",
     "release": "semantic-release",
     "test": "pnpm run lint && pnpm run test:unit",
-    "test:unit": "node --no-warnings --import tsx --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test 'test/*.test.ts' --test-coverage-exclude=test/**",
-    "test:unit:local": "node --no-warnings --import tsx --experimental-test-coverage --test 'test/*.test.ts' --test-coverage-exclude=test/**"
+    "test:unit": "node --no-warnings --import @oxc-node/core/register --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test 'test/*.test.ts' --test-coverage-exclude=test/**",
+    "test:unit:local": "node --no-warnings --import @oxc-node/core/register --experimental-test-coverage --test 'test/*.test.ts' --test-coverage-exclude=test/**",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "dependencies": {
-    "@fontsource/jetbrains-mono": "^5.2.8",
-    "@fontsource/onest": "^5.2.11",
-    "@unovis/svelte": "^1.6.6",
-    "@unovis/ts": "^1.6.6",
-    "dexie": "^4.4.4",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/onest": "^5.3.1",
+    "@unovis/svelte": "^1.7.1",
+    "@unovis/ts": "^1.7.1",
+    "dexie": "^4.4.6",
     "lucide-svelte": "^1.0.1",
-    "svelte": "^5.56.3",
+    "svelte": "^5.57.1",
     "svelty-picker": "^6.1.6",
     "typeid-js": "^1.2.0",
-    "unpdf": "^1.6.2"
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^21.0.2",
-    "@inlang/paraglide-js": "^2.20.1",
-    "@semantic-release/changelog": "^6.0.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@inlang/paraglide-js": "^2.25.4",
+    "@oxc-node/core": "^0.1.3",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.8",
-    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.10",
+    "@semantic-release/npm": "^13.2.0",
     "@semantic-release/release-notes-generator": "^14.1.1",
-    "@skellla/lint-config": "^3.0.5",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.66.0",
-    "@tailwindcss/vite": "^4.3.1",
-    "@tsconfig/node-lts": "^24.0.0",
-    "@tsconfig/strictest": "^2.0.8",
-    "@types/node": "^26.0.1",
-    "conventional-changelog-conventionalcommits": "^10.2.1",
-    "eslint": "^10.5.0",
-    "eslint-plugin-svelte": "^3.19.0",
+    "@sveltejs/kit": "^2.70.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "conventional-changelog-conventionalcommits": "^10.4.0",
     "fake-indexeddb": "^6.2.5",
-    "globals": "^17.6.0",
-    "globstar": "^1.0.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "pdf-lib": "^1.17.1",
-    "prettier": "^3.8.4",
-    "pretty-quick": "^4.2.2",
-    "semantic-release": "^25.0.5",
-    "svelte-check": "^4.6.0",
-    "svelte-eslint-parser": "^1.8.0",
-    "svelte-sitemap": "^3.2.0",
-    "tailwindcss": "^4.3.1",
-    "tsx": "^4.22.4",
+    "semantic-release": "^25.0.9",
+    "svelte-check": "^4.7.6",
+    "svelte-sitemap": "^4.0.4",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1",
-    "vite": "^8.0.16",
-    "vite-plugin-mkcert": "^2.1.0"
-  },
-  "packageManager": "pnpm@10.33.0",
-  "engines": {
-    "node": ">=20",
-    "pnpm": ">=10"
+    "vite": "^8.3.2"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": ">=20"
+      "version": ">=26"
     }
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ],
-    "overrides": {
-      "cookie": "^0.7.0",
-      "postcss": "^8.5.10",
-      "uuid": "^14.0.0"
-    }
-  }
+  "engines": {
+    "node": ">=26",
+    "pnpm": ">=12"
+  },
+  "packageManager": "pnpm@12.9.1"
 }

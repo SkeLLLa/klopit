@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+
 import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures', 'ib');
@@ -265,10 +266,10 @@ void describe('InteractiveBrokersParser', () => {
 
     void it('includes AAPL and MSFT but not TSLA (prior qty 0)', () => {
       const result = parseFixture('carry-in.csv');
-      const symbols = result.carryInPositions.map((p) => p.symbol);
-      assert.ok(symbols.includes('AAPL'));
-      assert.ok(symbols.includes('MSFT'));
-      assert.ok(!symbols.includes('TSLA'));
+      const symbols = new Set(result.carryInPositions.map((p) => p.symbol));
+      assert.ok(symbols.has('AAPL'));
+      assert.ok(symbols.has('MSFT'));
+      assert.ok(!symbols.has('TSLA'));
     });
 
     void it('parses prior quantity correctly', () => {
