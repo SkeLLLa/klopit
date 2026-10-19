@@ -41,6 +41,16 @@ pnpm test     # lint + unit tests
 pnpm build    # production build → build/
 ```
 
+### Bumping pinned tool versions
+
+Dependabot covers `npm` and `github-actions` (`.github/dependabot.yml`) but does not support mise (it has no `mise` ecosystem; checked against GitHub's supported-ecosystems list). Node, pnpm and mkcert are pinned in `.mise.toml` and bumped by hand:
+
+```bash
+mise upgrade --bump   # rewrite the pins in .mise.toml and refresh mise.lock
+```
+
+Keep `engines`/`devEngines` and `packageManager` in `package.json` in step with the pins, then run the full lint/build/test chain. Check `mise outdated` when updating dependencies.
+
 ---
 
 ## Code & Quality Rules
