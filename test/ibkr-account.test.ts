@@ -103,6 +103,8 @@ void describe('IBKR account stamping', () => {
     const result = parseText(
       [
         'Account Information,Header,Field Name,Field Value',
+        'Statement,Header,Field Name,Field Value',
+        'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
         'Account Information,Data,Account,U1111111',
         'Mark-to-Market Performance Summary,Header,Asset Category,Account,Symbol,Prior Quantity,Current Quantity',
         'Mark-to-Market Performance Summary,Data,Stocks,U3333333,AAPL,5,2',
