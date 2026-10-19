@@ -32,7 +32,7 @@ export function needsCarryInFx(
  */
 export function isCarryInCostMissing(pos: CarryInPosition): boolean {
   if (pos.costBasisPln !== undefined) return false;
-  if (pos.costBasis !== undefined && pos.currency) return false;
+  if (pos.costBasis !== undefined) return false;
   return pos.costBasisSource !== 'zero-confirmed';
 }
 
@@ -67,8 +67,8 @@ export async function enrichCarryInPositions<T extends CarryInPosition>(args: {
           costMissing: false,
         };
       }
-      if (pos.costBasis !== undefined && pos.currency) {
-        // PLN cost
+      if (pos.costBasis !== undefined) {
+        // PLN cost (a cost without a currency is PLN)
         return {
           ...pos,
           costPln: pos.costBasis,
@@ -84,4 +84,95 @@ export async function enrichCarryInPositions<T extends CarryInPosition>(args: {
       };
     }),
   );
+}
+
+export type CarryInValidationCode =
+  | 'symbol-required'
+  | 'quantity-invalid'
+  | 'year-invalid'
+  | 'year-not-prior'
+  | 'date-after-year'
+  | 'cost-invalid'
+  | 'date-required-for-fx';
+
+/** Carry-in input rejected by {@link normalizeCarryInPosition}. */
+export class CarryInValidationError extends Error {
+  readonly code: CarryInValidationCode;
+  constructor(code: CarryInValidationCode) {
+    super(`Invalid carry-in position: ${code}`);
+    this.name = 'CarryInValidationError';
+    this.code = code;
+  }
+}
+
+/**
+ * Parse a user-typed decimal ("1 234,5", "1234.5") or a value from a number
+ * input (`number | null`). Empty input is `undefined`; garbage is `NaN`.
+ */
+export function parseDecimalInput(
+  value: string | number | null | undefined,
+): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'number') return value;
+  const text = value.replaceAll(/\s/g, '').replace(',', '.');
+  if (text === '') return undefined;
+  return /^[+-]?(\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : Number.NaN;
+}
+
+/**
+ * Validate and normalize a complete carry-in position.
+ *
+ * - `year` must be before the session tax year (a carry-in is the position held
+ *   at the end of a prior year) and `acquisitionDate` must not be after Dec 31
+ *   of `year`.
+ * - A cost without a currency is in PLN.
+ * - A foreign-currency cost needs an acquisition date: the NBP rate is taken from
+ *   the business day before acquisition (art. 11a ust. 2 updof).
+ * - `costBasisSource` follows the data: `user` when a cost is set, otherwise
+ *   `zero-confirmed` if the user confirmed zero, else `missing`.
+ */
+export function normalizeCarryInPosition<T extends CarryInPosition>(
+  pos: T,
+  opts: { sessionYear?: number } = {},
+): T {
+  const symbol = pos.symbol.trim().toUpperCase();
+  if (!symbol) throw new CarryInValidationError('symbol-required');
+  if (!(pos.quantity > 0)) {
+    throw new CarryInValidationError('quantity-invalid');
+  }
+  if (!Number.isInteger(pos.year) || pos.year < 1900) {
+    throw new CarryInValidationError('year-invalid');
+  }
+  if (opts.sessionYear !== undefined && pos.year >= opts.sessionYear) {
+    throw new CarryInValidationError('year-not-prior');
+  }
+  if (pos.acquisitionDate !== undefined) {
+    const time = pos.acquisitionDate.getTime();
+    if (Number.isNaN(time) || pos.acquisitionDate.getFullYear() > pos.year) {
+      throw new CarryInValidationError('date-after-year');
+    }
+  }
+  for (const value of [pos.costBasis, pos.costBasisPln]) {
+    if (value !== undefined && !(value >= 0)) {
+      throw new CarryInValidationError('cost-invalid');
+    }
+  }
+  const typedCurrency = pos.currency?.trim().toUpperCase() || undefined;
+  const currency =
+    pos.costBasis === undefined ? typedCurrency : (typedCurrency ?? 'PLN');
+  if (
+    pos.costBasis !== undefined &&
+    pos.costBasisPln === undefined &&
+    currency !== 'PLN' &&
+    pos.acquisitionDate === undefined
+  ) {
+    throw new CarryInValidationError('date-required-for-fx');
+  }
+  const hasCost = pos.costBasis !== undefined || pos.costBasisPln !== undefined;
+  let costBasisSource: CarryInPosition['costBasisSource'] = 'missing';
+  if (hasCost) costBasisSource = 'user';
+  else if (pos.costBasisSource === 'zero-confirmed') {
+    costBasisSource = 'zero-confirmed';
+  }
+  return { ...pos, symbol, currency, costBasisSource };
 }

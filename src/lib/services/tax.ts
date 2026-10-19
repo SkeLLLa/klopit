@@ -214,9 +214,9 @@ export async function calculateSessionTaxes(args: {
     }),
   );
 
-  // 8b. Resolve carry-in acquisition costs to PLN (art. 22 ust. 1g:
-  // deducted in the year of sale; art. 11a ust. 2: NBP rate before the
-  // acquisition date)
+  // 8b. Resolve carry-in acquisition costs to PLN (art. 23 ust. 1 pkt 38
+  // with art. 30b ust. 2 pkt 1: deducted in the year of sale; art. 11a
+  // ust. 2: NBP rate before the acquisition date)
   const enrichedCarryIns = await enrichCarryInPositions({
     positions: carryInPositions,
     getRate: async ({ currency, date }) =>

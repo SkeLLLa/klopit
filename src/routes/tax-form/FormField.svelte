@@ -132,12 +132,12 @@
       {highlighted ? 'border-blue-300 bg-blue-50 font-semibold text-blue-900 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200 dark:hover:border-blue-600 dark:hover:bg-blue-900' : ''}
       {copied ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/50' : ''}"
     title={copyDisabled
-      ? m.tax_form_missing_rates_title()
+      ? m.tax_form_copy_disabled_incomplete()
       : copied
         ? m.tax_copy_value_done()
         : m.tax_copy_value_title()}
     aria-label={copyDisabled
-      ? m.tax_form_missing_rates_title()
+      ? m.tax_form_copy_disabled_incomplete()
       : copied
         ? m.tax_copy_value_done()
         : m.tax_copy_value_title()}

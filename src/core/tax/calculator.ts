@@ -200,5 +200,7 @@ function buildSummary(args: {
       args.tradeResults.filter((r) => r.rateUnavailable).length +
       args.dividendResults.filter((r) => r.rateUnavailable).length +
       args.creditInterestResults.filter((r) => r.rateUnavailable).length,
+    missingCostCount: args.tradeResults.filter((r) => r.costBasisMissing)
+      .length,
   };
 }

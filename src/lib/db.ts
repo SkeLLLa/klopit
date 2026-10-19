@@ -26,6 +26,7 @@ import {
   stripLegacyPriorYearLoss,
   type LegacyCarryInRow,
   type LegacySessionRecord,
+  type LegacyCorporateActionIsinRow,
   type LegacyTradeIsinRow,
   type SessionWithFiles,
 } from './db-migrations.js';
@@ -157,6 +158,8 @@ export interface TaxSummaryRecord {
    * on summaries saved before this field existed — treat as unknown.
    */
   missingRateCount?: number;
+  /** See TaxSummary.missingCostCount. Absent on older summaries. */
+  missingCostCount?: number;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**
@@ -164,7 +167,7 @@ export interface TaxSummaryRecord {
    * the calculation considered prior-year losses.
    */
   lossDeduction?: ApplyLossCarryForwardResult;
-  /** Carry-ins (partly) covered by imported prior-year trades. */
+  /** Carry-in reconciliation findings (overlap, inconsistent snapshot, ...). */
   carryInWarnings?: CarryInWarning[];
 }
 
@@ -356,7 +359,10 @@ export class KlopitDB extends Dexie {
     // invalidate results that were computed with a silent cost of 0.
     this.version(14).upgrade(async (tx) => {
       const trades = await tx.table<LegacyTradeIsinRow>('trades').toArray();
-      const isinMap = buildSessionSymbolIsinMap(trades);
+      const actions = await tx
+        .table<LegacyCorporateActionIsinRow>('corporateActions')
+        .toArray();
+      const isinMap = buildSessionSymbolIsinMap(trades, actions);
       await tx
         .table<LegacyCarryInRow>('carryInPositions')
         .toCollection()

@@ -10,7 +10,11 @@
     updateCarryInPosition,
     deleteCarryInPosition,
   } from '$lib/services/data.js';
-  import { isCarryInCostMissing } from '$lib/services/carry-in.js';
+  import {
+    CarryInValidationError,
+    isCarryInCostMissing,
+    parseDecimalInput,
+  } from '$lib/services/carry-in.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -40,7 +44,6 @@
   let editCostBasis = $state('');
   let editCurrency = $state('');
   let editZeroConfirmed = $state(false);
-  let editHasPlnOverride = $state(false);
   let editError = $state('');
   let deleteTarget: CarryInPositionRecord | null = $state(null);
 
@@ -64,9 +67,8 @@
     editYear = String(row?.year ?? sessionYear - 1);
     editAcquisitionDate = toDateInput(row?.acquisitionDate);
     editCostBasis = row?.costBasis === undefined ? '' : String(row.costBasis);
-    editCurrency = row?.currency ?? '';
+    editCurrency = row?.currency ?? 'PLN';
     editZeroConfirmed = row?.costBasisSource === 'zero-confirmed';
-    editHasPlnOverride = row?.costBasisPln !== undefined;
   }
 
   function startEdit(row: CarryInPositionRecord) {
@@ -79,19 +81,43 @@
     editingId = 'new';
   }
 
+  // Inputs are text (inputmode=decimal) so "1 234,5" works; parse explicitly.
   function buildChanges(): CarryInPosition {
-    const costBasis = editCostBasis.trim() === '' ? undefined : parseFloat(editCostBasis);
-    const hasCost = editHasPlnOverride || (costBasis !== undefined && editCurrency !== '');
+    const costBasis = parseDecimalInput(editCostBasis);
+    if (costBasis !== undefined && Number.isNaN(costBasis)) {
+      throw new CarryInValidationError('cost-invalid');
+    }
     return {
       symbol: editSymbol,
       isin: editIsin.trim() || undefined,
-      quantity: parseFloat(editQuantity),
-      year: parseInt(editYear, 10),
+      quantity: parseDecimalInput(editQuantity) ?? Number.NaN,
+      year: Number(editYear.trim() || Number.NaN),
       acquisitionDate: editAcquisitionDate ? new Date(`${editAcquisitionDate}T00:00:00`) : undefined,
       costBasis,
       currency: editCurrency || undefined,
-      costBasisSource: hasCost ? 'user' : editZeroConfirmed ? 'zero-confirmed' : 'missing',
+      // Normalized server-side: a cost (or PLN override) makes it 'user'.
+      costBasisSource: editZeroConfirmed ? 'zero-confirmed' : 'missing',
     };
+  }
+
+  function errorMessage(e: unknown): string {
+    if (!(e instanceof CarryInValidationError)) return e instanceof Error ? e.message : String(e);
+    switch (e.code) {
+      case 'symbol-required':
+        return m.data_carry_in_error_symbol_required();
+      case 'quantity-invalid':
+        return m.data_carry_in_error_quantity_invalid();
+      case 'year-invalid':
+        return m.data_carry_in_error_year_invalid();
+      case 'year-not-prior':
+        return m.data_carry_in_error_year_not_prior({ year: String(sessionYear) });
+      case 'date-after-year':
+        return m.data_carry_in_error_date_after_year();
+      case 'cost-invalid':
+        return m.data_carry_in_error_cost_invalid();
+      case 'date-required-for-fx':
+        return m.data_carry_in_error_date_required_for_fx();
+    }
   }
 
   async function saveEdit() {
@@ -105,7 +131,7 @@
       }
       editingId = null;
     } catch (e) {
-      editError = e instanceof Error ? e.message : String(e);
+      editError = errorMessage(e);
     }
   }
 
@@ -128,20 +154,19 @@
   <tr class="border-b border-slate-100 dark:border-slate-800">
     <td class="px-3 py-2"><input type="text" aria-label={m.data_symbol()} bind:value={editSymbol} onkeydown={handleKeydown} class={inputClass} /></td>
     <td class="px-3 py-2"><input type="text" aria-label={m.data_isin()} bind:value={editIsin} onkeydown={handleKeydown} class={inputClass} /></td>
-    <td class="px-3 py-2"><input type="number" step="any" min="0" aria-label={m.data_quantity()} bind:value={editQuantity} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
-    <td class="px-3 py-2"><input type="number" aria-label={m.data_year()} bind:value={editYear} onkeydown={handleKeydown} class="{inputClass} w-24" /></td>
+    <td class="px-3 py-2"><input type="text" inputmode="decimal" aria-label={m.data_quantity()} bind:value={editQuantity} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
+    <td class="px-3 py-2"><input type="text" inputmode="numeric" aria-label={m.data_year()} bind:value={editYear} onkeydown={handleKeydown} class="{inputClass} w-24" /></td>
     <td class="px-3 py-2"><input type="date" aria-label={m.data_acquisition_date()} bind:value={editAcquisitionDate} onkeydown={handleKeydown} class={inputClass} /></td>
-    <td class="px-3 py-2"><input type="number" step="any" min="0" aria-label={m.data_cost_basis()} bind:value={editCostBasis} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
+    <td class="px-3 py-2"><input type="text" inputmode="decimal" aria-label={m.data_cost_basis()} bind:value={editCostBasis} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
     <td class="px-3 py-2">
       <select aria-label={m.data_currency()} bind:value={editCurrency} class={inputClass}>
-        <option value="">—</option>
         {#each currencyOptions as currency (currency)}
           <option value={currency}>{currency}</option>
         {/each}
       </select>
     </td>
     <td class="px-3 py-2">
-      <label class="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+      <label class="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300" title={m.data_cost_zero_hint()}>
         <input type="checkbox" bind:checked={editZeroConfirmed} />
         {m.data_cost_zero_confirmed()}
       </label>
@@ -160,7 +185,10 @@
 
 <div>
   <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-    <p class="text-xs text-slate-500 dark:text-slate-400">{m.data_carry_in_split_hint()}</p>
+    <div class="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+      <p>{m.data_carry_in_split_hint()}</p>
+      <p>{m.data_cost_zero_hint()}</p>
+    </div>
     {#if editingId !== 'new'}
       <button
         onclick={startAdd}

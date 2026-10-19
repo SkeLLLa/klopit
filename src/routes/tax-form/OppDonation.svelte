@@ -235,12 +235,12 @@
         class={valueButtonClass('amount', 'text-right font-semibold text-pink-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-pink-300')}
         disabled={amountCopyDisabled}
         title={amountCopyDisabled
-          ? m.tax_form_missing_rates_title()
+          ? m.tax_form_copy_disabled_incomplete()
           : copiedField === 'amount'
             ? m.tax_copy_value_done()
             : m.tax_copy_value_title()}
         aria-label={amountCopyDisabled
-          ? m.tax_form_missing_rates_title()
+          ? m.tax_form_copy_disabled_incomplete()
           : copiedField === 'amount'
             ? m.tax_copy_value_done()
             : m.tax_copy_value_title()}

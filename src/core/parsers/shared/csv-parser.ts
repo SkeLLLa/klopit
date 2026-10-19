@@ -125,6 +125,26 @@ export abstract class CsvStatementParser implements StatementParser {
       }
     }
 
+    // Carry-ins parsed before the statement year was known have year 0.
+    // Derive the prior year from the inferred statement year, or drop them:
+    // a snapshot without a year cannot be placed on the FIFO timeline.
+    const yearless = this.carryInPositions.filter((p) => p.year <= 0);
+    if (yearless.length > 0) {
+      if (this.year > 0) {
+        for (const p of yearless) p.year = this.year - 1;
+        this.addWarning({
+          section: 'Carry-in positions',
+          message: `Carry-in positions parsed before the statement period; assumed held at the end of ${String(this.year - 1)}.`,
+        });
+      } else {
+        this.carryInPositions = this.carryInPositions.filter((p) => p.year > 0);
+        this.addWarning({
+          section: 'Carry-in positions',
+          message: `Statement year unknown; skipped ${String(yearless.length)} carry-in position(s). Add them manually on the Data page.`,
+        });
+      }
+    }
+
     return {
       broker: this.getBrokerId(),
       brokerCountry: this.brokerCountry,

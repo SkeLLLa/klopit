@@ -8,6 +8,7 @@ import {
   type CarryInWarning,
 } from '../src/core/tax/capital-gains.js';
 import type {
+  EnrichedCarryInPosition,
   EnrichedCorporateAction,
   EnrichedTrade,
   TaxPeriod,
@@ -439,8 +440,13 @@ void describe('calculateCapitalGains', () => {
     const sells = result.filter((r) => r.type === 'sell');
     assert.equal(sells.length, 1);
     assert.equal(sells[0].costPln, 200);
-    assert.equal(warnings.length, 1);
-    assert.equal(warnings[0].coveredQuantity, 5);
+    const overlap = warnings.find((w) => w.kind === 'carry-in-overlap');
+    assert.equal(
+      overlap?.kind === 'carry-in-overlap' && overlap.coveredQuantity,
+      5,
+    );
+    // The row had a cost and was only partly seeded: its cost was pro-rated.
+    assert.ok(warnings.some((w) => w.kind === 'carry-in-cost-prorated'));
   });
 
   void it('does not double count carry-in covered by imported prior-year trades', () => {
@@ -1595,5 +1601,222 @@ void describe('calculateCapitalGains — missing rate propagation', () => {
     assert.ok(Math.abs(sellRes.proceedsPln - 3125 * rate) < 1e-9);
     assert.ok(Math.abs(sellRes.costPln - 4.17 * rate) < 1e-9);
     assert.ok(Math.abs(sellRes.gainLossPln - (3125 - 4.17) * rate) < 1e-9);
+  });
+});
+
+void describe('carry-in snapshots (regressions)', () => {
+  const ISIN = 'US0378331005';
+
+  function plnTrade(overrides: Partial<EnrichedTrade>): EnrichedTrade {
+    return makeTrade({
+      isin: ISIN,
+      currency: 'PLN',
+      commission: 0,
+      commissionCurrency: 'PLN',
+      exchangeRate: 1,
+      commissionExchangeRate: 1,
+      ...overrides,
+    });
+  }
+
+  function sell(quantity: number, datetime: Date): EnrichedTrade {
+    return plnTrade({
+      type: 'sell',
+      quantity,
+      price: 100,
+      proceeds: quantity * 100,
+      datetime,
+    });
+  }
+
+  function carryIn(
+    overrides: Partial<EnrichedCarryInPosition>,
+  ): EnrichedCarryInPosition {
+    return {
+      symbol: 'AAPL',
+      isin: ISIN,
+      quantity: 10,
+      year: 2023,
+      costPln: 0,
+      rateUnavailable: false,
+      costMissing: true,
+      ...overrides,
+    };
+  }
+
+  void it('S1: undated unexplained shares precede the earliest imported buy', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        plnTrade({
+          type: 'buy',
+          quantity: 5,
+          price: 40,
+          datetime: new Date(2023, 2, 1),
+        }),
+        sell(5, new Date(2024, 2, 1)),
+      ],
+      corporateActions: [],
+      carryInPositions: [carryIn({ quantity: 10, year: 2023 })],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.equal(result.length, 1);
+    // FIFO consumes the 5 older carry-in shares, not the 40 PLN buy.
+    assert.equal(result[0].costPln, 0);
+    assert.equal(result[0].costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'carry-in-overlap'));
+  });
+
+  void it('S2a: dated carry-in with an imported prior-year sell does not throw', () => {
+    const result = calculateCapitalGains({
+      trades: [sell(2, new Date(2023, 4, 1)), sell(8, new Date(2024, 4, 1))],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({ quantity: 8, acquisitionDate: new Date(2021, 5, 1) }),
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].quantity, 8);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('S2b: undated carry-in with an imported prior-year sell does not throw', () => {
+    const result = calculateCapitalGains({
+      trades: [sell(2, new Date(2023, 4, 1)), sell(8, new Date(2024, 4, 1))],
+      corporateActions: [],
+      carryInPositions: [carryIn({ quantity: 8 })],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('S3: multi-year snapshots are not double counted', () => {
+    const base = {
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({ quantity: 10, year: 2022 }),
+        carryIn({ quantity: 15, year: 2023 }),
+      ],
+      taxPeriod: taxPeriod2024,
+    };
+    const buy = plnTrade({
+      type: 'buy',
+      quantity: 5,
+      price: 40,
+      datetime: new Date(2023, 5, 1),
+    });
+    // Holding is 15, not 10 + 5 + 15.
+    assert.throws(
+      () =>
+        calculateCapitalGains({
+          ...base,
+          trades: [buy, sell(20, new Date(2024, 2, 1))],
+        }),
+      /Short 5/,
+    );
+    const result = calculateCapitalGains({
+      ...base,
+      trades: [buy, sell(15, new Date(2024, 2, 1))],
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costPln, 200); // 10 x 0 (missing) + 5 x 40
+    assert.equal(result.filter((r) => r.costBasisMissing).length, 1);
+  });
+
+  void it('S3b: warns and skips a snapshot below the imported holdings', () => {
+    const warnings: CarryInWarning[] = [];
+    calculateCapitalGains({
+      trades: [
+        plnTrade({
+          type: 'buy',
+          quantity: 20,
+          price: 40,
+          datetime: new Date(2023, 5, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [carryIn({ quantity: 15, year: 2023 })],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.deepEqual(
+      warnings.map((w) => w.kind),
+      ['carry-in-inconsistent'],
+    );
+  });
+
+  void it('S4: a split after the carry-in year is applied by the timeline', () => {
+    const split: EnrichedCorporateAction = {
+      type: 'stock-split',
+      symbol: 'AAPL',
+      isin: ISIN,
+      datetime: new Date(2023, 5, 15),
+      numerator: 2,
+      denominator: 1,
+      cashExchangeRate: 0,
+      cashRateUnavailable: false,
+    };
+    const result = calculateCapitalGains({
+      trades: [sell(20, new Date(2024, 2, 1))],
+      corporateActions: [split],
+      carryInPositions: [
+        carryIn({
+          quantity: 10,
+          year: 2022,
+          acquisitionDate: new Date(2021, 0, 10),
+          costPln: 1000,
+          costMissing: false,
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.ok(Math.abs(result[0].costPln - 1000) < 1e-9);
+  });
+
+  void it('S7: carry-in without ISIN matches a cash merger keyed by ISIN', () => {
+    const merger: EnrichedCorporateAction = {
+      type: 'merger',
+      symbol: 'AAPL',
+      isin: ISIN,
+      datetime: new Date(2024, 2, 1),
+      numerator: 0,
+      denominator: 0,
+      conversionRatio: 0,
+      cashPerShare: 50,
+      cashCurrency: 'PLN',
+      cashExchangeRate: 1,
+      cashRateUnavailable: false,
+    };
+    const result = calculateCapitalGains({
+      trades: [],
+      corporateActions: [merger],
+      carryInPositions: [carryIn({ isin: undefined, quantity: 10 })],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].proceedsPln, 500);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('D2: carry-in with an unavailable FX rate uses the rate flag, not cost-missing', () => {
+    const result = calculateCapitalGains({
+      trades: [sell(10, new Date(2024, 2, 1))],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({
+          acquisitionDate: new Date(2023, 4, 10),
+          costMissing: false,
+          rateUnavailable: true,
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result[0].rateUnavailable, true);
+    assert.equal(result[0].costRateUnavailable, true);
+    assert.equal(result[0].costBasisMissing, undefined);
   });
 });

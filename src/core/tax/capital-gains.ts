@@ -23,17 +23,40 @@ export interface CalculateCapitalGainsArgs {
   onWarning?: (warning: CarryInWarning) => void;
 }
 
-/**
- * A carry-in position whose quantity is (partly) covered by imported prior-year
- * trades. Only the uncovered residual is seeded as a lot.
- */
-export interface CarryInWarning {
-  kind: 'carry-in-overlap';
-  symbol: string;
-  isin?: string;
-  carryInQuantity: number;
-  coveredQuantity: number;
-}
+/** Non-fatal carry-in reconciliation findings. */
+export type CarryInWarning =
+  | {
+      /** Imported trades explain part of the snapshot; only the rest is seeded. */
+      kind: 'carry-in-overlap';
+      symbol: string;
+      isin?: string;
+      carryInQuantity: number;
+      coveredQuantity: number;
+    }
+  | {
+      /**
+       * Imported history implies more shares at the end of `year` than the
+       * snapshot; nothing is seeded.
+       */
+      kind: 'carry-in-inconsistent';
+      symbol: string;
+      isin?: string;
+      year: number;
+      carryInQuantity: number;
+      impliedQuantity: number;
+    }
+  | {
+      /**
+       * A row with a cost was only partly seeded; its cost was pro-rated per
+       * share.
+       */
+      kind: 'carry-in-cost-prorated';
+      symbol: string;
+      isin?: string;
+      year: number;
+      carryInQuantity: number;
+      seededQuantity: number;
+    };
 
 type TimelineEvent =
   | { kind: 'trade'; datetime: Date; trade: EnrichedTrade }
@@ -45,6 +68,7 @@ type TimelineEvent =
       quantity: number;
       costPerSharePln: number;
       costMissing: boolean;
+      rateUnavailable: boolean;
     };
 
 /** Tie-break order on equal datetime: action, then carry-in, then trade. */
@@ -109,9 +133,8 @@ export function calculateCapitalGains(
     ...buildCarryInEvents({
       carryInPositions,
       trades,
-      priorEvents: timeline.filter(
-        (e) => e.datetime.getTime() < taxPeriod.from.getTime(),
-      ),
+      corporateActions,
+      events: [...timeline],
       taxPeriod,
       onWarning: args.onWarning,
     }),
@@ -124,6 +147,7 @@ export function calculateCapitalGains(
         quantity: event.quantity,
         costPerSharePln: event.costPerSharePln,
         commissionPerSharePln: 0,
+        rateUnavailable: event.rateUnavailable,
         ...(event.costMissing ? { costMissing: true } : {}),
       });
     } else if (event.kind === 'action') {
@@ -166,18 +190,30 @@ function compareEvents(a: TimelineEvent, b: TimelineEvent): number {
   return 0;
 }
 
+function endOfYear(year: number): Date {
+  return new Date(year, 11, 31, 23, 59, 59);
+}
+
 /**
- * Net quantity per lot key held at period start according to imported
- * prior-period trades, with splits and mergers applied in timeline order.
+ * Quantity held per lot key after replaying `events` up to and including
+ * `until` (trades, splits, mergers and already-seeded carry-ins). Sells may
+ * drive a key negative — that is how imported prior sells of carried-in shares
+ * show up.
  */
-function computeNetPriorQty(priorEvents: TimelineEvent[]): Map<string, number> {
+function simulateHoldings(
+  events: TimelineEvent[],
+  until: number,
+): Map<string, number> {
   const net = new Map<string, number>();
-  for (const event of priorEvents) {
-    if (event.kind === 'trade') {
+  for (const event of events) {
+    if (event.datetime.getTime() > until) break;
+    if (event.kind === 'carry-in') {
+      net.set(event.key, (net.get(event.key) ?? 0) + event.quantity);
+    } else if (event.kind === 'trade') {
       const key = lotKey(event.trade);
       const sign = event.trade.type === 'buy' ? 1 : -1;
       net.set(key, (net.get(key) ?? 0) + sign * event.trade.quantity);
-    } else if (event.kind === 'action') {
+    } else {
       const { action } = event;
       const key = lotKey(action);
       const qty = net.get(key);
@@ -201,99 +237,223 @@ function computeNetPriorQty(priorEvents: TimelineEvent[]): Map<string, number> {
 }
 
 /**
+ * Symbol → ISIN map from trades and corporate actions (source and target
+ * sides), used to key carry-ins that arrive without an ISIN.
+ */
+function buildSymbolIsinMap(args: {
+  trades: EnrichedTrade[];
+  corporateActions: EnrichedCorporateAction[];
+}): Map<string, string> {
+  const map = new Map<string, string>();
+  const add = (symbol: string | undefined, isin: string | undefined) => {
+    if (!symbol || !isin) return;
+    const key = symbol.toUpperCase();
+    if (!map.has(key)) map.set(key, isin);
+  };
+  for (const trade of args.trades) add(trade.symbol, trade.isin);
+  for (const action of args.corporateActions) {
+    add(action.symbol, action.isin);
+    add(action.targetSymbol, action.targetIsin);
+  }
+  return map;
+}
+
+interface SnapshotRow {
+  pos: EnrichedCarryInPosition;
+  /** Placement on the timeline (acquisition date or derived). */
+  datetime: Date;
+  /** Quantity to seed, in end-of-`year` units. */
+  seedQty: number;
+}
+
+/**
  * Turn carry-in positions into timeline events.
  *
- * - Key: carry-ins often lack an ISIN (IBKR MTM has no ISIN column, old DB rows,
- *   cross-file imports), so fall back to the ISIN of a trade with the same
- *   symbol. Otherwise the sell (keyed by ISIN) finds no lots.
- * - Date: `acquisitionDate`, or the end of `year` when unknown (clamped to just
- *   before the period), so it lands before every in-period trade.
- * - Double count: a carry-in is the position held at the end of the prior year.
- *   If prior-year trades are imported too, their net quantity is already in the
- *   queues, so only the uncovered residual is seeded (latest-acquired carry-ins
- *   are reduced first) and a warning is emitted.
- * - Units: `quantity` is as of the end of `year`. The timeline applies splits
- *   dated after the acquisition date to the seeded lot, so the seeded quantity
- *   is pre-divided by those split factors.
+ * A carry-in is a **snapshot**: the quantity of one instrument held at the end
+ * of `year`. Multi-year imports bring one snapshot per year, and imported
+ * trades may already explain part of it. Per lot key, snapshots are processed
+ * from the earliest year:
+ *
+ * - The holdings implied by imported trades and previously seeded carry-ins at
+ *   the end of `year` are compared with the snapshot. Only the unexplained
+ *   difference is seeded. A negative difference (the history implies more
+ *   shares than the snapshot) is reported and nothing is seeded.
+ * - When imported prior sells drove the implied holdings below zero, the
+ *   difference exceeds the snapshot — the extra shares are the ones sold, so
+ *   the sell finds lots.
+ * - Key: falls back to the ISIN of a trade / corporate action with the same
+ *   symbol (IBKR MTM rows, old DB rows and cross-file imports lack an ISIN).
+ * - Date: `acquisitionDate`; otherwise just before the earliest imported trade
+ *   after the previous snapshot (so FIFO consumes these older shares first),
+ *   capped at the end of `year` and before the tax period.
+ * - Units: `quantity` is as of the end of `year`, so splits between the placement
+ *   date and the end of `year` are already reflected and the seeded quantity is
+ *   pre-divided by them; later splits are applied by the timeline.
  */
 function buildCarryInEvents(args: {
   carryInPositions: EnrichedCarryInPosition[];
   trades: EnrichedTrade[];
-  priorEvents: TimelineEvent[];
+  corporateActions: EnrichedCorporateAction[];
+  /** Sorted trades and corporate actions. */
+  events: TimelineEvent[];
   taxPeriod: TaxPeriod;
   onWarning?: (warning: CarryInWarning) => void;
 }): TimelineEvent[] {
-  const { carryInPositions, priorEvents, taxPeriod } = args;
+  const { carryInPositions, events, taxPeriod } = args;
   if (carryInPositions.length === 0) return [];
 
-  const symbolToIsin = new Map<string, string>();
-  for (const trade of args.trades) {
-    const symbol = trade.symbol.toUpperCase();
-    if (trade.isin && !symbolToIsin.has(symbol)) {
-      symbolToIsin.set(symbol, trade.isin);
-    }
-  }
-
-  const netPriorQty = computeNetPriorQty(priorEvents);
+  const symbolToIsin = buildSymbolIsinMap(args);
   const periodStart = taxPeriod.from.getTime();
-  const entries = carryInPositions.map((pos) => {
+
+  // key -> year -> rows
+  const snapshots = new Map<string, Map<number, EnrichedCarryInPosition[]>>();
+  for (const pos of carryInPositions) {
+    if (!(pos.quantity > 0)) continue;
     const key = lotKey({
       isin: pos.isin ?? symbolToIsin.get(pos.symbol.toUpperCase()),
       symbol: pos.symbol,
     });
-    let datetime =
-      pos.acquisitionDate ?? new Date(pos.year, 11, 31, 23, 59, 59);
-    if (!pos.acquisitionDate && datetime.getTime() >= periodStart) {
-      datetime = new Date(periodStart - 1000);
+    let byYear = snapshots.get(key);
+    if (!byYear) {
+      byYear = new Map();
+      snapshots.set(key, byYear);
     }
-    return { pos, key, datetime, residual: pos.quantity };
-  });
-
-  const byLatest = entries.toSorted(
-    (a, b) => b.datetime.getTime() - a.datetime.getTime(),
-  );
-  for (const entry of byLatest) {
-    const covered = netPriorQty.get(entry.key) ?? 0;
-    if (covered <= 0 || entry.residual <= 0) continue;
-    const used = Math.min(covered, entry.residual);
-    entry.residual -= used;
-    netPriorQty.set(entry.key, covered - used);
-    args.onWarning?.({
-      kind: 'carry-in-overlap',
-      symbol: entry.pos.symbol,
-      isin: entry.pos.isin,
-      carryInQuantity: entry.pos.quantity,
-      coveredQuantity: used,
-    });
+    const rows = byYear.get(pos.year) ?? [];
+    rows.push(pos);
+    byYear.set(pos.year, rows);
   }
 
-  const events: TimelineEvent[] = [];
-  for (const { pos, key, datetime, residual } of entries) {
-    if (residual <= 0 || pos.quantity <= 0) continue;
-    let splitFactor = 1;
-    for (const event of priorEvents) {
-      if (
-        event.kind === 'action' &&
-        event.action.type === 'stock-split' &&
-        event.action.denominator !== 0 &&
-        event.datetime.getTime() > datetime.getTime() &&
-        lotKey(event.action) === key
-      ) {
-        splitFactor *= event.action.numerator / event.action.denominator;
+  const tradeTimesByKey = new Map<string, number[]>();
+  for (const event of events) {
+    if (event.kind !== 'trade') continue;
+    const key = lotKey(event.trade);
+    const times = tradeTimesByKey.get(key) ?? [];
+    times.push(event.datetime.getTime());
+    tradeTimesByKey.set(key, times);
+  }
+
+  const years = [
+    ...new Set([...snapshots.values()].flatMap((m) => [...m.keys()])),
+  ].toSorted((a, b) => a - b);
+  const previousYear = new Map<string, number>();
+  const seeded: TimelineEvent[] = [];
+
+  for (const year of years) {
+    const yearEnd = endOfYear(year).getTime();
+    const holdings = simulateHoldings(
+      [...events, ...seeded].toSorted(compareEvents),
+      yearEnd,
+    );
+
+    for (const [key, byYear] of snapshots) {
+      const rows = byYear.get(year);
+      if (!rows) continue;
+      const snapshotQty = rows.reduce((sum, p) => sum + p.quantity, 0);
+      const implied = holdings.get(key) ?? 0;
+      const diff = snapshotQty - implied;
+      const eps = Math.max(snapshotQty, 1) * 1e-9;
+      const first = rows[0];
+
+      // Undated rows go just before the earliest imported trade after the
+      // previous snapshot (oldest shares first), never past the snapshot or
+      // into the tax period.
+      const prevEnd = previousYear.has(key)
+        ? endOfYear(previousYear.get(key) ?? year).getTime()
+        : Number.NEGATIVE_INFINITY;
+      previousYear.set(key, year);
+      const nextTrade = (tradeTimesByKey.get(key) ?? []).find(
+        (t) => t > prevEnd,
+      );
+      const undatedTime = Math.min(
+        nextTrade === undefined ? yearEnd : nextTrade - 1000,
+        yearEnd,
+        periodStart - 1000,
+      );
+
+      if (diff < -eps) {
+        args.onWarning?.({
+          kind: 'carry-in-inconsistent',
+          symbol: first.symbol,
+          isin: first.isin,
+          year,
+          carryInQuantity: snapshotQty,
+          impliedQuantity: implied,
+        });
+        continue;
+      }
+      if (diff <= eps) continue;
+
+      const placed: SnapshotRow[] = rows
+        .map((pos) => ({
+          pos,
+          datetime: pos.acquisitionDate ?? new Date(undatedTime),
+          seedQty: pos.quantity,
+        }))
+        .toSorted((a, b) => a.datetime.getTime() - b.datetime.getTime());
+
+      if (diff >= snapshotQty) {
+        // Imported prior sells consumed carried-in shares: the oldest row also
+        // supplies the shares that were sold.
+        placed[0].seedQty += diff - snapshotQty;
+      } else {
+        // Imported trades explain part of the snapshot: drop the
+        // latest-acquired shares first.
+        let covered = snapshotQty - diff;
+        for (const row of placed.toReversed()) {
+          if (covered <= eps) break;
+          const used = Math.min(covered, row.seedQty);
+          row.seedQty -= used;
+          covered -= used;
+          if (!row.pos.costMissing && row.pos.costPln > 0) {
+            args.onWarning?.({
+              kind: 'carry-in-cost-prorated',
+              symbol: row.pos.symbol,
+              isin: row.pos.isin,
+              year,
+              carryInQuantity: row.pos.quantity,
+              seededQuantity: row.seedQty,
+            });
+          }
+        }
+        args.onWarning?.({
+          kind: 'carry-in-overlap',
+          symbol: first.symbol,
+          isin: first.isin,
+          carryInQuantity: snapshotQty,
+          coveredQuantity: snapshotQty - diff,
+        });
+      }
+
+      for (const row of placed) {
+        if (row.seedQty <= eps) continue;
+        let splitFactor = 1;
+        for (const event of events) {
+          if (
+            event.kind === 'action' &&
+            event.action.type === 'stock-split' &&
+            event.action.denominator !== 0 &&
+            event.datetime.getTime() > row.datetime.getTime() &&
+            event.datetime.getTime() <= yearEnd &&
+            lotKey(event.action) === key
+          ) {
+            splitFactor *= event.action.numerator / event.action.denominator;
+          }
+        }
+        const quantity = row.seedQty / splitFactor;
+        const costPln = (row.pos.costPln * row.seedQty) / row.pos.quantity;
+        seeded.push({
+          kind: 'carry-in',
+          datetime: row.datetime,
+          key,
+          quantity,
+          costPerSharePln: costPln / quantity,
+          costMissing: row.pos.costMissing,
+          rateUnavailable: row.pos.rateUnavailable,
+        });
       }
     }
-    const quantity = residual / splitFactor;
-    const residualCostPln = (pos.costPln * residual) / pos.quantity;
-    events.push({
-      kind: 'carry-in',
-      datetime,
-      key,
-      quantity,
-      costPerSharePln: residualCostPln / quantity,
-      costMissing: pos.costMissing || pos.rateUnavailable,
-    });
   }
-  return events;
+  return seeded;
 }
 
 function processAction(args: {

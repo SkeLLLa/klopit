@@ -184,6 +184,8 @@ void describe('tax service', () => {
       .toArray();
     assert.equal(results[0].costPln, 0);
     assert.equal(results[0].costBasisMissing, true);
+    const summary = await db.taxSummaries.get(sessionId);
+    assert.equal(summary?.missingCostCount, 1);
   });
 });
 

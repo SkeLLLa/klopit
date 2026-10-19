@@ -86,6 +86,7 @@
 
   // --- Carry-in cost basis warnings ---
   const hasCostBasisMissing = $derived(
+    (taxSummary?.missingCostCount ?? 0) > 0 ||
     tradeResults.some((t: TradeResultRecord) => t.costBasisMissing === true),
   );
   const carryInWarnings = $derived(taxSummary?.carryInWarnings ?? []);
@@ -215,21 +216,37 @@
       <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
         <AlertTriangle size={16} />
         <span>{m.dashboard_cost_basis_missing_warning()}</span>
-        <a href="/data" class="ml-auto font-medium underline">{m.data_tab_carry_in()}</a>
+        <a href="/data#carry-in" class="ml-auto font-medium underline">{m.data_tab_carry_in()}</a>
       </div>
     {/if}
 
-    <!-- Carry-in overlap with imported prior-year trades -->
+    <!-- Carry-in reconciliation with imported trades -->
     {#if carryInWarnings.length > 0}
       <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
         <ul class="list-disc space-y-1 pl-5">
           {#each carryInWarnings as warning, i (i)}
             <li>
-              {m.import_warning_carry_in_overlap({
-                symbol: warning.symbol,
-                covered: String(warning.coveredQuantity),
-                quantity: String(warning.carryInQuantity),
-              })}
+              {#if warning.kind === 'carry-in-overlap'}
+                {m.import_warning_carry_in_overlap({
+                  symbol: warning.symbol,
+                  covered: String(warning.coveredQuantity),
+                  quantity: String(warning.carryInQuantity),
+                })}
+              {:else if warning.kind === 'carry-in-inconsistent'}
+                {m.import_warning_carry_in_inconsistent({
+                  symbol: warning.symbol,
+                  year: String(warning.year),
+                  quantity: String(warning.carryInQuantity),
+                  implied: String(warning.impliedQuantity),
+                })}
+              {:else}
+                {m.import_warning_carry_in_cost_prorated({
+                  symbol: warning.symbol,
+                  year: String(warning.year),
+                  seeded: String(warning.seededQuantity),
+                  quantity: String(warning.carryInQuantity),
+                })}
+              {/if}
             </li>
           {/each}
         </ul>

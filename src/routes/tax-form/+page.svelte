@@ -48,8 +48,11 @@
   // Absent on summaries saved before the field existed: show nothing until
   // the next (re)calculation fills it in.
   const missingRateCount = $derived(taxSummary?.missingRateCount ?? 0);
+  // Sells of carry-ins whose acquisition cost is unknown (counted as 0).
+  const missingCostCount = $derived(taxSummary?.missingCostCount ?? 0);
+  const incomplete = $derived(missingRateCount + missingCostCount > 0);
   // Incomplete results must not be filed: disable copying PIT-38 values.
-  setCopyDisabled(() => missingRateCount > 0);
+  setCopyDisabled(() => incomplete);
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,
@@ -230,23 +233,40 @@
       </div>
     {/if}
 
-    <!-- Missing NBP rates banner (non-dismissable) -->
-    {#if missingRateCount > 0}
+    <!-- Incomplete results banner (non-dismissable) -->
+    {#if incomplete}
       <div
         role="alert"
         class="flex items-start justify-between gap-3 rounded border border-red-400 bg-red-50 px-4 py-3 dark:border-red-500/60 dark:bg-red-500/10"
       >
         <div class="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
           <AlertCircle size={16} class="mt-0.5 shrink-0" />
-          <div>
-            <p class="font-semibold">{m.tax_form_missing_rates_title()}</p>
-            <p>{m.tax_form_missing_rates_body({ count: missingRateCount })}</p>
-            <a
-              href={localizeHref('/dashboard#trades')}
-              class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
-            >
-              {m.taxform_see_trades()}
-            </a>
+          <div class="space-y-2">
+            <p class="font-semibold">{m.tax_form_results_incomplete()}</p>
+            {#if missingRateCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_missing_rates_title()}</p>
+                <p>{m.tax_form_missing_rates_body({ count: missingRateCount })}</p>
+                <a
+                  href={localizeHref('/dashboard#trades')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.taxform_see_trades()}
+                </a>
+              </div>
+            {/if}
+            {#if missingCostCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_missing_cost_title()}</p>
+                <p>{m.tax_form_missing_cost_body({ count: missingCostCount })}</p>
+                <a
+                  href={localizeHref('/data#carry-in')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.data_tab_carry_in()}
+                </a>
+              </div>
+            {/if}
           </div>
         </div>
         <button
@@ -289,7 +309,7 @@
       </a>
     </div>
 
-    {#if missingRateCount > 0}
+    {#if incomplete}
       <p
         class="w-fit rounded border-2 border-dashed border-red-500 px-3 py-1 text-sm font-bold tracking-wider text-red-600 uppercase dark:text-red-400"
       >
@@ -305,7 +325,7 @@
         onselect={(doc) => (activeDocument = doc)}
       />
 
-      <div class={['min-w-0 flex-1', missingRateCount > 0 && 'opacity-60']}>
+      <div class={['min-w-0 flex-1', incomplete && 'opacity-60']}>
         {#if typeof activeDocument === 'string'}
           <!-- PIT-38 sections -->
           <div class="space-y-4">

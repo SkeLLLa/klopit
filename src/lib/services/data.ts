@@ -8,6 +8,7 @@ import type {
   Trade,
 } from '../../core/types.js';
 import { db } from '../db.js';
+import { normalizeCarryInPosition } from './carry-in.js';
 
 // --- Trades (full CRUD) ---
 
@@ -89,50 +90,21 @@ export async function deleteCorporateAction(args: {
 
 // --- Carry-in Positions (full CRUD) ---
 
-/**
- * Validate and normalize carry-in fields: positive quantity, a year, an
- * upper-cased symbol and non-negative costs. Only fields present in `changes`
- * are checked.
- */
-export function normalizeCarryInChanges(
-  changes: Partial<CarryInPosition>,
-): Partial<CarryInPosition> {
-  const out = { ...changes };
-  if ('symbol' in out) {
-    const symbol = (out.symbol ?? '').trim().toUpperCase();
-    if (!symbol) throw new Error('Carry-in symbol is required');
-    out.symbol = symbol;
-  }
-  if ('quantity' in out) {
-    if (out.quantity === undefined || !(out.quantity > 0)) {
-      throw new Error('Carry-in quantity must be greater than 0');
-    }
-  }
-  if ('year' in out) {
-    if (out.year === undefined || !Number.isInteger(out.year)) {
-      throw new Error('Carry-in year is required');
-    }
-  }
-  for (const field of ['costBasis', 'costBasisPln'] as const) {
-    const value = out[field];
-    if (value !== undefined && !(value >= 0)) {
-      throw new Error(`Carry-in ${field} must be a non-negative number`);
-    }
-  }
-  if (out.currency !== undefined) {
-    out.currency = out.currency.trim().toUpperCase() || undefined;
-  }
-  return out;
+async function sessionYear(sessionId: string): Promise<number | undefined> {
+  return (await db.sessions.get(sessionId))?.year;
 }
 
+/**
+ * Validates via {@link normalizeCarryInPosition} (throws
+ * CarryInValidationError).
+ */
 export async function addCarryInPosition(args: {
   sessionId: string;
   position: CarryInPosition;
 }): Promise<number> {
-  const position = {
-    ...args.position,
-    ...normalizeCarryInChanges(args.position),
-  };
+  const position = normalizeCarryInPosition(args.position, {
+    sessionYear: await sessionYear(args.sessionId),
+  });
   const id = await db.carryInPositions.add({
     ...position,
     sessionId: args.sessionId,
@@ -141,14 +113,22 @@ export async function addCarryInPosition(args: {
   return id;
 }
 
+/**
+ * Merge `changes` into the stored row and validate the result as a whole, so
+ * cross-field rules (currency / acquisition date / year) always hold.
+ */
 export async function updateCarryInPosition(args: {
   id: number;
   changes: Partial<CarryInPosition>;
 }): Promise<void> {
-  await db.carryInPositions.update(
-    args.id,
-    normalizeCarryInChanges(args.changes),
+  const existing = await db.carryInPositions.get(args.id);
+  if (!existing)
+    throw new Error(`Carry-in position ${String(args.id)} not found`);
+  const merged = normalizeCarryInPosition(
+    { ...existing, ...args.changes },
+    { sessionYear: await sessionYear(existing.sessionId) },
   );
+  await db.carryInPositions.put(merged);
 }
 
 export async function deleteCarryInPosition(args: {

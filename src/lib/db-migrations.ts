@@ -70,6 +70,14 @@ export interface LegacyTradeIsinRow {
   isin?: string;
 }
 
+export interface LegacyCorporateActionIsinRow {
+  sessionId: string;
+  symbol: string;
+  isin?: string;
+  targetSymbol?: string;
+  targetIsin?: string;
+}
+
 export interface LegacyCarryInRow {
   sessionId: string;
   symbol: string;
@@ -83,15 +91,24 @@ function sessionSymbolKey(sessionId: string, symbol: string): string {
   return `${sessionId}::${symbol.toUpperCase()}`;
 }
 
-/** First non-empty ISIN per (session, upper-cased symbol) from trades. */
+/**
+ * First non-empty ISIN per (session, upper-cased symbol) from trades, then from
+ * corporate actions (source and merger-target sides).
+ */
 export function buildSessionSymbolIsinMap(
   trades: Iterable<LegacyTradeIsinRow>,
+  corporateActions: Iterable<LegacyCorporateActionIsinRow> = [],
 ): Map<string, string> {
   const map = new Map<string, string>();
-  for (const trade of trades) {
-    if (!trade.isin) continue;
-    const key = sessionSymbolKey(trade.sessionId, trade.symbol);
-    if (!map.has(key)) map.set(key, trade.isin);
+  const add = (sessionId: string, symbol?: string, isin?: string) => {
+    if (!symbol || !isin) return;
+    const key = sessionSymbolKey(sessionId, symbol);
+    if (!map.has(key)) map.set(key, isin);
+  };
+  for (const trade of trades) add(trade.sessionId, trade.symbol, trade.isin);
+  for (const action of corporateActions) {
+    add(action.sessionId, action.symbol, action.isin);
+    add(action.sessionId, action.targetSymbol, action.targetIsin);
   }
   return map;
 }

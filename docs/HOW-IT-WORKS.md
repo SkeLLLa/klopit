@@ -197,18 +197,26 @@ By default both rates are the average NBP Table A rate from the last business da
 
 **Exact algorithm** (`capital-gains.ts`):
 
-**Step 1 — Prepare carry-in positions.** Shares owned before the imported history starts (carry-ins) still carry their acquisition cost. Under [art. 22 ust. 1g ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-22/) that cost is deductible in the year the shares are **sold**, not in the year they were bought, so nothing was "already claimed". Each carry-in gets a PLN cost before the FIFO run:
+**Step 1 — Prepare carry-in positions.** Shares owned before the imported history starts (carry-ins) still carry their acquisition cost. Under [art. 23 ust. 1 pkt 38](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-23/) with [art. 30b ust. 2 pkt 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) that cost is deductible in the year the shares are **sold**, not in the year they were bought, so nothing was "already claimed". Each carry-in gets a PLN cost before the FIFO run:
 
 - `costBasisPln` entered by the user is used as is.
-- `costBasis` in a foreign currency is converted at the NBP rate from the last business day before the acquisition date ([art. 11a ust. 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)). Without an acquisition date, December 31 of the carry-in year is used.
-- A cost explicitly confirmed as zero (e.g. RSUs whose value was taxed as employment income) is 0.
-- Otherwise the cost is **missing**: it counts as 0 PLN, but every sale that consumes the lot is flagged (`costBasisMissing`) on the dashboard and in the transactions table, so the user knows the gain is overstated.
+- `costBasis` in a foreign currency is converted at the NBP rate from the last business day before the acquisition date ([art. 11a ust. 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)), so a foreign-currency cost requires an acquisition date. A cost without a currency is treated as PLN.
+- A cost explicitly confirmed as zero is 0. This is only for shares from a qualifying incentive program not taxed when received ([art. 24 ust. 11](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)); RSU or ESPP shares taxed at vesting or purchase have that taxed value as their cost.
+- Otherwise the cost is **missing**: it counts as 0 PLN, but every sale that consumes the lot is flagged (`costBasisMissing`) on the dashboard and in the transactions table, and the tax form is marked as incomplete (copying disabled) until the cost is entered.
+
+A carry-in must belong to a year before the tax year, and its acquisition date (if any) must fall on or before December 31 of that year.
 
 Carry-ins are keyed by ISIN when known (the parser back-fills it from the statement's instrument list), falling back to the symbol, so they match the trades that sell them.
 
-**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date (or at the end of its year when no date is known), so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
+**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date, so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). An undated carry-in is placed just before the first imported trade of the instrument after the previous snapshot (and never after the end of its year), because shares the imported history cannot explain must be older than it. On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
 
-To avoid double counting, if the imported history already contains buys before the tax period for the same instrument, only the part of the carry-in quantity not covered by those buys is seeded (the latest-acquired carry-ins are reduced first) and a warning is shown. Splits dated between a carry-in's acquisition and the period start are assumed to be already reflected in its quantity and are not applied again.
+Carry-ins are treated as per-instrument **snapshots**: "held N shares at the end of year Y". Years are processed in ascending order. For each snapshot the holding implied by the imported events (and earlier snapshots) at December 31 of Y is computed, and only the difference is seeded:
+
+- If the snapshot equals the implied holding, nothing is added (a later-year snapshot of the same shares is not double counted).
+- If the snapshot exceeds it, only the extra shares are seeded. When imported buys already explain part of the snapshot, the latest-acquired rows are reduced first, a warning is shown, and a reduced row's cost is pro-rated per share (with a separate warning).
+- If the snapshot is below the implied holding, the imports and the snapshot disagree (missing or duplicate imports): the snapshot is skipped and a warning is shown.
+
+Splits dated after a carry-in's acquisition and up to December 31 of its year are assumed to be already reflected in its quantity and are not applied again; later splits are applied by the timeline as usual.
 
 **Step 3 — Process events in chronological order.**
 

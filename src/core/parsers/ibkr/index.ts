@@ -664,6 +664,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
       this.carryInPositions.push({
         symbol,
         quantity: priorQuantity,
+        // 0 = statement year not known yet; resolved in finish().
         year: this.year > 0 ? this.year - 1 : 0,
       });
     } catch {

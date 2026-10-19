@@ -152,4 +152,25 @@ void describe('v14 migration: migrateCarryInPositionV14', () => {
     assert.equal(row.isin, 'XX0000000000');
     assert.equal(row.costBasisSource, 'user');
   });
+
+  void it('falls back to corporate-action source and target ISINs', () => {
+    const isinMap = buildSessionSymbolIsinMap(
+      [],
+      [
+        {
+          sessionId: 's1',
+          symbol: 'OLD',
+          isin: 'US0000000001',
+          targetSymbol: 'NEW',
+          targetIsin: 'US0000000002',
+        },
+      ],
+    );
+    const old: LegacyCarryInRow = { sessionId: 's1', symbol: 'old' };
+    const renamed: LegacyCarryInRow = { sessionId: 's1', symbol: 'NEW' };
+    migrateCarryInPositionV14(old, isinMap);
+    migrateCarryInPositionV14(renamed, isinMap);
+    assert.equal(old.isin, 'US0000000001');
+    assert.equal(renamed.isin, 'US0000000002');
+  });
 });

@@ -144,14 +144,15 @@ Polish tax law **requires FIFO** when specific lot identification is not possibl
 
 ### The Problem
 
-Broker statements often report shares held at the start of the year (carry-ins) without their purchase price. Earlier versions seeded them at cost 0 on the assumption that the cost was "already claimed" in prior years. That is wrong: under art. 22 ust. 1g ustawy o PIT the acquisition cost is deducted in the year of **sale**, so a zero cost silently overstates the gain and the tax.
+Broker statements often report shares held at the start of the year (carry-ins) without their purchase price. Earlier versions seeded them at cost 0 on the assumption that the cost was "already claimed" in prior years. That is wrong: under art. 23 ust. 1 pkt 38 with art. 30b ust. 2 pkt 1 ustawy o PIT the acquisition cost is deducted in the year of **sale**, so a zero cost silently overstates the gain and the tax.
 
 ### The Decision
 
 - The user can enter an acquisition date and cost basis (original currency or PLN) per carry-in. Foreign-currency costs are converted at the NBP rate from the business day before acquisition (art. 11a ust. 2).
 - Carry-ins are placed on the FIFO timeline at their acquisition date (art. 24 ust. 10), not in front of everything.
-- When the cost is unknown, the default status is **missing**, not zero. The calculation still runs with 0 PLN, but every affected sale is flagged on the dashboard and the Data page asks for the cost.
-- Zero cost is allowed only as an explicit choice (e.g. RSUs whose value was already taxed as employment income).
+- Carry-ins are per-instrument snapshots of the year-end holding: only the part the imported history (and earlier snapshots) does not explain is seeded, so overlapping years and imported buys are not double counted. A snapshot below the imported holding is skipped with a warning.
+- When the cost is unknown, the default status is **missing**, not zero. The calculation still runs with 0 PLN, but every affected sale is flagged on the dashboard, the Data page asks for the cost, and the tax form is marked incomplete with copying disabled.
+- Zero cost is allowed only as an explicit choice for shares from a qualifying incentive program not taxed when received (art. 24 ust. 11). RSU or ESPP shares taxed at vesting or purchase have that taxed value as their cost.
 
 ### Why Not Silently Use 0?
 

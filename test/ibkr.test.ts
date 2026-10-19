@@ -698,6 +698,23 @@ void describe('InteractiveBrokersParser', () => {
       to: new Date(2024, 11, 31),
     };
 
+    void it('never emits a carry-in with year 0', () => {
+      // No Statement period: the year is inferred from the trade dates.
+      const inferred = parseLines([MTM_LINE, SELL_LINE]);
+      assert.equal(inferred.year, 2024);
+      assert.equal(inferred.carryInPositions[0].year, 2023);
+      assert.ok(
+        inferred.warnings.some((w) => w.section === 'Carry-in positions'),
+      );
+
+      // No year at all: the position is skipped with a warning.
+      const unknown = parseLines([MTM_LINE]);
+      assert.equal(unknown.carryInPositions.length, 0);
+      assert.ok(
+        unknown.warnings.some((w) => w.section === 'Carry-in positions'),
+      );
+    });
+
     void it('calculates an MTM carry-in sold in-year without "No buy lots available"', () => {
       const statement = parseLines([
         PERIOD_LINE,

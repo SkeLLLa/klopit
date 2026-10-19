@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ComponentProps } from 'svelte';
   import { m } from '$lib/paraglide/messages.js';
   import {
     deriveImportWarnings,
@@ -28,6 +29,12 @@
   import EmptyState from './EmptyState.svelte';
 
   pageTitle.set(m.page_data());
+
+  // `/data#carry-in` (linked from the dashboard and tax form) opens that tab.
+  let dataTab: ComponentProps<typeof DataTabs>['activeTab'] = $state('trades');
+  $effect(() => {
+    if (window.location.hash === '#carry-in') dataTab = 'carryIn';
+  });
 
   type SessionWithImportWarnings = SessionRecord & {
     importWarnings?: ImportWarning[];
@@ -188,7 +195,7 @@
         </div>
       {/if}
 
-      <DataTabs activeTab="trades" {counts}>
+      <DataTabs bind:activeTab={dataTab} {counts}>
         {#snippet children(tab)}
           {#if tab === 'trades'}
             <TradesTable sessionId={activeSession.id} sessionYear={activeSession.year} />

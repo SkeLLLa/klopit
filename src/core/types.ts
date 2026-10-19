@@ -115,8 +115,9 @@ export type CarryInCostBasisSource = 'user' | 'zero-confirmed' | 'missing';
 
 /**
  * Open position carried in from a prior year (shares bought earlier, sold now).
- * Its acquisition cost is deductible in the year of sale (art. 22 ust. 1g
- * updof) — it was never "claimed" in the purchase year.
+ * Its acquisition cost is deductible in the year of sale (art. 23 ust. 1 pkt 38
+ * with art. 30b ust. 2 pkt 1 updof) — it was never "claimed" in the purchase
+ * year.
  *
  * `quantity` is the position held at the end of `year`.
  */
@@ -387,6 +388,11 @@ export interface TaxSummary {
    * rate.
    */
   missingRateCount: number;
+  /**
+   * Number of in-period trade results (sells / merger cash) that consumed a
+   * carry-in lot whose acquisition cost is unknown (counted as 0).
+   */
+  missingCostCount: number;
 }
 
 /**
