@@ -55,3 +55,38 @@ void test('build app bundles do not include AI metadata generator code', (t) => 
 
   assert.deepEqual(failures, []);
 });
+
+void test('prerendered pages carry a CSP meta limiting connect-src to self and NBP', (t) => {
+  const buildDir = resolve(root, 'build');
+  if (!existsSync(buildDir)) {
+    t.skip('build output not found - run `pnpm run build:app` first');
+    return;
+  }
+
+  const failures: string[] = [];
+  let checked = 0;
+  for (const file of collectFiles(buildDir)) {
+    if (!file.endsWith('.html')) continue;
+    const html = readFileSync(file, 'utf8');
+    // Redirect stubs are a bare meta refresh with no app code
+    if (html.includes('http-equiv="refresh"')) continue;
+    checked++;
+    const csp =
+      /<meta http-equiv="content-security-policy" content="([^"]*)"/.exec(
+        html,
+      )?.[1];
+    if (csp === undefined) {
+      failures.push(`${relative(root, file)} has no CSP meta`);
+      continue;
+    }
+    if (!csp.includes("connect-src 'self' https://api.nbp.pl;")) {
+      failures.push(`${relative(root, file)} has unexpected connect-src`);
+    }
+    if (/script-src[^;]*unsafe-/.test(csp)) {
+      failures.push(`${relative(root, file)} allows unsafe script-src`);
+    }
+  }
+
+  assert.ok(checked > 0);
+  assert.deepEqual(failures, []);
+});

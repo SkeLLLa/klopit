@@ -33,6 +33,9 @@ export default defineConfig(({ command }) => {
       __APP_VERSION__: JSON.stringify(appVersion),
     },
     build: {
+      // Keep fonts as files: inlined data: URIs would need `data:` in font-src
+      assetsInlineLimit: (file) =>
+        /\.(woff2?|ttf)$/.test(file) ? false : undefined,
       minify: 'oxc',
       cssMinify: 'lightningcss',
     },
@@ -48,6 +51,24 @@ export default defineConfig(({ command }) => {
           precompress: false,
           strict: true,
         }),
+        // Hosting (GitHub Pages) cannot set headers, so Kit emits the policy as
+        // a <meta> tag in each prerendered page, hashing its own inline scripts.
+        csp: {
+          mode: 'hash',
+          directives: {
+            'default-src': ['self'],
+            'script-src': ['self'],
+            // Unovis (emotion) injects <style> elements at runtime
+            'style-src': ['self', 'unsafe-inline'],
+            'img-src': ['self', 'data:', 'blob:'],
+            'font-src': ['self'],
+            'connect-src': ['self', 'https://api.nbp.pl'],
+            'worker-src': ['self', 'blob:'],
+            'object-src': ['none'],
+            'base-uri': ['self'],
+            'form-action': ['self'],
+          },
+        },
         prerender: {
           entries: [
             '*',

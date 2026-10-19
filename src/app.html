@@ -8,20 +8,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg" />
     <link rel="manifest" href="/site.webmanifest" />
-    <script>
-      (function () {
-        var d = localStorage.getItem('darkMode');
-        if (
-          d === 'true' ||
-          (d === null && matchMedia('(prefers-color-scheme: dark)').matches)
-        ) {
-          document.documentElement.classList.add('dark');
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-          document.documentElement.dataset.sidebarCollapsed = '';
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
