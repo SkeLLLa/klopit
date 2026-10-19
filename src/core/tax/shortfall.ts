@@ -12,6 +12,13 @@ import type { CarryInWarning } from './capital-gains.js';
 export interface ShortfallRequest {
   trade: EnrichedTrade;
   missing: number;
+  /**
+   * Parts of `missing` that a `transfer-shortfall` already explains, by the
+   * transfer's source account. That account is not suggested as donor for them.
+   * Other donors still count (the shares may have come from there), but their
+   * warnings stay hidden up to the explained quantity.
+   */
+  explained?: { account: string; quantity: number }[];
 }
 
 const EPS = 1e-9;
@@ -23,24 +30,27 @@ const EPS = 1e-9;
  * earliest date. Nothing is moved; sells in the `unassigned` account are left
  * to the `account-unassigned` warning.
  *
- * `holdingsAtTimes` replays the timeline once for all request times.
+ * `holdingsAtTimes` replays the timeline once for all request times. `all` also
+ * holds the parts a transfer shortfall explains (they still taint their
+ * donors); `visible` is what to show.
  */
 export function shortfallWarnings(args: {
   requests: ShortfallRequest[];
   accounts: readonly string[];
   symbolToIsin: Map<string, string>;
   holdingsAtTimes: (times: number[]) => Map<number, Map<string, number>>;
-}): CarryInWarning[] {
+}): { all: CarryInWarning[]; visible: CarryInWarning[] } {
   const requests = args.requests.filter(
     (r) => r.trade.account !== UNASSIGNED_ACCOUNT,
   );
-  if (requests.length === 0) return [];
+  if (requests.length === 0) return { all: [], visible: [] };
   const snapshots = args.holdingsAtTimes([
     ...new Set(requests.map((r) => r.trade.datetime.getTime())),
   ]);
 
   const warnings = new Map<string, CarryInWarning>();
   const allocated = new Map<string, number>();
+  const hidden = new Map<string, number>();
   const add = (key: string, warning: CarryInWarning, quantity: number) => {
     const known = warnings.get(key);
     if (
@@ -57,7 +67,15 @@ export function shortfallWarnings(args: {
     }
   };
 
-  for (const { trade, missing: total } of requests) {
+  for (const { trade, missing: total, explained = [] } of requests) {
+    let explainedLeft = explained.reduce((sum, e) => sum + e.quantity, 0);
+    const explainedBy = new Map<string, number>();
+    for (const e of explained) {
+      explainedBy.set(
+        e.account,
+        (explainedBy.get(e.account) ?? 0) + e.quantity,
+      );
+    }
     const account = trade.account ?? '';
     const names = instrumentNames(trade, args.symbolToIsin);
     const base = instrumentBase(trade);
@@ -74,7 +92,10 @@ export function shortfallWarnings(args: {
         );
         return {
           account: other,
-          available: held - (allocated.get(`${other}|${group}`) ?? 0),
+          available:
+            held -
+            (allocated.get(`${other}|${group}`) ?? 0) -
+            (explainedBy.get(other) ?? 0),
         };
       })
       .filter((donor) => donor.available > EPS)
@@ -89,8 +110,12 @@ export function shortfallWarnings(args: {
         `${donor.account}|${group}`,
         (allocated.get(`${donor.account}|${group}`) ?? 0) + quantity,
       );
+      const hide = Math.min(quantity, explainedLeft);
+      explainedLeft -= hide;
+      const transferKey = `transfer|${donor.account}|${account}|${base}`;
+      hidden.set(transferKey, (hidden.get(transferKey) ?? 0) + hide);
       add(
-        `transfer|${donor.account}|${account}|${base}`,
+        transferKey,
         {
           kind: 'transfer-suggested',
           instrument: trade.symbol,
@@ -104,8 +129,11 @@ export function shortfallWarnings(args: {
       );
     }
     if (missing > EPS) {
+      const hide = Math.min(missing, explainedLeft);
+      const carryKey = `carry|${account}|${base}`;
+      hidden.set(carryKey, (hidden.get(carryKey) ?? 0) + hide);
       add(
-        `carry|${account}|${base}`,
+        carryKey,
         {
           kind: 'shortfall-add-carry-in',
           instrument: trade.symbol,
@@ -118,5 +146,17 @@ export function shortfallWarnings(args: {
       );
     }
   }
-  return [...warnings.values()];
+  const visible: CarryInWarning[] = [];
+  for (const [key, warning] of warnings) {
+    if (
+      warning.kind !== 'transfer-suggested' &&
+      warning.kind !== 'shortfall-add-carry-in'
+    ) {
+      visible.push(warning);
+      continue;
+    }
+    const quantity = warning.quantity - (hidden.get(key) ?? 0);
+    if (quantity > EPS) visible.push({ ...warning, quantity });
+  }
+  return { all: [...warnings.values()], visible };
 }

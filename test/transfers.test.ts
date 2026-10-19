@@ -150,6 +150,13 @@ const snapshot = (
   acquisitionDate: new Date(2020, 0, 1),
 });
 
+const isDraft = (r: ReturnType<typeof run>) =>
+  sells(r.results).some((x) => x.costBasisMissing) ||
+  r.warnings.some((w) => w.kind === 'carry-in-inconsistent');
+
+const costs = (r: ReturnType<typeof run>) =>
+  sells(r.results).map((x) => x.costPln);
+
 void describe('transfers between accounts', () => {
   void it('moves lots with their cost and is not a disposal', () => {
     const { results, warnings } = run({
@@ -513,6 +520,131 @@ void describe('transfers between accounts', () => {
       });
       assert.equal(sells(results)[0].costPln, 200);
       assert.deepEqual(warnings, []);
+    });
+  });
+
+  void describe('IBKR-style snapshots and unexplained transfers', () => {
+    const auto = (year: number, quantity: number): EnrichedCarryInPosition => ({
+      symbol: 'AAPL',
+      quantity,
+      year,
+      costPln: 0,
+      rateUnavailable: false,
+      costMissing: true,
+      account: A,
+    });
+    const T23 = new Date(2023, 2, 1);
+    const ibkr = {
+      trades: [
+        buy(A, 10, 40, new Date(2020, 0, 1)),
+        buy(A, 2, 45, new Date(2023, 6, 1)),
+        sell(B, 5, D(5)),
+        sell(A, 7, D(8)),
+      ],
+      corporateActions: [transfer(5, T23)],
+    };
+
+    void it('R1: consistent auto snapshots stay final', () => {
+      const r = run({
+        ...ibkr,
+        carryInPositions: [auto(2022, 10), auto(2023, 7)],
+      });
+      assert.deepEqual(costs(r), [200, 290]);
+      assert.equal(isDraft(r), false);
+    });
+
+    void it('R2: a single auto snapshot stays final', () => {
+      const r = run({ ...ibkr, carryInPositions: [auto(2023, 7)] });
+      assert.deepEqual(costs(r), [200, 290]);
+      assert.equal(isDraft(r), false);
+    });
+
+    void it('A3: snapshots at both ends of a consistent transfer', () => {
+      const r = run({
+        trades: [
+          buy(A, 10, 40, new Date(2020, 0, 1)),
+          buy(B, 5, 20, new Date(2023, 5, 1)),
+          sell(B, 10, D(5)),
+        ],
+        carryInPositions: [snapshot(A, 5, 200), snapshot(B, 10, 300)],
+        corporateActions: [transfer(5, T23)],
+      });
+      assert.equal(isDraft(r), false);
+    });
+
+    void it('A4: source snapshot explained by imports stays final', () => {
+      const r = run({
+        trades: [
+          buy(A, 10, 40, new Date(2020, 0, 1)),
+          sell(B, 5, D(5)),
+          sell(A, 5, D(8)),
+        ],
+        carryInPositions: [snapshot(A, 5, 200)],
+        corporateActions: [transfer(5, T23)],
+      });
+      assert.deepEqual(costs(r), [200, 200]);
+      assert.equal(isDraft(r), false);
+    });
+
+    void it('B3/B3x: the snapshot shares stay at the source and are final', () => {
+      const r = run({
+        trades: [
+          buy(A, 8, 30, new Date(2019, 0, 1)),
+          sell(A, 3, new Date(2023, 1, 1)),
+          sell(B, 5, D(5)),
+          sell(A, 5, D(8)),
+        ],
+        carryInPositions: [snapshot(A, 5, 200)],
+        corporateActions: [transfer(5, T23)],
+      });
+      const [dest, source] = sells(r.results);
+      assert.equal(dest.costPln, 150);
+      assert.equal(dest.costBasisMissing, undefined);
+      // Shares the imports do not explain count as older than every import
+      // (as without transfers): the Feb 2023 sell took 3 of them, so the
+      // source's last 5 are 2@40 (snapshot) + 3@30.
+      assert.equal(source.costPln, 170);
+      assert.equal(source.costBasisMissing, undefined);
+      assert.equal(isDraft(r), false);
+    });
+
+    const IBI = 'ibi:default';
+    const donor = [
+      buy(IBI, 10, 30, new Date(2020, 0, 1)),
+      buy(IBI, 3, 50, new Date(2022, 0, 1)),
+      sell(IBI, 10, D(8)),
+    ];
+
+    void it('S1: a short transfer still taints a third-account donor', () => {
+      const r = run({
+        trades: [
+          buy(A, 2, 40, new Date(2020, 0, 1)),
+          sell(B, 5, new Date(2023, 8, 1)),
+          ...donor,
+        ],
+        corporateActions: [transfer(5, T23)],
+      });
+      const ibi = sells(r.results).at(-1);
+      assert.equal(ibi?.costBasisMissing, true);
+      // The shortfall is the transfer's: no extra suggestion for it.
+      assert.ok(!r.warnings.some((w) => w.kind === 'transfer-suggested'));
+    });
+
+    void it('S3: a shortfall beyond the transfer is still suggested', () => {
+      const r = run({
+        trades: [
+          buy(A, 2, 40, new Date(2020, 0, 1)),
+          sell(B, 8, new Date(2023, 8, 1)),
+          ...donor,
+        ],
+        corporateActions: [transfer(5, T23)],
+      });
+      const suggested = r.warnings.filter(
+        (w) => w.kind === 'transfer-suggested',
+      );
+      assert.equal(suggested.length, 1);
+      assert.equal(suggested[0].quantity, 3);
+      assert.equal(sells(r.results).at(-1)?.costBasisMissing, true);
     });
   });
 });

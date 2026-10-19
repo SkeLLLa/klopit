@@ -725,6 +725,6 @@
   "data_transfer_hint": "Akcje przeniesione między Twoimi rachunkami papierów wartościowych. To nie jest sprzedaż: akcje zachowują koszt i datę nabycia, a najpierw przenoszone są najstarsze partie rachunku źródłowego.",
   "data_transfer_same_account": "Wybierz inny rachunek",
   "data_transfer_details": "{quantity} akcji: {from} → {to}",
-  "import_warning_transfer_shortfall": "{symbol}: transfer z rachunku {from} na {to} dnia {date} jest większy niż stan rachunku {from}: brakuje tam {quantity} akcji. Przeniesiono tylko akcje, które rachunek posiadał. Sprawdź transfer (strona Dane, zakładka Zdarzenia korporacyjne) lub dodaj brakującą historię. Do tego czasu późniejsze sprzedaże tego instrumentu na rachunku {to} są wersją roboczą.",
+  "import_warning_transfer_shortfall": "{symbol}: nie jest znany zakup {quantity} akcji przeniesionych z {from} na {to} dnia {date}. Pozycja na koniec roku wpisana dla {from} oznacza stan po tym transferze, więc nie może ich pokryć. Ich koszt jest nieznany: późniejsze sprzedaże tych akcji na {to} pozostają wersją roboczą, dopóki nie dodasz brakującego zakupu lub stanu początkowego dla {from} z datą sprzed transferu.",
   "import_warning_transfer_invalid": "{symbol}: transfer z dnia {date} został pominięty: wymaga dwóch różnych rachunków i dodatniej liczby akcji. Popraw go na stronie Dane, w zakładce Zdarzenia korporacyjne."
 }

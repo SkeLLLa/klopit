@@ -731,6 +731,6 @@
   "data_transfer_hint": "Shares moved between your own securities accounts. It is not a sale: the shares keep their cost and purchase date, and the oldest lots of the source account move first.",
   "data_transfer_same_account": "Choose a different account",
   "data_transfer_details": "{quantity} shares: {from} → {to}",
-  "import_warning_transfer_shortfall": "{symbol}: the transfer from {from} to {to} on {date} is larger than what {from} held: {quantity} shares are missing there. Only the shares it held moved. Check the transfer (Data page, Corporate actions tab) or add the missing history. Until then later sales of the instrument in {to} are drafts.",
+  "import_warning_transfer_shortfall": "{symbol}: no purchase is known for {quantity} of the shares moved from {from} to {to} on {date}. A year-end position entered for {from} counts as what it held after this transfer, so it cannot supply them. Their cost is unknown: later sales of these shares in {to} stay drafts until you add the missing purchase or a carry-in for {from} dated before the transfer.",
   "import_warning_transfer_invalid": "{symbol}: the transfer on {date} was ignored: it needs two different accounts and a positive quantity. Fix it on the Data page, Corporate actions tab."
 }
