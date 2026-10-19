@@ -147,6 +147,18 @@ void describe('InteractiveBrokersParser', () => {
       assert.ok(msftTax);
       assert.equal(msftTax.isin, 'US5949181045');
     });
+
+    void it('keeps signs of dividend reversals and WHT refunds unchanged', () => {
+      const result = parseFixture('dividend-reversal.csv');
+      assert.deepEqual(
+        result.dividends.map((d) => d.amount),
+        [100, -100, 100],
+      );
+      assert.deepEqual(
+        result.withholdingTaxes.map((w) => w.amount),
+        [-15, 15, -15],
+      );
+    });
   });
 
   void describe('Interest', () => {

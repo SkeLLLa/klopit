@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
+import { roundedDividendTax } from '../src/core/tax/aggregates.js';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
 import type {
   EnrichedCorporateAction,
@@ -639,5 +643,42 @@ void describe('calculateTaxes', () => {
     assert.equal(result.pit38[48], 0);
     assert.equal(result.pit38[49], 7.98);
     assert.equal(result.pit38[51], 7.98);
+  });
+});
+
+void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
+  void it('nets reversed dividends and refunded WHT end to end', () => {
+    const text = readFileSync(
+      join(import.meta.dirname, 'fixtures', 'ib', 'dividend-reversal.csv'),
+      'utf-8',
+    );
+    const parser = ibkrDefinition.createParser();
+    for (const line of text.split('\n')) {
+      parser.feed({ line });
+    }
+    const parsed = parser.finish();
+
+    const result = calculateTaxes({
+      trades: [],
+      dividends: parsed.dividends.map((d) => ({
+        ...d,
+        exchangeRate: 4.0,
+        rateUnavailable: false,
+      })),
+      withholdingTaxes: parsed.withholdingTaxes.map((w) => ({
+        ...w,
+        exchangeRate: 4.0,
+        rateUnavailable: false,
+      })),
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+    });
+
+    assert.equal(result.dividends.length, 1);
+    assert.equal(result.pit38[47], roundedDividendTax({ totalIncomePln: 400 }));
+    // Net WHT is 15 USD x 4.0 = 60 PLN (not 45 x 4.0 per row).
+    assert.equal(result.pit38[48], 60);
   });
 });

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { calculateDividends } from '../src/core/tax/dividends.js';
 import type {
+  DividendResult,
   EnrichedRawDividend,
   EnrichedWithholdingTax,
   TaxPeriod,
@@ -474,5 +475,137 @@ void describe('calculateDividends', () => {
       Math.abs(result[0].taxPlnGross - result[0].amountPln * 0.19) < 0.001,
     );
     assert.ok(result[0].taxToPayPln >= 0);
+  });
+});
+
+function sum(rs: DividendResult[], k: keyof DividendResult): number {
+  return rs.reduce((s, r) => s + (r[k] as number), 0);
+}
+
+void describe('calculateDividends — reversals & refunds', () => {
+  const us = new Map([['AAPL', 'US']]);
+
+  void it('nets a reversed and re-posted dividend instead of double counting', () => {
+    const r = calculateDividends({
+      dividends: [
+        makeDiv({ amount: 100 }),
+        makeDiv({ amount: -100 }),
+        makeDiv({ amount: 100 }),
+      ],
+      withholdingTaxes: [makeTax({ amount: -15 })],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r.length, 1);
+    assert.equal(sum(r, 'amountOriginal'), 100);
+    assert.equal(sum(r, 'withholdingTaxOriginal'), 15);
+    assert.equal(sum(r, 'amountPln'), 400);
+  });
+
+  void it('treats a positive withholding row as a refund (-15, +15 => 0)', () => {
+    const r = calculateDividends({
+      dividends: [makeDiv({ amount: 100 })],
+      withholdingTaxes: [makeTax({ amount: -15 }), makeTax({ amount: 15 })],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r[0].withholdingTaxOriginal, 0);
+    assert.equal(r[0].deductibleWithholdingPln, 0);
+    assert.equal(r[0].warnings, undefined);
+  });
+
+  void it('nets -15, +15, -15 to 15 withheld with no W-8BEN warning', () => {
+    const r = calculateDividends({
+      dividends: [makeDiv({ amount: 100 })],
+      withholdingTaxes: [
+        makeTax({ amount: -15 }),
+        makeTax({ amount: 15 }),
+        makeTax({ amount: -15 }),
+      ],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r[0].withholdingTaxOriginal, 15);
+    assert.ok(Math.abs(r[0].withholdingTaxPln - 60) < 1e-9);
+    assert.equal(r[0].warnings, undefined);
+  });
+
+  void it('attributes WHT and ADR fees once when a key has several dividend rows', () => {
+    const r = calculateDividends({
+      dividends: [makeDiv({ amount: 50 }), makeDiv({ amount: 50 })],
+      withholdingTaxes: [makeTax({ amount: -15 })],
+      transactionFees: [makeFee({ amount: 2 })],
+      reduceAdrFeesFromDividends: true,
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(sum(r, 'withholdingTaxOriginal'), 15);
+    assert.equal(sum(r, 'adrFeeOriginal'), 2);
+    assert.equal(sum(r, 'amountOriginal'), 98);
+  });
+
+  void it('floors a net-negative group to 0 and warns', () => {
+    const r = calculateDividends({
+      dividends: [makeDiv({ amount: -100 })],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r[0].amountOriginal, 0);
+    assert.equal(r[0].amountPln, 0);
+    assert.ok(r[0].warnings?.some((w) => w.kind === 'net-negative'));
+  });
+
+  void it('warns when refunds exceed withholding', () => {
+    const r = calculateDividends({
+      dividends: [makeDiv({ amount: 100 })],
+      withholdingTaxes: [makeTax({ amount: 15 })],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r[0].withholdingTaxOriginal, 0);
+    assert.equal(r[0].withholdingTaxPln, 0);
+    assert.ok(r[0].warnings?.some((w) => w.kind === 'wht-net-refund'));
+  });
+
+  void it('does not merge same-day same-symbol rows in different currencies', () => {
+    const r = calculateDividends({
+      dividends: [
+        makeDiv({ amount: 10 }),
+        makeDiv({ amount: 10, currency: 'EUR', exchangeRate: 4.3 }),
+      ],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r.length, 2);
+  });
+
+  void it('sums PLN per row when rows in one group have different rates', () => {
+    const r = calculateDividends({
+      dividends: [
+        makeDiv({ amount: 100, exchangeRate: 4.0 }),
+        makeDiv({ amount: 50, exchangeRate: 4.2 }),
+      ],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r.length, 1);
+    assert.equal(r[0].amountOriginal, 150);
+    assert.ok(Math.abs(r[0].amountPln - 610) < 1e-9);
+  });
+
+  void it('ORs rateUnavailable across all dividend rows in a group', () => {
+    const r = calculateDividends({
+      dividends: [
+        makeDiv({ amount: 100 }),
+        makeDiv({ amount: 1, rateUnavailable: true }),
+      ],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: us,
+    });
+    assert.equal(r[0].rateUnavailable, true);
   });
 });

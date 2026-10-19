@@ -64,6 +64,7 @@ export interface RawDividend {
   isin?: string;
   currency: string;
   date: Date;
+  /** Signed amount: positive = dividend paid, negative = reversal/correction. */
   amount: number;
 }
 
@@ -73,6 +74,7 @@ export interface RawWithholdingTax {
   isin?: string;
   currency: string;
   date: Date;
+  /** Signed amount: negative = tax withheld, positive = refund/reversal. */
   amount: number;
 }
 
@@ -235,6 +237,14 @@ export type DividendWarning =
     }
   | {
       kind: 'unknown-country';
+    }
+  | {
+      /** Dividend rows for one event net below 0; amount floored to 0. */
+      kind: 'net-negative';
+    }
+  | {
+      /** WHT refunds exceed withholding for one event; WHT floored to 0. */
+      kind: 'wht-net-refund';
     };
 
 /** Dividend with PLN conversion and matched withholding */

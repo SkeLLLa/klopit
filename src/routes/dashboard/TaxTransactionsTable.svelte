@@ -331,11 +331,17 @@
             {@const hasUnknownCountry =
               div.warnings?.some((w) => w.kind === 'unknown-country') ??
               div.country === 'XX'}
+            {@const hasNetNegative =
+              div.warnings?.some((w) => w.kind === 'net-negative') ?? false}
+            {@const hasWhtNetRefund =
+              div.warnings?.some((w) => w.kind === 'wht-net-refund') ?? false}
             {@const warningText = hasWhtLapse
               ? m.dividend_warning_wht_lapse_description()
-              : hasUnknownCountry
-                ? m.dividend_warning_unknown_country_description()
-                : undefined}
+              : hasWhtNetRefund
+                ? m.dividend_warning_wht_net_refund_description()
+                : hasUnknownCountry
+                  ? m.dividend_warning_unknown_country_description()
+                  : undefined}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}
@@ -351,8 +357,19 @@
               >
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
-                >{formatPlnValue(div.amountPln)}</td
               >
+                {#if hasNetNegative}
+                  <span
+                    class="cursor-help text-amber-600 dark:text-amber-400"
+                    title={m.dividend_warning_net_negative_description()}
+                    aria-label={m.dividend_warning_net_negative_description()}
+                  >
+                    {formatPlnValue(div.amountPln)}
+                  </span>
+                {:else}
+                  {formatPlnValue(div.amountPln)}
+                {/if}
+              </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
                 >{formatPlnValue(taxPl)}</td

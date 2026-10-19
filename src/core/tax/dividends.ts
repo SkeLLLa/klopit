@@ -26,19 +26,26 @@ function toDateString(args: { date: Date }): string {
   return `${String(year)}-${month}-${day}`;
 }
 
-function matchKey(args: { isin?: string; symbol: string; date: Date }): string {
+function matchKey(args: {
+  isin?: string;
+  symbol: string;
+  currency: string;
+  date: Date;
+}): string {
   const id = (args.isin ?? args.symbol).toUpperCase();
-  return `${toDateString({ date: args.date })}:${id}`;
+  return `${toDateString({ date: args.date })}:${id}:${args.currency.toUpperCase()}`;
 }
 
 function feeMatchKey(args: {
   isin?: string;
   symbol: string;
+  currency: string;
   datetime: Date;
 }): string {
   return matchKey({
     isin: args.isin,
     symbol: args.symbol,
+    currency: args.currency,
     date: args.datetime,
   });
 }
@@ -88,49 +95,84 @@ export function calculateDividends(
     }
   }
 
+  // Group dividend rows by event key so reversals and re-postings net out
+  // and matched WHT / ADR fees are attributed once per event.
+  const divGroups = new Map<string, EnrichedRawDividend[]>();
+  for (const div of dividends) {
+    if (!isInTaxPeriod({ date: div.date, taxPeriod })) continue;
+    const key = matchKey(div);
+    let group = divGroups.get(key);
+    if (!group) {
+      group = [];
+      divGroups.set(key, group);
+    }
+    group.push(div);
+  }
+
   const results: DividendResult[] = [];
 
-  for (const div of dividends) {
-    // Filter by tax period
-    if (!isInTaxPeriod({ date: div.date, taxPeriod })) {
-      continue;
-    }
-
-    const key = matchKey(div);
+  for (const [key, divRows] of divGroups) {
+    const div = divRows[0];
     const matchedTaxes = taxMap.get(key) ?? [];
-    const matchedAdrFees = (adrFeeMap.get(key) ?? []).filter(
-      (fee) => fee.currency === div.currency,
+    const matchedAdrFees = adrFeeMap.get(key) ?? [];
+
+    const grossOriginal = divRows.reduce((sum, row) => sum + row.amount, 0);
+    const grossPln = divRows.reduce(
+      (sum, row) => sum + row.amount * row.exchangeRate,
+      0,
     );
+    const ratesAgree = divRows.every(
+      (row) => row.exchangeRate === div.exchangeRate,
+    );
+    const exchangeRate = ratesAgree
+      ? div.exchangeRate
+      : (divRows.find((row) => row.amount > 0) ?? div).exchangeRate;
+
     const adrFeeOriginal = matchedAdrFees.reduce(
       (sum, fee) => sum + fee.amount,
       0,
     );
-    const taxableAmountOriginal = Math.max(div.amount - adrFeeOriginal, 0);
-
-    // Sum withholding amounts (IB stores as negative — use Math.abs)
-    const withholdingTaxOriginal = matchedTaxes.reduce(
-      (sum, tax) => sum + Math.abs(tax.amount),
-      0,
-    );
+    const taxableAmountOriginal = Math.max(grossOriginal - adrFeeOriginal, 0);
 
     // Convert dividend to PLN
-    const amountPln = taxableAmountOriginal * div.exchangeRate;
-    const adrFeePln = adrFeeOriginal * div.exchangeRate;
+    const amountPln = ratesAgree
+      ? taxableAmountOriginal * exchangeRate
+      : Math.max(grossPln - adrFeeOriginal * exchangeRate, 0);
+    const adrFeePln = adrFeeOriginal * exchangeRate;
 
-    // Convert withholding to PLN (each entry may have its own rate)
-    const withholdingTaxPln = matchedTaxes.reduce(
-      (sum, tax) => sum + Math.abs(tax.amount) * tax.exchangeRate,
+    // Withholding sign convention: negative = tax withheld, positive =
+    // refund/reversal. Net per event, floored at 0 (art. 30a ust. 9 updof
+    // credits only tax actually paid). Each entry may have its own rate.
+    const netWithholdingOriginal = matchedTaxes.reduce(
+      (sum, tax) => sum + tax.amount,
+      0,
+    );
+    const withholdingTaxOriginal = Math.max(-netWithholdingOriginal, 0);
+    const withholdingTaxPln = Math.max(
+      -matchedTaxes.reduce(
+        (sum, tax) => sum + tax.amount * tax.exchangeRate,
+        0,
+      ),
       0,
     );
 
     const rateUnavailable =
-      div.rateUnavailable || matchedTaxes.some((tax) => tax.rateUnavailable);
+      divRows.some((row) => row.rateUnavailable) ||
+      matchedTaxes.some((tax) => tax.rateUnavailable);
 
     const country = symbolCountryMap.get(div.symbol) ?? 'XX';
     const warnings: DividendWarning[] = [];
 
     if (country === 'XX') {
       warnings.push({ kind: 'unknown-country' });
+    }
+
+    if (grossOriginal < 0) {
+      warnings.push({ kind: 'net-negative' });
+    }
+
+    if (netWithholdingOriginal > 0) {
+      warnings.push({ kind: 'wht-net-refund' });
     }
 
     // Check for W-8BEN lapse: withheld rate exceeds treaty rate
@@ -164,7 +206,7 @@ export function calculateDividends(
       adrFeePln,
       amountPln,
       withholdingTaxPln,
-      exchangeRate: div.exchangeRate,
+      exchangeRate,
       rateUnavailable,
       country,
       creditCapRate,

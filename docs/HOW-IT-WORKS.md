@@ -350,19 +350,25 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 
 **Exact algorithm** (`dividends.ts` + `calculator.ts` + `treaty-rates.ts`):
 
-**Step 1 — Match dividends with withholding taxes.**
+**Step 1 — Group rows per dividend event and match withholding taxes.**
 
-Withholding taxes are grouped by a composite key: `YYYY-MM-DD:ISIN` (or `YYYY-MM-DD:SYMBOL` if ISIN is unavailable). Each dividend is matched to its withholding tax entries using the same key.
+Dividend rows, withholding tax rows and (optionally) ADR fees are grouped by a composite key: `YYYY-MM-DD:ISIN:CURRENCY` (or `YYYY-MM-DD:SYMBOL:CURRENCY` if ISIN is unavailable). All dividend rows with the same key form one dividend event, so a payment that the broker posts, reverses and re-posts on the same day (`100`, `-100`, `100`) is netted to a single event of `100`. Matched withholding taxes and ADR fees are counted once per event, regardless of how many dividend rows it has.
 
-**Step 2 — Convert each dividend to PLN.**
+**Step 2 — Net amounts and convert each event to PLN.**
+
+Sign convention: dividend amounts are positive for payments and negative for reversals; withholding amounts are **negative for tax withheld** and **positive for refunds/reversals** (as in the Interactive Brokers CSV).
 
 ```
-For each dividend in the tax period:
-    amountPln          = dividend.amount × dividend.exchangeRate
-    withholdingTaxPln  = sum of (|tax.amount| × tax.exchangeRate) for matched taxes
+For each dividend event in the tax period:
+    amountOriginal          = max(sum of dividend.amount − ADR fees, 0)
+    amountPln               = amountOriginal × dividend.exchangeRate
+    withholdingTaxOriginal  = max(−sum of tax.amount, 0)
+    withholdingTaxPln       = max(−sum of (tax.amount × tax.exchangeRate), 0)
 ```
 
-Note: Interactive Brokers stores withholding amounts as negative numbers — `Math.abs()` is applied. Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date).
+Only the dividend actually received is income ([art. 30a ust. 1 pkt 4](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)) and only tax actually paid abroad can be credited ([art. 30a ust. 9](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)), so a refunded withholding (`-15`, `+15`) nets to 0. Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date). If dividend rows in one event have different rates, PLN amounts are summed per row.
+
+Two non-fatal warnings flag suspicious nets: **net-negative** (the event's dividend rows sum below zero — usually a reversal dated differently from the original payment; the amount is floored to 0) and **wht-net-refund** (refunds exceed withholding — often a withheld amount entered as a positive number; withholding is floored to 0). Reversals posted on a different date than the original payment are not netted yet.
 
 **Step 3 — Per-dividend credit cap** (applied in `buildSummary`):
 
