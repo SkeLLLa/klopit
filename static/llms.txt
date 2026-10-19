@@ -28,10 +28,13 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 - [IBI Capital overview](https://klopit.co.pl/docs/ibi/)
 - [IBI Capital ESPP](https://klopit.co.pl/docs/ibi/espp/)
 - [IBI Capital RSU](https://klopit.co.pl/docs/ibi/rsu/)
+- [Charles Schwab — ESPP, RSU and sales CSV](https://klopit.co.pl/docs/schwab/)
+- [Revolut — manual entry guide](https://klopit.co.pl/docs/revolut/)
 
 ## Tax topics
 
 - [US dividends — 15% or 19% withholding](https://klopit.co.pl/docs/dividends/us-15-or-19/)
+- [Comparison with alternatives](https://klopit.co.pl/docs/alternatives/)
 
 ## Polski (pl)
 
@@ -49,7 +52,10 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 - [IBI Capital](https://klopit.co.pl/pl/docs/ibi/)
 - [IBI ESPP](https://klopit.co.pl/pl/docs/ibi/espp/)
 - [IBI RSU](https://klopit.co.pl/pl/docs/ibi/rsu/)
+- [Charles Schwab](https://klopit.co.pl/pl/docs/schwab/)
+- [Revolut](https://klopit.co.pl/pl/docs/revolut/)
 - [Dywidendy z USA — 15% czy 19%](https://klopit.co.pl/pl/docs/dividends/us-15-or-19/)
+- [Porównanie z alternatywami](https://klopit.co.pl/pl/docs/alternatives/)
 
 ## Українська (uk)
 
@@ -67,7 +73,10 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 - [IBI Capital](https://klopit.co.pl/uk/docs/ibi/)
 - [IBI ESPP](https://klopit.co.pl/uk/docs/ibi/espp/)
 - [IBI RSU](https://klopit.co.pl/uk/docs/ibi/rsu/)
+- [Charles Schwab](https://klopit.co.pl/uk/docs/schwab/)
+- [Revolut](https://klopit.co.pl/uk/docs/revolut/)
 - [Дивіденди зі США — 15% чи 19%](https://klopit.co.pl/uk/docs/dividends/us-15-or-19/)
+- [Порівняння з альтернативами](https://klopit.co.pl/uk/docs/alternatives/)
 
 ## AI discovery endpoints
 
@@ -83,8 +92,8 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 
 - Import CSV from Interactive Brokers Activity Statements (trades, dividends, withholding tax, corporate actions).
 - Import PDF from IBI Capital for ESPP and RSU grants with per-grant FIFO lots.
-- Import CSV from Charles Schwab (ESPP deposits, RSU vests, sales). Schwab dividends and withholding: manual entry.
-- Manual entry for trades, dividends and foreign withholding tax for any other broker.
+- Import CSV from Charles Schwab (ESPP deposits, RSU vests, sales). Schwab dividends are not imported (add them manually); withholding is not imported either.
+- Manual entry for trades, dividends and carry-in positions for any other broker (no manual form for withholding tax yet).
 - Capital gains via FIFO per ISIN and per broker account (art. 24 ust. 10 ustawy o PIT), with lot-level isolation for ESPP grants.
 - NBP Table A average exchange rates from the business day preceding each transaction or dividend.
 - Foreign dividend withholding credit capped per dividend at the lower of 19% and the bilateral tax-treaty rate.

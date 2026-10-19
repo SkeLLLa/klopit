@@ -155,6 +155,20 @@
         {content.manualCta}
         <ArrowRight size={12} />
       </a>
+      <a
+        href={localizeHref('/docs/revolut')}
+        class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
+      >
+        {content.revolutLabel}
+        <ArrowRight size={12} />
+      </a>
+      <a
+        href={localizeHref('/docs/alternatives')}
+        class="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
+      >
+        {content.alternativesLabel}
+        <ArrowRight size={12} />
+      </a>
     </div>
 
     <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">

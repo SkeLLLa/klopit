@@ -75,6 +75,21 @@ export const navigation: NavSection[] = [
             ],
           },
           {
+            labelKey: 'nav_docs_schwab',
+            href: '/docs/schwab',
+            icon: 'FileText',
+          },
+          {
+            labelKey: 'nav_docs_revolut',
+            href: '/docs/revolut',
+            icon: 'FileText',
+          },
+          {
+            labelKey: 'nav_docs_alternatives',
+            href: '/docs/alternatives',
+            icon: 'FileText',
+          },
+          {
             labelKey: 'nav_faq',
             href: '/docs/faq',
             icon: 'HelpCircle',

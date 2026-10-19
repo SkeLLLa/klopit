@@ -30,6 +30,12 @@
     '/docs/ibi': { label: () => m.nav_docs_ibi(), linkable: true },
     '/docs/ibi/espp': { label: () => m.nav_docs_ibi_espp(), linkable: true },
     '/docs/ibi/rsu': { label: () => m.nav_docs_ibi_rsu(), linkable: true },
+    '/docs/schwab': { label: () => m.nav_docs_schwab(), linkable: true },
+    '/docs/revolut': { label: () => m.nav_docs_revolut(), linkable: true },
+    '/docs/alternatives': {
+      label: () => m.nav_docs_alternatives(),
+      linkable: true,
+    },
   };
 
   interface Crumb {

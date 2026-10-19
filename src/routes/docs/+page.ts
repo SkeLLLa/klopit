@@ -16,6 +16,9 @@ const DOC_LINKS = [
   { name: () => m.nav_docs_ibkr_w8ben(), path: '/docs/ibkr/w8ben/' },
   { name: () => m.nav_docs_ibi_espp(), path: '/docs/ibi/espp/' },
   { name: () => m.nav_docs_ibi_rsu(), path: '/docs/ibi/rsu/' },
+  { name: () => m.nav_docs_schwab(), path: '/docs/schwab/' },
+  { name: () => m.nav_docs_revolut(), path: '/docs/revolut/' },
+  { name: () => m.nav_docs_alternatives(), path: '/docs/alternatives/' },
   {
     name: () => m.nav_docs_div_usa(),
     path: '/docs/dividends/us-15-or-19/',

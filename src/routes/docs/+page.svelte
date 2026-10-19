@@ -24,6 +24,9 @@
     nav_docs_ibkr_w8ben: m.page_docs_desc_ibkr_w8ben,
     nav_docs_ibi_espp: m.page_docs_desc_ibi_espp,
     nav_docs_ibi_rsu: m.page_docs_desc_ibi_rsu,
+    nav_docs_schwab: m.page_docs_desc_schwab,
+    nav_docs_revolut: m.page_docs_desc_revolut,
+    nav_docs_alternatives: m.page_docs_desc_alternatives,
     nav_faq: m.page_docs_desc_faq,
   };
 

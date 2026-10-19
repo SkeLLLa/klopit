@@ -25,6 +25,8 @@ interface BrokerPageContent {
   manualTitle: string;
   manualBody: string;
   manualCta: string;
+  revolutLabel: string;
+  alternativesLabel: string;
   notYetTitle: string;
   notYet: string[];
   sourcesTitle: string;
@@ -60,8 +62,8 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       schwab: {
         importType: 'CSV',
         supportedData:
-          'ESPP deposits, RSU vests and sales; dividends and withholding are not imported yet and must be entered manually',
-        docsHref: '/docs/faq',
+          'ESPP deposits, RSU vests and sales; dividends and withholding are not imported yet (dividends can be added by hand, withholding cannot yet)',
+        docsHref: '/docs/schwab',
         status: 'partial',
       },
     },
@@ -69,7 +71,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     featureHeaders: ['Area', 'Scope in kloPIT'],
     features: [
       ['Broker file import', 'IBKR CSV, IBI PDF, Schwab CSV'],
-      ['Manual entries', 'trades, dividends, withholding, carry-in positions'],
+      ['Manual entries', 'trades, dividends, carry-in positions'],
       [
         'FIFO',
         'matching sales to the oldest lots, including per-grant lots for IBI',
@@ -88,8 +90,10 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     ],
     manualTitle: 'When a broker has no parser',
     manualBody:
-      'You can still use kloPIT by adding transactions, dividends and withholding manually on the Data page. This is a practical path for smaller accounts or brokers waiting for a dedicated importer.',
+      'You can still use kloPIT by adding transactions and dividends manually on the Data page. This is a practical path for smaller accounts or brokers waiting for a dedicated importer.',
     manualCta: 'Add data manually',
+    revolutLabel: 'Revolut guide: manual entry',
+    alternativesLabel: 'Comparison with alternatives',
     notYetTitle: 'Not supported yet',
     notYet: [
       'automatic PIT-8C import from Polish brokers',
@@ -137,8 +141,8 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       schwab: {
         importType: 'CSV',
         supportedData:
-          'wpłaty ESPP, vesting RSU i sprzedaże; dywidendy i podatek u źródła nie są jeszcze importowane i trzeba je wpisać ręcznie',
-        docsHref: '/docs/faq',
+          'wpłaty ESPP, vesting RSU i sprzedaże; dywidendy i podatek u źródła nie są jeszcze importowane (dywidendy można dodać ręcznie, podatku u źródła jeszcze nie)',
+        docsHref: '/docs/schwab',
         status: 'partial',
       },
     },
@@ -146,7 +150,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     featureHeaders: ['Obszar', 'Zakres w kloPIT'],
     features: [
       ['Import plików brokera', 'IBKR CSV, IBI PDF, Schwab CSV'],
-      ['Ręczne wpisy', 'transakcje, dywidendy, withholding, pozycje carry-in'],
+      ['Ręczne wpisy', 'transakcje, dywidendy, pozycje carry-in'],
       [
         'FIFO',
         'dopasowanie sprzedaży do najstarszych partii, także per grant dla IBI',
@@ -168,8 +172,10 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     ],
     manualTitle: 'Gdy broker nie ma parsera',
     manualBody:
-      'Nadal możesz użyć kloPIT, dodając transakcje, dywidendy i withholding ręcznie na stronie Dane. To dobry wariant dla mniejszych rachunków albo brokerów oczekujących na dedykowany import.',
+      'Nadal możesz użyć kloPIT, dodając transakcje i dywidendy ręcznie na stronie Dane. To dobry wariant dla mniejszych rachunków albo brokerów oczekujących na dedykowany import.',
     manualCta: 'Dodaj dane ręcznie',
+    revolutLabel: 'Revolut: ręczne wpisy',
+    alternativesLabel: 'Porównanie z alternatywami',
     notYetTitle: 'Jeszcze nieobsługiwane',
     notYet: [
       'automatyczny import PIT-8C z polskich brokerów',
@@ -218,8 +224,8 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       schwab: {
         importType: 'CSV',
         supportedData:
-          'надходження ESPP, vesting RSU і продажі; дивіденди та податок у джерела поки не імпортуються, їх потрібно вводити вручну',
-        docsHref: '/docs/faq',
+          'надходження ESPP, vesting RSU і продажі; дивіденди та податок у джерела поки не імпортуються (дивіденди можна додати вручну, податок у джерела поки ні)',
+        docsHref: '/docs/schwab',
         status: 'partial',
       },
     },
@@ -227,7 +233,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     featureHeaders: ['Область', 'Покриття в kloPIT'],
     features: [
       ['Імпорт файлів брокера', 'IBKR CSV, IBI PDF, Schwab CSV'],
-      ['Ручні записи', 'транзакції, дивіденди, withholding, початкові позиції'],
+      ['Ручні записи', 'транзакції, дивіденди, початкові позиції'],
       [
         'FIFO',
         'зіставлення продажів із найстарішими лотами, також за grant для IBI',
@@ -249,8 +255,10 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     ],
     manualTitle: 'Коли для брокера немає парсера',
     manualBody:
-      'Ви все одно можете користуватися kloPIT, додаючи транзакції, дивіденди і withholding вручну на сторінці Дані. Це практичний варіант для менших рахунків або брокерів, які ще чекають на окремий імпортер.',
+      'Ви все одно можете користуватися kloPIT, додаючи транзакції і дивіденди вручну на сторінці Дані. Це практичний варіант для менших рахунків або брокерів, які ще чекають на окремий імпортер.',
     manualCta: 'Додати дані вручну',
+    revolutLabel: 'Revolut: ручне введення',
+    alternativesLabel: 'Порівняння з альтернативами',
     notYetTitle: 'Ще не підтримується',
     notYet: [
       'автоматичний імпорт PIT-8C від польських брокерів',
