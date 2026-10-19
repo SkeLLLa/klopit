@@ -2,7 +2,7 @@
 
 Open and partially done work, organized by priority tier. Finished items are removed; see [CHANGELOG.md](CHANGELOG.md) for what shipped.
 
-**Shipped brokers:** Interactive Brokers (CSV), IBI (PDF: confirmations, ESPP, RSU), Charles Schwab (CSV, equity awards). Manual entry is available for all data types.
+**Shipped brokers:** Interactive Brokers (CSV), IBI (PDF: confirmations, ESPP, RSU), Charles Schwab (CSV, equity awards). Manual entry covers trades, transfers, dividends with their withholding tax, and carry-in positions; credit interest and splits/mergers are edit-only (P1.8, P1.9).
 
 ---
 
@@ -20,12 +20,15 @@ Open and partially done work, organized by priority tier. Finished items are rem
 
 Ready-to-file tax outputs and calculation refinements.
 
-| ID       | Feature                       | Brief Description                                                                                                                         | Status |
-| -------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| **P1.1** | e-Deklaracje XML              | Schema-valid XML for PIT-38(18) + embedded PIT/ZG. Direct download → upload to e-Urząd Skarbowy. Build-time XSD validation.               |        |
-| **P1.2** | PIT/ZG Export                 | Printable PIT/ZG(8) cards per country + XML attachment. Verified `poz.` numbering and item 6/7 country display.                           |        |
-| **P1.3** | Loss CF Consistency           | Audit all export formats (UI, PDF, CSV, XML) read from single `TaxSummary` source. No recalculation drift.                                |        |
-| **P1.7** | IBKR §1446(f) PTP withholding | Auto-import US §1446(f) withholding on PTP sales as foreign tax on gains (today entered by hand per sell). Blocked on a sample statement. |        |
+| ID        | Feature                       | Brief Description                                                                                                                                                            | Status |
+| --------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **P1.1**  | e-Deklaracje XML              | Schema-valid XML for PIT-38(18) + embedded PIT/ZG. Direct download → upload to e-Urząd Skarbowy. Build-time XSD validation.                                                  |        |
+| **P1.2**  | PIT/ZG Export                 | Printable PIT/ZG(8) cards per country + XML attachment. Verified `poz.` numbering and item 6/7 country display.                                                              |        |
+| **P1.3**  | Loss CF Consistency           | Audit all export formats (UI, PDF, CSV, XML) read from single `TaxSummary` source. No recalculation drift.                                                                   |        |
+| **P1.7**  | IBKR §1446(f) PTP withholding | Auto-import US §1446(f) withholding on PTP sales as foreign tax on gains (today entered by hand per sell). Blocked on a sample statement.                                    |        |
+| **P1.8**  | Manual credit interest        | Add form for credit interest with a foreign-tax field. `RawCreditInterest` has no foreign tax and `credit-interest.ts` hard-codes it to 0 (plan 14, F1).                     |        |
+| **P1.9**  | Manual split/merger           | Add form for splits and mergers. Today only transfers can be entered; a split is modelled through trade quantities (plan 14, F2).                                            |        |
+| **P1.10** | Manual payment in lieu        | Let the dividend form enter `kind: 'payment-in-lieu'` with its `taxCountry` and the `pil-excess-not-credited` rules. Edited imported PIL rows keep their kind (plan 14, F4). |        |
 
 ---
 
@@ -33,11 +36,12 @@ Ready-to-file tax outputs and calculation refinements.
 
 Integration tests and hardening (IBKR-focused).
 
-| ID       | Feature                  | Brief Description                                                                                                                         | Status  |
-| -------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| **P3.3** | NBP Error Handling       | Done: HTTP 404 (no table that day) is told apart from network errors. Open: retry on network errors, structured logging per walkback hop. | Partial |
-| **P3.4** | E2E Fixture Tests (IBKR) | Parser and calculator tests run on `test/fixtures/ib/*.csv`. Open: CSV → `Pit38Fields` golden-file assertions on every `poz.`.            | Partial |
-| **P3.5** | Totals Validation (IBKR) | Compare IBKR parser aggregates against statement totals (±0.02 PLN). Catch layout drift & partial-parse bugs early.                       |         |
+| ID       | Feature                     | Brief Description                                                                                                                                                   | Status  |
+| -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **P3.3** | NBP Error Handling          | Done: HTTP 404 (no table that day) is told apart from network errors. Open: retry on network errors, structured logging per walkback hop.                           | Partial |
+| **P3.4** | E2E Fixture Tests (IBKR)    | Parser and calculator tests run on `test/fixtures/ib/*.csv`. Open: CSV → `Pit38Fields` golden-file assertions on every `poz.`.                                      | Partial |
+| **P3.5** | Totals Validation (IBKR)    | Compare IBKR parser aggregates against statement totals (±0.02 PLN). Catch layout drift & partial-parse bugs early.                                                 |         |
+| **P3.6** | Import vs manual duplicates | Warn at import when a dividend or withholding row has the same match key and amount as a manual row, so a later import does not credit the tax twice (plan 14, F3). |         |
 
 ---
 
