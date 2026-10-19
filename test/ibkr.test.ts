@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
+import { calculateCapitalGains } from '../src/core/tax/capital-gains.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures', 'ib');
 
@@ -14,6 +15,30 @@ function parseFixture(filename: string) {
     parser.feed({ line });
   }
   return parser.finish();
+}
+
+function parseLines(lines: string[]) {
+  const parser = ibkrDefinition.createParser();
+  for (const line of lines) parser.feed({ line });
+  return parser.finish();
+}
+
+function enrich(statement: ReturnType<typeof parseLines>) {
+  return statement.trades.map((t) => ({
+    ...t,
+    exchangeRate: 4,
+    commissionExchangeRate: 4,
+    rateUnavailable: false,
+  }));
+}
+
+function enrichCarryIns(statement: ReturnType<typeof parseLines>) {
+  return statement.carryInPositions.map((p) => ({
+    ...p,
+    costPln: 0,
+    rateUnavailable: false,
+    costMissing: true,
+  }));
 }
 
 function parseLines(lines: string[]) {
@@ -475,6 +500,21 @@ void describe('InteractiveBrokersParser', () => {
       const result = parser.finish();
       assert.equal(result.dividends[0].isin, 'US0378331005');
     });
+
+    void it('backfills ISIN on carry-in positions from FII', () => {
+      const parser = ibkrDefinition.createParser();
+      parser.feed({
+        line: 'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
+      });
+      parser.feed({
+        line: 'Mark-to-Market Performance Summary,Data,Stocks,AAPL,25,30,175.50,195.20,492.50,0,-1.00,0,491.50,',
+      });
+      parser.feed({
+        line: 'Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,',
+      });
+      const result = parser.finish();
+      assert.equal(result.carryInPositions[0].isin, 'US0378331005');
+    });
   });
 
   void describe('Header-based column resolution', () => {
@@ -639,6 +679,54 @@ void describe('InteractiveBrokersParser', () => {
         result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
         1,
       );
+    });
+  });
+
+  void describe('carry-in end-to-end', () => {
+    const MTM_LINE =
+      'Mark-to-Market Performance Summary,Data,Stocks,AAPL,25,30,175.50,195.20,492.50,0,-1.00,0,491.50,';
+    const FII_LINE =
+      'Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,';
+    const SELL_LINE =
+      'Trades,Data,Order,Stocks,USD,AAPL,"2024-03-15, 10:30:00",-10,200,200,2000,-1.00,0,0,0,C';
+    const PERIOD_LINE =
+      'Statement,Data,Period,"January 1, 2024 - December 31, 2024"';
+
+    const taxPeriod = {
+      year: 2024,
+      from: new Date(2024, 0, 1),
+      to: new Date(2024, 11, 31),
+    };
+
+    void it('calculates an MTM carry-in sold in-year without "No buy lots available"', () => {
+      const statement = parseLines([
+        PERIOD_LINE,
+        MTM_LINE,
+        SELL_LINE,
+        FII_LINE,
+      ]);
+      const result = calculateCapitalGains({
+        trades: enrich(statement),
+        corporateActions: [],
+        carryInPositions: enrichCarryIns(statement),
+        taxPeriod,
+      });
+      assert.equal(result.length, 1);
+      assert.equal(result[0].type, 'sell');
+      assert.equal(result[0].costBasisMissing, true);
+    });
+
+    void it('matches a carry-in from a file without FII to a sell from another file', () => {
+      const carryInFile = parseLines([PERIOD_LINE, MTM_LINE]);
+      const tradesFile = parseLines([PERIOD_LINE, SELL_LINE, FII_LINE]);
+      assert.equal(carryInFile.carryInPositions[0].isin, undefined);
+      const result = calculateCapitalGains({
+        trades: enrich(tradesFile),
+        corporateActions: [],
+        carryInPositions: enrichCarryIns(carryInFile),
+        taxPeriod,
+      });
+      assert.equal(result.length, 1);
     });
   });
 });

@@ -88,7 +88,8 @@ export abstract class CsvStatementParser implements StatementParser {
 
   /** Assemble the final ParsedStatement from accumulated state */
   finish(): ParsedStatement {
-    // Backfill ISINs on trades, dividends, and withholding taxes from the
+    // Backfill ISINs on trades, dividends, withholding taxes, corporate
+    // actions, fees and carry-in positions from the
     // symbolToIsin map. The Financial Instrument Information section may
     // appear AFTER other sections in the CSV, so ISINs might be missing
     // at parse time but available now.
@@ -106,6 +107,9 @@ export abstract class CsvStatementParser implements StatementParser {
     }
     for (const fee of this.transactionFees) {
       fee.isin ??= this.symbolToIsin.get(fee.symbol);
+    }
+    for (const p of this.carryInPositions) {
+      p.isin ??= this.symbolToIsin.get(p.symbol);
     }
 
     // Year inference fallback — max year from all parsed dates

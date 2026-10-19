@@ -21,6 +21,33 @@ const [
   import('../src/lib/state/logger.svelte.js'),
 ]);
 
+async function seedCarryInSession(args: {
+  carryIn: Record<string, unknown>;
+}): Promise<string> {
+  const session = await createSession({ year: 2024 });
+  // PLN sell so the only FX lookup is the carry-in cost.
+  await db.trades.add({
+    sessionId: session.id,
+    symbol: 'AAPL',
+    currency: 'PLN',
+    datetime: new Date(2024, 2, 1, 10, 0, 0),
+    quantity: 10,
+    price: 800,
+    proceeds: 8000,
+    commission: 0,
+    commissionCurrency: 'PLN',
+    type: 'sell',
+  });
+  await db.carryInPositions.add({
+    sessionId: session.id,
+    symbol: 'AAPL',
+    quantity: 10,
+    year: 2023,
+    ...args.carryIn,
+  });
+  return session.id;
+}
+
 void describe('tax service', () => {
   afterEach(async () => {
     mock.restoreAll();
@@ -30,6 +57,7 @@ void describe('tax service', () => {
     await db.trades.clear();
     await db.tradeResults.clear();
     await db.taxSummaries.clear();
+    await db.carryInPositions.clear();
   });
 
   void it('logs settlement-date rate misses with the settlement reference date', async () => {
@@ -87,6 +115,75 @@ void describe('tax service', () => {
         taxRateMissWarnings.map((args) => args.map(String)),
       )}`,
     );
+  });
+
+  void it('converts a USD carry-in cost at the NBP rate from the day before acquisition', async () => {
+    const sessionId = await seedCarryInSession({
+      carryIn: {
+        acquisitionDate: new Date(2023, 4, 10),
+        costBasis: 1500,
+        currency: 'USD',
+        costBasisSource: 'user',
+      },
+    });
+    mock.method(globalThis, 'fetch', async () => {
+      return new Response(
+        JSON.stringify({
+          table: 'A',
+          currency: 'dolar amerykanski',
+          code: 'USD',
+          rates: [
+            { no: '089/A/NBP/2023', effectiveDate: '2023-05-09', mid: 4.2 },
+          ],
+        }),
+        { headers: { 'content-type': 'application/json' }, status: 200 },
+      );
+    });
+
+    await calculateSessionTaxes({ sessionId });
+
+    const results = await db.tradeResults
+      .where('sessionId')
+      .equals(sessionId)
+      .toArray();
+    assert.equal(results.length, 1);
+    assert.ok(Math.abs(results[0].costPln - 1500 * 4.2) < 1e-9);
+    assert.equal(results[0].costBasisMissing, undefined);
+  });
+
+  void it('uses costBasisPln without an FX lookup', async () => {
+    const sessionId = await seedCarryInSession({
+      carryIn: {
+        acquisitionDate: new Date(2023, 4, 10),
+        costBasis: 1500,
+        currency: 'USD',
+        costBasisPln: 6000,
+        costBasisSource: 'user',
+      },
+    });
+    const fetchMock = mock.method(globalThis, 'fetch', async () => {
+      throw new Error('fetch must not be called');
+    });
+
+    await calculateSessionTaxes({ sessionId });
+
+    assert.equal(fetchMock.mock.callCount(), 0);
+    const results = await db.tradeResults
+      .where('sessionId')
+      .equals(sessionId)
+      .toArray();
+    assert.equal(results[0].costPln, 6000);
+  });
+
+  void it('flags a sell from a carry-in without cost', async () => {
+    const sessionId = await seedCarryInSession({ carryIn: {} });
+    await calculateSessionTaxes({ sessionId });
+    const results = await db.tradeResults
+      .where('sessionId')
+      .equals(sessionId)
+      .toArray();
+    assert.equal(results[0].costPln, 0);
+    assert.equal(results[0].costBasisMissing, true);
   });
 });
 

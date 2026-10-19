@@ -14,6 +14,7 @@ import type {
 } from '../../core/types.js';
 import { db } from '../db.js';
 import { createLogger } from '../state/logger.svelte.js';
+import { enrichCarryInPositions } from './carry-in.js';
 import {
   fetchRatesForSession,
   getFixingRate,
@@ -213,6 +214,21 @@ export async function calculateSessionTaxes(args: {
     }),
   );
 
+  // 8b. Resolve carry-in acquisition costs to PLN (art. 22 ust. 1g:
+  // deducted in the year of sale; art. 11a ust. 2: NBP rate before the
+  // acquisition date)
+  const enrichedCarryIns = await enrichCarryInPositions({
+    positions: carryInPositions,
+    getRate: async ({ currency, date }) =>
+      (
+        await tryGetFixingRate({
+          currency,
+          date: toDateString(date),
+          scope: 'carryIn',
+        })
+      )?.rate,
+  });
+
   // 9. Enrich corporate actions with fixing rates for cash component
   const enrichedCorporateActions: EnrichedCorporateAction[] = await Promise.all(
     corporateActions.map(async (ca) => {
@@ -261,7 +277,7 @@ export async function calculateSessionTaxes(args: {
       creditInterests: enrichedCreditInterests,
       withholdingTaxes: enrichedWithholding,
       corporateActions: enrichedCorporateActions,
-      carryInPositions,
+      carryInPositions: enrichedCarryIns,
       priorLosses: priorLosses.map((p) => ({
         year: p.year,
         totalLossPln: p.totalLossPln,
@@ -319,6 +335,7 @@ export async function calculateSessionTaxes(args: {
         pit38: result.pit38,
         pitZg: result.pitZg,
         lossDeduction: result.lossDeduction,
+        carryInWarnings: result.carryInWarnings,
       });
 
       // 13. Update session status

@@ -140,6 +140,25 @@ Polish tax law **requires FIFO** when specific lot identification is not possibl
 
 ---
 
+## Design Decision: Carry-In Cost Basis
+
+### The Problem
+
+Broker statements often report shares held at the start of the year (carry-ins) without their purchase price. Earlier versions seeded them at cost 0 on the assumption that the cost was "already claimed" in prior years. That is wrong: under art. 22 ust. 1g ustawy o PIT the acquisition cost is deducted in the year of **sale**, so a zero cost silently overstates the gain and the tax.
+
+### The Decision
+
+- The user can enter an acquisition date and cost basis (original currency or PLN) per carry-in. Foreign-currency costs are converted at the NBP rate from the business day before acquisition (art. 11a ust. 2).
+- Carry-ins are placed on the FIFO timeline at their acquisition date (art. 24 ust. 10), not in front of everything.
+- When the cost is unknown, the default status is **missing**, not zero. The calculation still runs with 0 PLN, but every affected sale is flagged on the dashboard and the Data page asks for the cost.
+- Zero cost is allowed only as an explicit choice (e.g. RSUs whose value was already taxed as employment income).
+
+### Why Not Silently Use 0?
+
+Following the fail-loud principle (see [Fail-Loud Import Warnings](#design-decision-fail-loud-import-warnings)), a value that can make the user overpay must be visible. Blocking the calculation would be worse: users still need a draft result while they look up old purchase prices.
+
+---
+
 ## Design Decision: Conservative ADR/GDR Fee Treatment
 
 ### The Problem

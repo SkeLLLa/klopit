@@ -175,6 +175,11 @@
                     <AlertTriangle size={14} class="text-amber-500" />
                   </span>
                 {/if}
+                {#if trade.costBasisMissing}
+                  <span title={m.data_cost_status_missing()} aria-label={m.data_cost_status_missing()}>
+                    <AlertTriangle size={14} class="text-red-500" />
+                  </span>
+                {/if}
               </td>
             </tr>
           {/each}
@@ -271,6 +276,11 @@
                     : m.dash_rate_unavailable()}
                   <span class="cursor-help" title={rateHint} aria-label={rateHint}>
                     <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
+                {/if}
+                {#if trade.costBasisMissing}
+                  <span title={m.data_cost_status_missing()} aria-label={m.data_cost_status_missing()}>
+                    <AlertTriangle size={14} class="text-red-500" />
                   </span>
                 {/if}
               </td>

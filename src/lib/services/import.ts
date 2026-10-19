@@ -15,6 +15,7 @@ import {
   type TransactionFeeRecord,
   type WithholdingTaxRecord,
 } from '../db.js';
+import { isCarryInCostMissing } from './carry-in.js';
 import { deriveImportWarnings } from './import-warnings.js';
 import { addImportedFile, appendImportWarnings } from './session.js';
 
@@ -91,10 +92,13 @@ export async function importFile(args: ImportFileArgs): Promise<{
     }),
   );
 
-  // Store carry-in positions
+  // Store carry-in positions. Broker statements carry no acquisition cost,
+  // so mark it explicitly as missing; the Data page asks the user for it.
   const carryInPositions: CarryInPositionRecord[] = result.carryInPositions.map(
     (p) => ({
       ...p,
+      costBasisSource:
+        p.costBasisSource ?? (isCarryInCostMissing(p) ? 'missing' : 'user'),
       sessionId: args.sessionId,
     }),
   );

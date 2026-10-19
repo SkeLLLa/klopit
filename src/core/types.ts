@@ -102,12 +102,47 @@ export interface CorporateAction {
   newSharesValue?: number;
 }
 
-/** Carry-in position from prior year */
+/**
+ * How the acquisition cost of a carry-in position was established.
+ *
+ * - `user` — cost entered by the user (`costBasis` + `currency`, or
+ *   `costBasisPln`).
+ * - `zero-confirmed` — user explicitly confirmed cost 0 (e.g. RSU / incentive
+ *   program shares not taxed at vesting, art. 24 ust. 11-12b updof).
+ * - `missing` — no cost known yet; the result is flagged as not final.
+ */
+export type CarryInCostBasisSource = 'user' | 'zero-confirmed' | 'missing';
+
+/**
+ * Open position carried in from a prior year (shares bought earlier, sold now).
+ * Its acquisition cost is deductible in the year of sale (art. 22 ust. 1g
+ * updof) — it was never "claimed" in the purchase year.
+ *
+ * `quantity` is the position held at the end of `year`.
+ */
 export interface CarryInPosition {
   symbol: string;
   isin?: string;
   quantity: number;
   year: number;
+  /** Real acquisition date: drives FIFO ordering and the NBP rate date. */
+  acquisitionDate?: Date;
+  /** Total cost for `quantity` in `currency`, including commission. */
+  costBasis?: number;
+  /** ISO currency code of `costBasis` ('PLN' allowed). */
+  currency?: string;
+  /** Optional manual PLN total cost override (skips the FX lookup). */
+  costBasisPln?: number;
+  costBasisSource?: CarryInCostBasisSource;
+}
+
+/** Carry-in position with its acquisition cost resolved to PLN. */
+export interface EnrichedCarryInPosition extends CarryInPosition {
+  /** Total PLN cost for `quantity` (0 when missing or rate unavailable). */
+  costPln: number;
+  rateUnavailable: boolean;
+  /** True when no cost was entered and zero cost was not confirmed. */
+  costMissing: boolean;
 }
 
 /**
@@ -232,6 +267,8 @@ export interface TradeResult {
   foreignTaxPln: number;
   /** Foreign tax paid in original currency (default 0). */
   foreignTaxOriginal: number;
+  /** Sell consumed a carry-in lot with no known acquisition cost. */
+  costBasisMissing?: boolean;
 }
 
 /** Warning on a dividend result */

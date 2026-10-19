@@ -6,6 +6,7 @@ import {
 } from '../../core/nbp.js';
 import { db, type NbpRateRecord } from '../db.js';
 import { createLogger } from '../state/logger.svelte.js';
+import { carryInFxDate, needsCarryInFx } from './carry-in.js';
 
 const log = createLogger('rates');
 
@@ -397,12 +398,51 @@ export async function getTradeSettlementFixingRate(args: {
 }
 
 /**
+ * Prefetch a short walk-back window for each carry-in cost date. Carry-ins can
+ * be years older than the session, so they are fetched per date instead of
+ * widening the session-wide range. Failures are logged; the per-row lookup then
+ * reports `rateUnavailable`.
+ */
+async function prefetchCarryInRates(args: {
+  sessionId: string;
+}): Promise<void> {
+  const positions = await db.carryInPositions
+    .where('sessionId')
+    .equals(args.sessionId)
+    .toArray();
+  const windows = new Map<string, { currency: string; date: Date }>();
+  for (const pos of positions) {
+    if (!needsCarryInFx(pos)) continue;
+    const date = carryInFxDate(pos);
+    const currency = pos.currency.toUpperCase();
+    windows.set(`${currency}:${toDateString(date)}`, { currency, date });
+  }
+  for (const { currency, date } of windows.values()) {
+    try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential to avoid hammering the rate-limited NBP API
+      await getCachedRates({
+        currency,
+        startDate: toDateString(addDays(date, -PREFETCH_DAYS_BEFORE)),
+        endDate: toDateString(date),
+      });
+    } catch (e) {
+      log.warn(
+        `prefetchCarryInRates: failed for ${currency} on ${toDateString(date)}`,
+        e,
+      );
+    }
+  }
+}
+
+/**
  * Collect all unique (currency, date) pairs from session data and prefetch
  * rates
  */
 export async function fetchRatesForSession(args: {
   sessionId: string;
 }): Promise<void> {
+  await prefetchCarryInRates(args);
+
   const [trades, dividends, creditInterests, corporateActions] =
     await Promise.all([
       db.trades.where('sessionId').equals(args.sessionId).toArray(),

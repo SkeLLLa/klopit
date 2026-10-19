@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { parseIbiText } from '../src/core/parsers/ibi/index.js';
-import { calculateCapitalGains } from '../src/core/tax/capital-gains.js';
+import {
+  calculateCapitalGains,
+  type CarryInWarning,
+} from '../src/core/tax/capital-gains.js';
 import type {
   EnrichedCorporateAction,
   EnrichedTrade,
@@ -298,7 +301,7 @@ void describe('calculateCapitalGains', () => {
     assert.equal(sells[0].datetime.getDate(), 31);
   });
 
-  void it('uses carry-in positions with zero cost', () => {
+  void it('flags a sell from a carry-in with missing cost (cost 0)', () => {
     const sell = makeTrade({
       datetime: new Date(2024, 5, 10),
       quantity: 50,
@@ -311,12 +314,271 @@ void describe('calculateCapitalGains', () => {
     const result = calculateCapitalGains({
       trades: [sell],
       corporateActions: [],
-      carryInPositions: [{ symbol: 'AAPL', quantity: 100, year: 2024 }],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 100,
+          year: 2023,
+          costPln: 0,
+          rateUnavailable: false,
+          costMissing: true,
+        },
+      ],
       taxPeriod: taxPeriod2024,
     });
 
     assert.equal(result.length, 1);
-    assert.equal(result[0].costPln, 0); // Carry-in has zero cost
+    assert.equal(result[0].costPln, 0);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('matches carry-in keyed by symbol to a sell keyed by ISIN', () => {
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'sell',
+          isin: 'US0378331005',
+          quantity: 10,
+          price: 200,
+          proceeds: 2000,
+          datetime: new Date(2024, 2, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 25,
+          year: 2023,
+          costPln: 0,
+          rateUnavailable: false,
+          costMissing: true,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    // before fix: throws /No buy lots available for AAPL \(US0378331005\)/
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('deducts carry-in acquisition cost in the year of sale', () => {
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'sell',
+          quantity: 10,
+          price: 200,
+          proceeds: 2000,
+          commission: 0,
+          exchangeRate: 4,
+          datetime: new Date(2024, 2, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 10,
+          year: 2023,
+          acquisitionDate: new Date(2023, 4, 10),
+          costBasis: 1500,
+          currency: 'USD',
+          costPln: 6000,
+          rateUnavailable: false,
+          costMissing: false,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result[0].proceedsPln, 8000);
+    assert.equal(result[0].costPln, 6000); // before fix: 0
+    assert.equal(result[0].gainLossPln, 2000);
+    assert.equal(result[0].costBasisMissing, undefined);
+  });
+
+  void it('orders carry-in and imported prior-year buys by acquisition date (FIFO)', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'buy',
+          quantity: 5,
+          price: 10,
+          commission: 0,
+          exchangeRate: 4, // 40 PLN/share
+          datetime: new Date(2023, 2, 1),
+        }),
+        makeTrade({
+          type: 'sell',
+          quantity: 5,
+          price: 20,
+          proceeds: 100,
+          commission: 0,
+          exchangeRate: 4,
+          datetime: new Date(2024, 2, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 10,
+          year: 2023,
+          acquisitionDate: new Date(2023, 5, 1),
+          costPln: 500, // 50 PLN/share
+          rateUnavailable: false,
+          costMissing: false,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    // netPriorQty=5 < carry-in 10 -> residual 5 seeded at 2023-06-01; the
+    // sell consumes the 2023-03-01 lot first.
+    const sells = result.filter((r) => r.type === 'sell');
+    assert.equal(sells.length, 1);
+    assert.equal(sells[0].costPln, 200);
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0].coveredQuantity, 5);
+  });
+
+  void it('does not double count carry-in covered by imported prior-year trades', () => {
+    assert.throws(
+      () =>
+        calculateCapitalGains({
+          trades: [
+            makeTrade({
+              type: 'buy',
+              quantity: 10,
+              datetime: new Date(2023, 3, 1),
+            }),
+            makeTrade({
+              type: 'sell',
+              quantity: 15,
+              proceeds: 3000,
+              datetime: new Date(2024, 3, 1),
+            }),
+          ],
+          corporateActions: [],
+          carryInPositions: [
+            {
+              symbol: 'AAPL',
+              quantity: 10,
+              year: 2023,
+              costPln: 0,
+              rateUnavailable: false,
+              costMissing: true,
+            },
+          ],
+          taxPeriod: taxPeriod2024,
+        }),
+      /Insufficient buy lots .* Short 5/,
+    );
+  });
+
+  void it('keeps cost 0 without flag when user confirmed zero cost (RSU)', () => {
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'sell',
+          quantity: 10,
+          proceeds: 2000,
+          datetime: new Date(2024, 3, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 10,
+          year: 2022,
+          costBasisSource: 'zero-confirmed',
+          costPln: 0,
+          rateUnavailable: false,
+          costMissing: false,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result[0].costPln, 0);
+    assert.equal(result[0].costBasisMissing, undefined);
+  });
+
+  void it('carries costMissing through a stock split', () => {
+    const split: EnrichedCorporateAction = {
+      type: 'stock-split',
+      symbol: 'AAPL',
+      datetime: new Date(2024, 1, 1),
+      numerator: 2,
+      denominator: 1,
+      cashExchangeRate: 0,
+      cashRateUnavailable: false,
+    };
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'sell',
+          quantity: 20,
+          proceeds: 2000,
+          datetime: new Date(2024, 3, 1),
+        }),
+      ],
+      corporateActions: [split],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 10,
+          year: 2023,
+          costPln: 0,
+          rateUnavailable: false,
+          costMissing: true,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('does not re-apply a pre-period split to an end-of-year carry-in quantity', () => {
+    // Carry-in acquired 2022 at 1000 PLN total for what is 20 shares at the
+    // end of 2023 (after a 2:1 split in mid-2023).
+    const split: EnrichedCorporateAction = {
+      type: 'stock-split',
+      symbol: 'AAPL',
+      datetime: new Date(2023, 6, 1),
+      numerator: 2,
+      denominator: 1,
+      cashExchangeRate: 0,
+      cashRateUnavailable: false,
+    };
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'sell',
+          quantity: 20,
+          proceeds: 2000,
+          commission: 0,
+          datetime: new Date(2024, 3, 1),
+        }),
+      ],
+      corporateActions: [split],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 20,
+          year: 2023,
+          acquisitionDate: new Date(2022, 0, 10),
+          costPln: 1000,
+          rateUnavailable: false,
+          costMissing: false,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    assert.ok(Math.abs(result[0].costPln - 1000) < 1e-9);
   });
 
   void it('handles commission in different currency', () => {

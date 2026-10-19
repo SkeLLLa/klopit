@@ -59,3 +59,61 @@ export function renameInteractiveBrokersToIbkr(
     }
   }
 }
+
+/**
+ * V14 migration helpers: carry-in positions gained cost-basis fields and are
+ * now matched to sells by ISIN.
+ */
+export interface LegacyTradeIsinRow {
+  sessionId: string;
+  symbol: string;
+  isin?: string;
+}
+
+export interface LegacyCarryInRow {
+  sessionId: string;
+  symbol: string;
+  isin?: string;
+  costBasis?: number;
+  costBasisPln?: number;
+  costBasisSource?: 'user' | 'zero-confirmed' | 'missing';
+}
+
+function sessionSymbolKey(sessionId: string, symbol: string): string {
+  return `${sessionId}::${symbol.toUpperCase()}`;
+}
+
+/** First non-empty ISIN per (session, upper-cased symbol) from trades. */
+export function buildSessionSymbolIsinMap(
+  trades: Iterable<LegacyTradeIsinRow>,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const trade of trades) {
+    if (!trade.isin) continue;
+    const key = sessionSymbolKey(trade.sessionId, trade.symbol);
+    if (!map.has(key)) map.set(key, trade.isin);
+  }
+  return map;
+}
+
+/**
+ * V14: copy a missing ISIN from a same-session trade with the same symbol, and
+ * mark rows without any cost as `missing` (old rows were silently treated as
+ * cost 0).
+ */
+export function migrateCarryInPositionV14(
+  row: LegacyCarryInRow,
+  isinMap: Map<string, string>,
+): void {
+  if (!row.isin) {
+    const isin = isinMap.get(sessionSymbolKey(row.sessionId, row.symbol));
+    if (isin) row.isin = isin;
+  }
+  if (
+    row.costBasisSource === undefined &&
+    row.costBasis === undefined &&
+    row.costBasisPln === undefined
+  ) {
+    row.costBasisSource = 'missing';
+  }
+}

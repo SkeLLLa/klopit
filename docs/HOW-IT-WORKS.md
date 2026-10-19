@@ -197,9 +197,18 @@ By default both rates are the average NBP Table A rate from the last business da
 
 **Exact algorithm** (`capital-gains.ts`):
 
-**Step 1 — Seed carry-in positions.** Shares owned from prior years are added to the FIFO queue with `costPerSharePln = 0` and `commissionPerSharePln = 0`. This means their cost basis was already claimed in prior tax years; if these shares are sold, only proceeds generate a taxable event.
+**Step 1 — Prepare carry-in positions.** Shares owned before the imported history starts (carry-ins) still carry their acquisition cost. Under [art. 22 ust. 1g ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-22/) that cost is deductible in the year the shares are **sold**, not in the year they were bought, so nothing was "already claimed". Each carry-in gets a PLN cost before the FIFO run:
 
-**Step 2 — Build unified timeline.** All trades and corporate actions are merged into a single timeline, sorted by datetime. On the same datetime, **corporate actions are processed before trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
+- `costBasisPln` entered by the user is used as is.
+- `costBasis` in a foreign currency is converted at the NBP rate from the last business day before the acquisition date ([art. 11a ust. 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)). Without an acquisition date, December 31 of the carry-in year is used.
+- A cost explicitly confirmed as zero (e.g. RSUs whose value was taxed as employment income) is 0.
+- Otherwise the cost is **missing**: it counts as 0 PLN, but every sale that consumes the lot is flagged (`costBasisMissing`) on the dashboard and in the transactions table, so the user knows the gain is overstated.
+
+Carry-ins are keyed by ISIN when known (the parser back-fills it from the statement's instrument list), falling back to the symbol, so they match the trades that sell them.
+
+**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date (or at the end of its year when no date is known), so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
+
+To avoid double counting, if the imported history already contains buys before the tax period for the same instrument, only the part of the carry-in quantity not covered by those buys is seeded (the latest-acquired carry-ins are reduced first) and a warning is shown. Splits dated between a carry-in's acquisition and the period start are assumed to be already reflected in its quantity and are not applied again.
 
 **Step 3 — Process events in chronological order.**
 
@@ -730,6 +739,8 @@ When you download your Activity Statement from Interactive Brokers and import it
 5. **Carry-In Positions**
    - Shares you owned before importing (from prior years)
    - Needed for accurate FIFO calculations
+   - Imported from broker statements (e.g. IBKR Mark-to-Market prior quantity) without a cost; add the acquisition date and cost basis on the Data page, or confirm a zero cost for RSUs
+   - Sales of carry-ins without a cost are flagged as "cost missing"
 
 6. **Credit Interest**
    - Interest earned on uninvested cash balances
@@ -796,7 +807,7 @@ Each session contains:
 - **Dividends table:** All dividend income
 - **Withholding table:** Tax withheld abroad
 - **Corporate actions table:** Stock splits and similar events
-- **Carry-in positions table:** Prior year shares
+- **Carry-in positions table:** Prior year shares with optional acquisition date, cost basis (original currency or PLN) and cost status
 - **Credit interest table:** Interest earned on uninvested cash
 - **Results table:** Calculated gains, losses, tax amounts
 - **Tax summary:** Final PIT-38 form fields ready for reporting
@@ -849,7 +860,7 @@ The app supports **three languages:**
 1. **Load data** — Fetch all trades, dividends, withholding taxes, corporate actions, and carry-in positions from your session in IndexedDB
 2. **Resolve exchange rates** — For each transaction, fetch the NBP Table A average rate from the last business day before the event date. Each trade gets two rates (amount + commission), optionally based on estimated T+2 settlement dates when that session setting is enabled. Each dividend and withholding tax entry gets its own rate.
 3. **Capital gains** (`calculateCapitalGains`):
-   - Seed carry-in positions into FIFO queues (cost = 0, already claimed)
+   - Add carry-in positions to the timeline at their acquisition date with their PLN cost (missing cost counts as 0 and is flagged)
    - Build unified timeline of trades + corporate actions, sorted chronologically
    - Process each event: buys push lots, corporate actions modify lots, sells consume lots via FIFO
    - Record sell results with PLN amounts for trades within the tax period

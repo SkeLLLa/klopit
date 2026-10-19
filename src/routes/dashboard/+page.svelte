@@ -84,6 +84,12 @@
     creditInterestResults.some((r: CreditInterestResultRecord) => r.rateUnavailable),
   );
 
+  // --- Carry-in cost basis warnings ---
+  const hasCostBasisMissing = $derived(
+    tradeResults.some((t: TradeResultRecord) => t.costBasisMissing === true),
+  );
+  const carryInWarnings = $derived(taxSummary?.carryInWarnings ?? []);
+
   // --- Sell trades count ---
   const sellTradeCount = $derived(
     tradeResults.filter((t: TradeResultRecord) => t.type === 'sell').length,
@@ -201,6 +207,32 @@
         <AlertTriangle size={16} />
         <span>{m.dash_rates_warning()}</span>
         <a href="/rates" class="ml-auto font-medium underline">{m.page_rates()}</a>
+      </div>
+    {/if}
+
+    <!-- Carry-in cost basis missing banner -->
+    {#if hasCostBasisMissing}
+      <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+        <AlertTriangle size={16} />
+        <span>{m.dashboard_cost_basis_missing_warning()}</span>
+        <a href="/data" class="ml-auto font-medium underline">{m.data_tab_carry_in()}</a>
+      </div>
+    {/if}
+
+    <!-- Carry-in overlap with imported prior-year trades -->
+    {#if carryInWarnings.length > 0}
+      <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+        <ul class="list-disc space-y-1 pl-5">
+          {#each carryInWarnings as warning, i (i)}
+            <li>
+              {m.import_warning_carry_in_overlap({
+                symbol: warning.symbol,
+                covered: String(warning.coveredQuantity),
+                quantity: String(warning.carryInQuantity),
+              })}
+            </li>
+          {/each}
+        </ul>
       </div>
     {/if}
 

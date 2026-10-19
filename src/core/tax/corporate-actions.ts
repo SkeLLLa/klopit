@@ -5,6 +5,8 @@ export interface FifoLot {
   commissionPerSharePln: number;
   /** The buy that created this lot had no NBP rate; its cost was counted as 0. */
   rateUnavailable?: boolean;
+  /** Lot comes from a carry-in position with no known acquisition cost. */
+  costMissing?: boolean;
 }
 
 /** Result of applying a merger to lots */
@@ -15,6 +17,8 @@ export interface MergerResult {
   cashCurrency: string;
   /** At least one input lot had no NBP rate (its cost was counted as 0). */
   costRateUnavailable: boolean;
+  /** Any consumed lot had no known acquisition cost. */
+  costMissing?: boolean;
 }
 
 /**
@@ -48,6 +52,7 @@ export function applyStockSplit(args: {
     costPerSharePln: lot.costPerSharePln / factor,
     commissionPerSharePln: lot.commissionPerSharePln / factor,
     rateUnavailable: lot.rateUnavailable,
+    ...(lot.costMissing ? { costMissing: true } : {}),
   }));
 }
 
@@ -88,6 +93,9 @@ export function applyMerger(args: {
     0,
   );
 
+  const costMissing = args.lots.some((lot) => lot.costMissing === true);
+  const missingFlag = costMissing ? { costMissing: true } : {};
+
   const cashProceeds = totalOldQty * args.cashPerShare;
   const totalNewQty = totalOldQty * args.conversionRatio;
 
@@ -115,6 +123,7 @@ export function applyMerger(args: {
       cashCostPln: totalCostPln,
       cashCurrency: args.cashCurrency,
       costRateUnavailable,
+      ...missingFlag,
     };
   }
 
@@ -125,11 +134,13 @@ export function applyMerger(args: {
         costPerSharePln: remainingCostPln / totalNewQty,
         commissionPerSharePln: 0,
         rateUnavailable: costRateUnavailable,
+        ...missingFlag,
       },
     ],
     cashProceeds,
     cashCostPln: allocatedCashCostPln,
     cashCurrency: args.cashCurrency,
     costRateUnavailable,
+    ...missingFlag,
   };
 }

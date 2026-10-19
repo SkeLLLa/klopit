@@ -6,6 +6,7 @@ export type {
   RawCreditInterest,
   CorporateAction,
   CarryInPosition,
+  EnrichedCarryInPosition,
   TransactionFee,
   ParsedStatement,
   TradeResult,

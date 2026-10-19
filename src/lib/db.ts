@@ -1,5 +1,6 @@
 import { Dexie, type EntityTable } from 'dexie';
 
+import type { CarryInWarning } from '../core/tax/capital-gains.js';
 import type { ApplyLossCarryForwardResult } from '../core/tax/loss-carry-forward.js';
 import type {
   CarryInPosition,
@@ -19,9 +20,13 @@ import type {
 } from '../core/types.js';
 import { installStaleHooks } from './db-hooks.js';
 import {
+  buildSessionSymbolIsinMap,
+  migrateCarryInPositionV14,
   renameInteractiveBrokersToIbkr,
   stripLegacyPriorYearLoss,
+  type LegacyCarryInRow,
   type LegacySessionRecord,
+  type LegacyTradeIsinRow,
   type SessionWithFiles,
 } from './db-migrations.js';
 
@@ -159,6 +164,8 @@ export interface TaxSummaryRecord {
    * the calculation considered prior-year losses.
    */
   lossDeduction?: ApplyLossCarryForwardResult;
+  /** Carry-ins (partly) covered by imported prior-year trades. */
+  carryInWarnings?: CarryInWarning[];
 }
 
 export interface NbpRateRecord {
@@ -338,6 +345,34 @@ export class KlopitDB extends Dexie {
         .modify((session) => {
           delete session.includeAllInPitZg;
           session.showDividendsInPitZg = false;
+          session.status = 'draft';
+          session.calculatedAt = undefined;
+          session.dataUpdatedAt = new Date();
+        });
+    });
+    // v14: carry-in positions gained cost basis / acquisition date and are
+    // matched to sells by ISIN. Non-destructive: backfill ISINs from
+    // same-session trades, mark rows without cost as `missing`, and
+    // invalidate results that were computed with a silent cost of 0.
+    this.version(14).upgrade(async (tx) => {
+      const trades = await tx.table<LegacyTradeIsinRow>('trades').toArray();
+      const isinMap = buildSessionSymbolIsinMap(trades);
+      await tx
+        .table<LegacyCarryInRow>('carryInPositions')
+        .toCollection()
+        .modify((row) => {
+          migrateCarryInPositionV14(row, isinMap);
+        });
+      await Promise.all([
+        tx.table('tradeResults').clear(),
+        tx.table('dividendResults').clear(),
+        tx.table('creditInterestResults').clear(),
+        tx.table('taxSummaries').clear(),
+      ]);
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
           session.status = 'draft';
           session.calculatedAt = undefined;
           session.dataUpdatedAt = new Date();

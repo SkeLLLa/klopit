@@ -201,6 +201,90 @@ void describe('KlopitDB schema upgrade', () => {
 
     klopit.close();
   });
+
+  void it('v14 preserves source tables, backfills carry-in ISIN and invalidates results', async () => {
+    const dbName = `klopit_upgrade_${String(Date.now())}_${Math.random().toString(36).slice(2)}`;
+
+    // Seed a v13 database by opening a KlopitDB-shaped schema up to v13.
+    const legacy = new Dexie(dbName);
+    legacy.version(1).stores({
+      sessions: 'id, year',
+      trades: '++id, sessionId, symbol, datetime',
+      dividends: '++id, sessionId, symbol, date',
+      corporateActions: '++id, sessionId, datetime',
+      tradeResults: '++id, sessionId, symbol, datetime',
+      dividendResults: '++id, sessionId, symbol, date',
+      taxSummaries: 'sessionId',
+      nbpRates: 'id, currency, date',
+    });
+    legacy.version(2).stores({
+      withholdingTaxes: '++id, sessionId, symbol, date',
+      carryInPositions: '++id, sessionId, symbol',
+      transactionFees: '++id, sessionId, symbol, datetime',
+    });
+    legacy.version(3).stores({
+      symbolCountryOverrides: '++id, sessionId, symbol',
+    });
+    legacy.version(6).stores({
+      priorLosses: '++id, sessionId, year, [sessionId+year]',
+    });
+    legacy.version(8).stores({
+      creditInterests: '++id, sessionId, date',
+      creditInterestResults: '++id, sessionId, date',
+    });
+    legacy.version(10).stores({
+      trades:
+        '++id, sessionId, symbol, datetime, [sessionId+symbol], [sessionId+symbol+isin]',
+      dividends:
+        '++id, sessionId, symbol, date, [sessionId+symbol], [sessionId+symbol+isin]',
+    });
+    legacy.version(13).stores({ sessions: 'id, year' });
+    await legacy.open();
+    await legacy.table('sessions').add({
+      id: 's1',
+      year: 2024,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      files: [],
+      status: 'calculated',
+      calculatedAt: new Date('2025-04-01T00:00:00.000Z'),
+    });
+    await legacy.table('trades').bulkAdd([
+      { sessionId: 's1', symbol: 'AAPL', isin: 'US0378331005', type: 'sell' },
+      { sessionId: 's1', symbol: 'MSFT', type: 'sell' },
+    ]);
+    await legacy.table('carryInPositions').bulkAdd([
+      { sessionId: 's1', symbol: 'AAPL', quantity: 25, year: 2023 },
+      { sessionId: 's1', symbol: 'MSFT', quantity: 5, year: 2023 },
+    ]);
+    await legacy.table('tradeResults').add({
+      sessionId: 's1',
+      symbol: 'AAPL',
+      datetime: new Date(),
+      type: 'sell',
+    });
+    legacy.close();
+
+    const klopit = new KlopitDB(dbName);
+    await klopit.open();
+
+    assert.equal(await klopit.trades.count(), 2);
+    assert.equal(await klopit.carryInPositions.count(), 2);
+    assert.equal(await klopit.tradeResults.count(), 0);
+
+    const carryIns = await klopit.carryInPositions.orderBy('symbol').toArray();
+    assert.equal(carryIns[0].isin, 'US0378331005');
+    assert.equal(carryIns[0].costBasisSource, 'missing');
+    assert.equal(carryIns[0].quantity, 25);
+    assert.equal(carryIns[1].isin, undefined);
+
+    const session = await klopit.sessions.get('s1');
+    assert.ok(session);
+    assert.equal(session.status, 'draft');
+    assert.equal(session.calculatedAt, undefined);
+
+    klopit.close();
+  });
 });
 
 void describe('KlopitDB v15 upgrade (NBP null-rate purge)', () => {

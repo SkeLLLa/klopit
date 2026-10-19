@@ -1,6 +1,6 @@
 import {
   TAX_RATE,
-  type CarryInPosition,
+  type EnrichedCarryInPosition,
   type CreditInterestResult,
   type DividendResult,
   type EnrichedCorporateAction,
@@ -25,7 +25,7 @@ import {
   sumProceeds,
   sumWithholding,
 } from './aggregates.js';
-import { calculateCapitalGains } from './capital-gains.js';
+import { calculateCapitalGains, type CarryInWarning } from './capital-gains.js';
 import { calculateCreditInterest } from './credit-interest.js';
 import { calculateDividends } from './dividends.js';
 import { type ApplyLossCarryForwardResult } from './loss-carry-forward.js';
@@ -39,7 +39,7 @@ export interface CalculateTaxesArgs {
   creditInterests?: EnrichedCreditInterest[];
   withholdingTaxes: EnrichedWithholdingTax[];
   corporateActions: EnrichedCorporateAction[];
-  carryInPositions: CarryInPosition[];
+  carryInPositions: EnrichedCarryInPosition[];
   /**
    * Prior-year capital losses (art. 9 ust. 3 updof). Replaces the legacy
    * single-number `priorYearLoss` field — each year carries its own residual
@@ -61,6 +61,8 @@ export interface TaxCalculationResult {
   pitZg: PitZgFields[];
   /** Per-year breakdown of how prior-year losses were applied. */
   lossDeduction: ApplyLossCarryForwardResult;
+  /** Carry-ins (partly) covered by imported prior-year trades. */
+  carryInWarnings: CarryInWarning[];
 }
 
 /** Orchestrate full tax calculation pipeline */
@@ -81,12 +83,14 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
 
   const countryMap = args.symbolCountryMap ?? new Map<string, string>();
 
+  const carryInWarnings: CarryInWarning[] = [];
   const tradeResults = calculateCapitalGains({
     trades,
     corporateActions,
     carryInPositions,
     taxPeriod,
     symbolCountryMap: countryMap,
+    onWarning: (warning) => carryInWarnings.push(warning),
   });
 
   const dividendResults = calculateDividends({
@@ -140,6 +144,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     pit38,
     pitZg,
     lossDeduction,
+    carryInWarnings,
   };
 }
 

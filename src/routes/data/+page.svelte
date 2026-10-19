@@ -4,6 +4,7 @@
     deriveImportWarnings,
     mergeImportWarnings,
   } from '$lib/services/import.js';
+  import { isCarryInCostMissing } from '$lib/services/carry-in.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { db, type SessionRecord } from '$lib/db.js';
@@ -71,6 +72,12 @@
         db.carryInPositions.where('sessionId').equals(activeSessionId).count(),
       ]);
     return { trades, dividends, withholding, corporateActions, creditInterest, carryIn };
+  });
+  // Carry-ins without an acquisition cost (imported from MTM or legacy rows).
+  const carryInsMissingCost = useLiveQuery<string[]>(async () => {
+    if (!activeSessionId) return [];
+    const rows = await db.carryInPositions.where('sessionId').equals(activeSessionId).toArray();
+    return [...new Set(rows.filter(isCarryInCostMissing).map((row) => row.symbol))];
   });
   const inMemorySkippedRows = $derived(
     activeSessionId ? skippedRowsStore.getSkippedRows({ sessionId: activeSessionId }) : [],
@@ -171,6 +178,16 @@
         </details>
       {/if}
 
+      {#if (carryInsMissingCost.current ?? []).length > 0}
+        <div
+          class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          {m.import_warning_carry_in_cost_missing({
+            symbols: (carryInsMissingCost.current ?? []).join(', '),
+          })}
+        </div>
+      {/if}
+
       <DataTabs activeTab="trades" {counts}>
         {#snippet children(tab)}
           {#if tab === 'trades'}
@@ -184,7 +201,7 @@
           {:else if tab === 'corporateActions'}
             <CorporateActionsTable sessionId={activeSession.id} />
           {:else if tab === 'carryIn'}
-            <CarryInTable sessionId={activeSession.id} />
+            <CarryInTable sessionId={activeSession.id} sessionYear={activeSession.year} />
           {:else if tab === 'skipped'}
             <SkippedTable sessionId={activeSession.id} />
           {/if}
