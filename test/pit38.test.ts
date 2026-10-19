@@ -668,4 +668,42 @@ void describe('buildPit38', () => {
     assert.equal(result[51], 997.34);
     assert.equal(result[51], result[35] + result[49]);
   });
+
+  void it('shifts poz. 22/23 by sell commission, poz. 28 unchanged', () => {
+    const build = (commission: number) =>
+      buildPit38({
+        trades: [
+          makeSellResult({
+            proceedsPln: 50000,
+            costPln: 30000 + commission,
+            gainLossPln: 20000 - commission,
+            taxPln: 0,
+          }),
+        ],
+        dividends: [],
+        creditInterests: [],
+        summary: makeSummary({
+          totalProceedsPln: 50000,
+          totalCostPln: 30000 + commission,
+        }),
+      });
+    // Same economic trade: commission moves from netting proceeds to cost
+    const net = build(0);
+    const gross = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 50100,
+          costPln: 30100,
+          gainLossPln: 20000,
+          taxPln: 0,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      summary: makeSummary({ totalProceedsPln: 50100, totalCostPln: 30100 }),
+    });
+    assert.equal(gross[22], net[22] + 100);
+    assert.equal(gross[23], net[23] + 100);
+    assert.equal(gross[28], net[28]);
+  });
 });

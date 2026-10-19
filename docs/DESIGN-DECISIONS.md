@@ -168,6 +168,24 @@ kloPIT imports ADR/GDR/CDI accrual rows as transaction fees, but the default tax
 
 ---
 
+## Design Decision: Gross Proceeds, Sell Commission as Cost
+
+### The Problem
+
+A sell commission can reduce the taxable gain in two equivalent ways: net it off proceeds (PIT-38 poz. 22) or count it as a cost (poz. 23). Dochód and tax are identical; only the 22/23 split differs.
+
+### The Decision
+
+Poz. 22 reports **gross** sale proceeds and the sell commission is added to poz. 23.
+
+### Grounding
+
+- The MF PIT-38 brochure for 2025 (wiersz 2, poz. 23) lists as costs "prowizje zapłacone przy kupnie i sprzedaży papierów wartościowych". Its worked example shows przychód 20 000 and koszty 10 000 + 100 commissions.
+- PIT-8C (poz. 35/36) and CRS reports are gross, so a gross poz. 22 reconciles with them; a net one is what fails reconciliation.
+- Trade-off: the literal art. 19 ust. 1 ("pomniejszona o koszty odpłatnego zbycia") supports netting. We follow MF practice as the least audit-contestable option.
+
+---
+
 ## Design Decision: Rate Caching
 
 ### The Problem

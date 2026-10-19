@@ -153,7 +153,10 @@
               >
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
-                >{formatPlnValue(trade.costPln)}</td
+                >{formatPlnValue(trade.costPln)}{#if trade.sellCommissionPln}<div
+                  class="text-xs text-slate-500 dark:text-slate-400"
+                  >{m.dash_tax_sell_commission_included({ amount: formatPlnValue(trade.sellCommissionPln) })}</div
+                >{/if}</td
               >
               <td
                 class="px-3 py-2 text-right tabular-nums {trade.gainLossPln >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}"

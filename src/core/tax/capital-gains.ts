@@ -255,9 +255,10 @@ function processTrade(args: {
     }
   } else {
     // Sell — consume lots FIFO
+    // Gross proceeds go to PIT-38 poz. 22; the sell commission is a cost
+    // (poz. 23) per the MF PIT-38 brochure, so gain/loss is unchanged.
     const proceedsPln = trade.proceeds * trade.exchangeRate;
-    const commissionPln = trade.commission * trade.commissionExchangeRate;
-    const netProceedsPln = proceedsPln - commissionPln;
+    const sellCommissionPln = trade.commission * trade.commissionExchangeRate;
 
     let totalCostPln = 0;
     let remainingQty = trade.quantity;
@@ -299,6 +300,8 @@ function processTrade(args: {
       );
     }
 
+    totalCostPln += sellCommissionPln;
+
     if (isInPeriod({ datetime: trade.datetime, taxPeriod })) {
       results.push({
         symbol: trade.symbol,
@@ -311,10 +314,11 @@ function processTrade(args: {
         commission: trade.commission,
         currency: trade.currency,
         exchangeRate: trade.exchangeRate,
-        proceedsPln: netProceedsPln,
+        proceedsPln,
         costPln: totalCostPln,
-        gainLossPln: netProceedsPln - totalCostPln,
-        taxPln: Math.max(netProceedsPln - totalCostPln, 0) * TAX_RATE,
+        sellCommissionPln,
+        gainLossPln: proceedsPln - totalCostPln,
+        taxPln: Math.max(proceedsPln - totalCostPln, 0) * TAX_RATE,
         rateUnavailable: trade.rateUnavailable || costRateUnavailable,
         costRateUnavailable,
         country: args.symbolCountryMap.get(trade.symbol) ?? 'XX',

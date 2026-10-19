@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
+import { parseIbiText } from '../src/core/parsers/ibi/index.js';
 import { calculateCapitalGains } from '../src/core/tax/capital-gains.js';
 import type {
   EnrichedCorporateAction,
   EnrichedTrade,
   TaxPeriod,
 } from '../src/core/types.js';
+
+const RSU_TEXT = readFileSync(
+  new URL('./fixtures/ibi-rsu-sample.txt', import.meta.url),
+  'utf8',
+);
 
 const taxPeriod2024: TaxPeriod = {
   year: 2024,
@@ -80,14 +87,14 @@ void describe('calculateCapitalGains', () => {
     // Sell result
     const sellResult = result[1];
     assert.equal(sellResult.type, 'sell');
-    // proceedsPln = 16000 * 4.1 - 1 * 4.1 = 65600 - 4.1 = 65595.9
+    // proceedsPln is gross: 16000 * 4.1 = 65600 (sell commission is a cost)
     assert.ok(
-      Math.abs(sellResult.proceedsPln - 65595.9) < 0.01,
+      Math.abs(sellResult.proceedsPln - 65600) < 0.01,
       `proceedsPln: ${String(sellResult.proceedsPln)}`,
     );
-    // costPln = 100 * (150*4.0 + 1*4.0/100) = 100 * (600 + 0.04) = 60004
+    // costPln = lots 60004 + sell commission 1*4.1 = 60008.1
     assert.ok(
-      Math.abs(sellResult.costPln - 60004) < 0.01,
+      Math.abs(sellResult.costPln - 60008.1) < 0.01,
       `costPln: ${String(sellResult.costPln)}`,
     );
     assert.ok(
@@ -1274,5 +1281,57 @@ void describe('calculateCapitalGains — missing rate propagation', () => {
       taxPeriod: taxPeriod2024,
     });
     assert.equal(res[0].rateUnavailable, true);
+  });
+
+  void it('reports gross proceeds and counts sell commission as cost', () => {
+    const buy = makeTrade({ quantity: 10, price: 100, commission: 0 });
+    const sell = makeTrade({
+      datetime: new Date(2024, 8, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+      commission: 5,
+      exchangeRate: 4,
+      commissionExchangeRate: 4,
+    });
+    const [, r] = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(r.proceedsPln, 4800);
+    assert.equal(r.sellCommissionPln, 20);
+    assert.equal(r.costPln, 4000 + 20);
+    // Same as the net-proceeds treatment: (4800 - 20) - 4000
+    assert.equal(r.gainLossPln, 780);
+    assert.ok(Math.abs(r.taxPln - 780 * 0.19) < 1e-9);
+  });
+
+  void it('IBI RSU sale: gross 3,125.00 proceeds, fees 4.17 in cost', () => {
+    const parsed = parseIbiText({ text: RSU_TEXT });
+    const rate = 4;
+    const trades: EnrichedTrade[] = parsed.trades.map((t) => ({
+      ...t,
+      exchangeRate: rate,
+      commissionExchangeRate: rate,
+      rateUnavailable: false,
+    }));
+    const results = calculateCapitalGains({
+      trades,
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: {
+        year: 2024,
+        from: new Date(2024, 0, 1),
+        to: new Date(2024, 11, 31),
+      },
+    });
+    const sellRes = results.find((r) => r.type === 'sell');
+    assert.ok(sellRes);
+    assert.ok(Math.abs(sellRes.proceedsPln - 3125 * rate) < 1e-9);
+    assert.ok(Math.abs(sellRes.costPln - 4.17 * rate) < 1e-9);
+    assert.ok(Math.abs(sellRes.gainLossPln - (3125 - 4.17) * rate) < 1e-9);
   });
 });

@@ -218,9 +218,8 @@ commissionPerSharePln = commissionPln / quantity
 **For a SELL trade:**
 
 ```
-proceedsPln     = proceeds × exchangeRate
-commissionPln   = commission × commissionExchangeRate
-netProceedsPln  = proceedsPln − commissionPln        ← sell commission reduces proceeds
+proceedsPln         = proceeds × exchangeRate              ← gross (PIT-38 poz. 22)
+sellCommissionPln   = commission × commissionExchangeRate
 
 totalCostPln = 0
 remainingQty = sell quantity
@@ -233,7 +232,9 @@ WHILE remainingQty > 0 AND queue is not empty:
     IF usedQty >= lot.quantity → remove lot from queue
     ELSE → reduce lot.quantity by usedQty
 
-gainLossPln = netProceedsPln − totalCostPln
+totalCostPln += sellCommissionPln                    ← sell commission is a cost (poz. 23)
+
+gainLossPln = proceedsPln − totalCostPln
 ```
 
 If the queue is empty before all shares are consumed, the calculator throws an error (insufficient buy lots).
@@ -247,15 +248,14 @@ If the queue is empty before all shares are consumed, the calculator throws an e
 - Sell 120 AAPL on Jan 20 at $170 (NBP rate 4.05), commission $10
 
 ```
-proceedsPln    = 120 × 170 × 4.05 = 82,620 PLN
-commissionPln  = 10 × 4.05 = 40.50 PLN
-netProceedsPln = 82,620 − 40.50 = 82,579.50 PLN
+proceedsPln        = 120 × 170 × 4.05 = 82,620 PLN (gross)
+sellCommissionPln  = 10 × 4.05 = 40.50 PLN
 
 FIFO lot 1: 100 shares × 600 PLN = 60,000 PLN (+ buy commission)
 FIFO lot 2:  20 shares × 656 PLN = 13,120 PLN (+ buy commission)
-totalCostPln = 73,120 PLN + buy commissions
+totalCostPln = 73,120 PLN + buy commissions + 40.50 sell commission
 
-gainLossPln = 82,579.50 − totalCostPln
+gainLossPln = 82,620 − totalCostPln
 ```
 
 ---
@@ -331,12 +331,12 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 
 - **Buy price in PLN:** `price × NBP_rate_from_day_before_buy`
 - **Buy commission in PLN:** `commission × NBP_rate_from_day_before_buy`
-- Both are stored per-share in the FIFO lot and consumed proportionally on sell
+- **Sell commission in PLN:** `commission × NBP_rate_from_day_before_sell`, added to the cost of that sell (PIT-38 poz. 23)
+- Buy price and buy commission are stored per-share in the FIFO lot and consumed proportionally on sell
 
 **What counts as proceeds (przychody):**
 
-- **Sell price in PLN:** `proceeds × NBP_rate_from_day_before_sell`
-- **Minus sell commission in PLN:** `commission × NBP_rate_from_day_before_sell`
+- **Gross sell proceeds in PLN:** `proceeds × NBP_rate_from_day_before_sell` (poz. 22). The sell commission is not subtracted here; it is a cost (see above)
 
 **Rounding:** Tax base and tax owed are rounded to full złoty using mathematical rounding ([art. 63 § 1 Ordynacji podatkowej](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/) — amounts ending in less than 50 groszy are discarded, 50 groszy and above are rounded up to the next full złoty).
 

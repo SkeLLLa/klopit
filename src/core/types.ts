@@ -219,6 +219,8 @@ export interface TradeResult {
   exchangeRate: number;
   proceedsPln: number;
   costPln: number;
+  /** Sell commission in PLN, already included in costPln (0 for non-sells). */
+  sellCommissionPln?: number;
   gainLossPln: number;
   rateUnavailable: boolean;
   /** A FIFO lot consumed by this sell had no NBP rate; its cost was counted as 0. */
