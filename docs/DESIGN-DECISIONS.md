@@ -14,7 +14,7 @@ This document explains the _why_ behind kloPIT's design — the thinking that go
 
 1. **Privacy**: Your broker statements and tax data never leave your browser
 2. **Simplicity**: No server to maintain, no authentication system, no payment processing
-3. **Reliability**: Works offline. Works forever (as long as browsers exist)
+3. **Reliability**: No backend to go down. Needs the network only to fetch NBP rates that are not cached yet (there is no service worker, so the site itself is not installable offline)
 4. **Speed**: No network latency. Calculations run instantly
 
 ### What This Means for Design
@@ -40,7 +40,7 @@ This document explains the _why_ behind kloPIT's design — the thinking that go
 │ Core Library (Pure TypeScript)  │  ← Tax domain logic
 │   - FIFO algorithm              │
 │   - Tax formulas                │
-│   - CSV parsers                 │
+│   - CSV and PDF parsers         │
 └─────────────────────────────────┘
 ```
 
@@ -90,9 +90,10 @@ This document explains the _why_ behind kloPIT's design — the thinking that go
 
 CSV files from different brokers look different:
 
-- Interactive Brokers: 200+ rows of mixed data
-- Fidelity: Different columns, different structure
-- Etc.
+- Interactive Brokers (CSV): 200+ rows of mixed data
+- IBI (PDF): confirmations, ESPP and RSU statements
+- Charles Schwab (CSV): equity awards and transactions
+- A future broker such as Fidelity: different columns, different structure
 
 Auto-detecting the broker from the file is tempting but leads to:
 
@@ -102,7 +103,7 @@ Auto-detecting the broker from the file is tempting but leads to:
 
 ### The Solution
 
-**Explicit broker selection**: User picks "Interactive Brokers" before importing.
+**Explicit broker selection**: User picks a broker from the dropdown (IBKR / IBI / Schwab) before importing.
 
 That explicit choice is paired with **fail-loud section classification** inside the parser. Once the user says "this is an IBKR statement", the app treats every IBKR section intentionally: supported sections are parsed, clearly tax-irrelevant sections are ignored, and unsupported or unknown sections are surfaced back to the user as warnings instead of being dropped silently.
 
@@ -111,7 +112,7 @@ That explicit choice is paired with **fail-loud section classification** inside 
 - User confirms intent ("yes, I'm uploading IB data")
 - Error messages are clear ("Interactive Brokers parser failed on line 42")
 - Unsupported data is visible ("Options section skipped") instead of disappearing silently
-- Easy to add new brokers (just register a new parser)
+- Easy to add new brokers (one parser definition, added to `ALL_PARSERS`)
 - User can upload multiple file types to one session
 
 ---
@@ -187,7 +188,7 @@ kloPIT imports ADR/GDR/CDI accrual rows as transaction fees, but the default tax
 | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | These rows should be imported because they represent actual ADR/GDR/CDI account fees.                                           | [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php)                                                                                                         |
 | Separate cash-account debits should not be silently netted against dividend income.                                             | [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php)                                                                                                         |
-| The safest Polish PIT default is no cost reduction for art. 30a dividend income.                                                | [PIT Act art. 30a, especially ust. 1 pkt 4 and ust. 6](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                                                                         |
+| The safest Polish PIT default is no cost reduction for art. 30a dividend income.                                                | [PIT Act art. 30a, especially ust. 1 pkt 4 and ust. 6](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                                                                      |
 | PIT-38 section G remains the reporting target for foreign art. 30a dividend tax and the art. 30a ust. 9 foreign-tax credit.     | [Ministry of Finance PIT-38 guidance for 2025](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/)                                                                                                  |
 | The optional setting exists because public sources do not directly resolve every broker-reporting pattern for ADR/GDR/CDI fees. | [IBKR says to consult the ADR/GDR/CDI prospectus for fee details](https://www.interactivebrokers.com/en/pricing/other-fees.php), while Polish PIT art. 30a does not mention this broker-specific fee form. |
 
@@ -221,7 +222,7 @@ Poz. 22 reports **gross** sale proceeds and the sell commission is added to poz.
 
 ### The Problem
 
-Converting 50 trades from USD to PLN requires 50 NBP API calls. If you click "Calculate" twice, that's 100 calls.
+Converting 50 trades from USD to PLN requires 50 NBP API calls. Every recalculation would repeat them.
 
 ### The Solution
 
@@ -229,17 +230,17 @@ Cache rates in IndexedDB by (date, currency) pair.
 
 **How it works:**
 
-1. First calculation (May): Looks up Jan 15 rate → API call → caches result
-2. Second calculation (May): Looks up Jan 15 rate → uses cache → no API call
-3. User imports another trade dated Jan 15: Looks up Jan 15 rate → uses cache
+1. First calculation: the rates for the session's whole date range are prefetched per currency in chunks of at most 93 days (`fetchRatesForSession`), then stored in the `nbpRates` table
+2. Later calculations: look up the rate → use cache → no API call
+3. User imports another trade dated Jan 15: look up the rate → use cache
 
 **Why this matters:**
 
 - Reduces API calls by 95%+ (typical: 50 trades → 1-5 unique dates)
 - NBP rates are permanent (never change )
-- Users can calculate offline after initial import
+- Calculations whose rates are already cached run without the network
 
-**Cache clearing:** Never automatic. Users must manually clear if they suspect a stale rate (rare).
+**Cache invalidation:** Published rates are never refetched or cleared by the app: there is no UI to clear the cache (`clearRateCache()` exists in `services/rates.ts` but is unused). Only entries that may be wrong are dropped: a day without a table is cached as `rate: null` only when it is clearly a past holiday, and DB v15 deleted all earlier cached nulls (see [Exchange Rate Lookup](#design-decision-exchange-rate-lookup-and-unavailable-rates)). The cache is a derived table: it is not part of backups and an upgrade may clear it.
 
 ---
 
@@ -271,6 +272,14 @@ A **session** is a discrete workspace for one tax year.
 - Results (calculated, read-only)
 - Tax summary (calculated, read-only)
 
+**Stale results and recalculation:**
+
+- Source tables (trades, dividends, withholding, fees, credit interest, carry-ins, corporate actions incl. transfers, country overrides, prior losses) have Dexie hooks (`installStaleHooks`). Any create, update or delete bumps the owning session's `dataUpdatedAt`. Derived tables are not hooked, so writing results never marks a session stale.
+- `calculatedAt` is set when results are stored. A session is **stale** when `dataUpdatedAt > calculatedAt` (`isSessionStale`). The Data, Dashboard and Tax form pages then show a stale banner with a recalculate button, and copying PIT-38 values is disabled until a recalculation succeeds.
+- Recalculation (`calculateSessionTaxes`) re-reads the source tables and replaces the session's result rows and summary in one transaction. Results are never patched in place.
+- The tax form calculates automatically only when a session has data but no results yet; after that, staleness is shown, not silently recomputed.
+- Upgrades and backup imports that change results keep `calculatedAt` and bump `dataUpdatedAt` instead of clearing `calculatedAt`: with `calculatedAt` missing `isSessionStale` is false and old numbers would show as current. Older upgrades (v12-v14) cleared the derived tables and reset sessions to `draft`; this stays allowed for derived tables only, never for input tables (see CONTRIBUTING, "Database Schema Upgrades").
+
 ---
 
 ## Design Decision: Pre-Rendered Static HTML
@@ -300,7 +309,7 @@ Pre-render the app to **static HTML files** once, serve them forever.
 - **Fast**: Instant load (no server processing)
 - **Cheap**: GitHub Pages is free
 - **Reliable**: Can't crash (it's just HTML)
-- **Works offline**: Download the site, works completely locally
+- **Runs locally**: Once loaded, all calculations and storage stay in the browser
 
 **How data stays local:**
 
@@ -326,7 +335,7 @@ Instead of translating strings at runtime, translations are **compiled into the 
 
 - English route `/dashboard` → HTML with English text
 - Polish route `/pl/dashboard` → Separate HTML with Polish text
-- No language logic in the browser (faster, simpler)
+- The locale is resolved from the URL prefix at prerender time; the Paraglide runtime only reads the URL or a cookie (strategy: url → cookie → base locale)
 
 **Benefits:**
 
@@ -337,7 +346,7 @@ Instead of translating strings at runtime, translations are **compiled into the 
 
 ---
 
-## Design Decision: Three Pages (Not A Single Page)
+## Design Decision: Multi-Page (Not A Single Page)
 
 ### Alternative: Single Page App (SPA)
 
@@ -345,13 +354,13 @@ Load one page, JavaScript controls all views. Pro: feels fast.
 
 ### Reality: Multi-Page SSG
 
-Three pre-rendered pages: `/data`, `/dashboard`, `/tax-form`.
+Pre-rendered routes, every one in every locale. The core workflow is `/data`, `/dashboard` and `/tax-form`; the others are `/prior-losses`, `/rates`, `/settings`, `/support`, `/about` and `/docs/*`.
 
 **Why not SPA?**
 
 1. **Data permanence**: Each navigation doesn't lose session state (URL is your state)
 2. **Browser back button**: Works intuitively between pages
-3. **Shareable links**: `/tax-form?year=2025` preserves context
+3. **Shareable links**: every view has its own URL (the tax year comes from the selected session, not from a query parameter)
 4. **Search friendly**: Google can index all routes
 
 **How multi-page feels fast:**
@@ -433,10 +442,10 @@ $effect(() => { /* runs when deps change */ });
 ### Pipeline
 
 ```
-Raw CSV File → Parser → ParsedStatement + SkippedRow[] → IndexedDB Records + Session ImportWarnings
+Raw file (CSV or PDF) → Parser → ParsedStatement + SkippedRow[] → IndexedDB Records + Session ImportWarnings
 ```
 
-### Why Not Store Raw CSV?
+### Why Not Store Raw Files?
 
 1. **Duplicates**: Same trade could be in CSV twice (hard to detect)
 2. **Parsing delay**: Parsing on every calc would be slow
@@ -456,7 +465,7 @@ Raw CSV File → Parser → ParsedStatement + SkippedRow[] → IndexedDB Records
 
 ### The Problem
 
-Broker statements mix useful rows with metadata, summaries, and sections kloPIT does not support yet. A parser that simply ignores what it does not understand is dangerous here: the user may think their entire statement was imported even when options, interest, or malformed rows were skipped.
+Broker statements mix useful rows with metadata, summaries, and sections kloPIT does not support yet. A parser that simply ignores what it does not understand is dangerous here: the user may think their entire statement was imported even when options, futures, or malformed rows were skipped.
 
 ### The Solution
 
@@ -530,7 +539,7 @@ Art. 11a updof requires the NBP average rate from the **last business day before
 
 - Capital gains in Poland: 19% **flat rate** (not progressive)
 - Dividends: 19% **flat rate**
-- Crypto: 19% flat rate (as of 2024)
+- Crypto: 19% flat rate (as of 2024); crypto is not calculated by kloPIT, its PIT-38 section is a placeholder
 
 ### Why This Matters
 
@@ -598,7 +607,9 @@ at 0.
 **Implementation:**
 
 - `roundToFullPln()` for tax base and full-PLN tax fields such as PIT-38 poz. 31, 35 and the dividend part of poz. 49
-- `roundToGrosz()` for PIT-38 fields that the official form marks as `zł, gr`, including Section C totals/gain/loss, the dividend tax/credit parts and poz. 51/52
+- `roundToGrosz()` for PIT-38 fields that the official form marks as `zł, gr`, including Section C totals/gain/loss and the dividend tax/credit parts
+- `paymentSummaryAmount()` (`tax/aggregates.ts`) for poz. 51/52 (amount to the grosz, clamped at 0)
+- `floorToGrosz()` for caps that must never be exceeded (the loss carry-forward limit)
 - `roundToGroszUp()` for the interest part (art. 30a ust. 1 pkt 3) of poz. 47 and 49
 
 ---
@@ -613,26 +624,26 @@ at 0.
 **Example:**
 
 ```
-2020 loss: -$100K
-2021: use $50K (50% of loss), $50K stays
-2022: use $50K (rest of 2020), can use $50K of 2021 loss (50%)
-2023: can use $50K of 2021 loss (rest)
-2024: 2020 loss expired (5 years up), can still use 2021 loss (only 4 years old)
-2025: 2021 loss expires (5 years up)
+2022 loss: 10 000 zł (usable in 2023-2027, max 5 000 zł per year)
+2023 gain 4 000 zł  → deduct 4 000 zł (1 000 zł of this year's 5 000 zł cap unused)
+2024 gain 20 000 zł → deduct 5 000 zł
+2025-2027           → 1 000 zł left, deductible if there is a gain
 ```
+
+The one-time option of deducting up to 5 mln zł in one year (art. 9 ust. 3 pkt 2) is not supported.
 
 **Implementation:**
 
-- User enters prior year loss amount manually
+- User enters each prior-year loss manually as `PriorYearLoss { year, totalLossPln, alreadyDeductedPln }`
 - App ensures 50% limit per year
 - The per-year cap is rounded **down** to the grosz, so poz. 30 never exceeds 50% of the loss (rounding to nearest could overshoot by half a grosz)
-- Stores "loss used" and "loss remaining" separately
+- The remaining amount is derived (`totalLossPln - alreadyDeductedPln`), not stored
 
 ---
 
 ## Design Decision: Component Organization (Data, Dashboard, Form)
 
-### Three Top-Level Routes
+### Core Workflow Routes
 
 1. **`/data`** — CRUD, raw tables, imports
 2. **`/dashboard`** — Metrics, charts, summaries
@@ -702,16 +713,16 @@ Dashboard re-renders as you edit trades (real-time reaction).
 
 ### Designed for Addition
 
-1. **Broker registry**: Add new parsers without modifying existing code
+1. **Parser definitions**: a new broker is one `ParserDefinition` in `src/core/parsers/<broker>/`, added to `ALL_PARSERS` (`parsers/index.ts`) and `BrokerId` (`core/types.ts`); the import UI picks it up
 2. **Currency support**: Easy to add EUR, GBP, etc. (infrastructure in place)
-3. **Asset types**: Crypto framework exists, just needs implementation
-4. **Export formats**: Can export to XML, JSON, PDF (adapter pattern exists)
+3. **Asset types**: Crypto is not supported; only placeholder form fields exist
+4. **Export formats**: only the JSON backup exists today; XML and PDF exports are on the roadmap
 5. **Multi-language**: Adding languages is just adding a JSON file
 
 ### Designed for Replacement
 
 1. **Storage**: Could replace IndexedDB with SQLite WASM
-2. **UI framework**: SvelteKit is frontend-agnostic (calcs work standalone)
+2. **UI framework**: the core logic in `src/core` is framework-agnostic (calcs work standalone)
 3. **Parser library**: Could be used in CLI tool or Node.js app
 
 ---
@@ -724,9 +735,30 @@ Dashboard re-renders as you edit trades (real-time reaction).
 | **User control**         | Explicit broker selection, no auto-magic                  |
 | **Transparency**         | Show parse warnings, rate lookup status, rounding applied |
 | **Resilience**           | Cache rates, collect all errors before failing            |
-| **Simplicity**           | Three pages, one session per year, one tax rate (19%)     |
-| **Flexibility**          | Parser registry, adapter patterns, pure core logic        |
+| **Simplicity**           | One session per year, one tax rate (19%)                  |
+| **Flexibility**          | Parser definitions, pure core logic                       |
 | **Standards compliance** | FIFO method, PIT-38 fields, NBP rates, Polish tax rules   |
+
+## Design Decision: Backup Export and Import
+
+**Decision:** Settings → Backup exports every input table to one JSON file and imports it back (`src/lib/services/backup.ts`). This is the only export; there is no XML or PDF output yet.
+
+- Derived tables (results, summaries) and the NBP rate cache are not exported. They are recomputed, so a backup stays small and cannot carry results that disagree with the inputs.
+- Import replaces **all** local data (input and derived tables) in one transaction, after the user confirms. Calculated sessions keep `calculatedAt` and get `dataUpdatedAt` bumped, so they show as stale and the user recalculates.
+- The file carries `formatVersion` and the Dexie `schemaVersion`. A newer schema, an older one without a migration, an unknown format or an oversized file (100 MB) is rejected with a localized error; backups start at schema v16. Every database version bump must add a `BACKUP_MIGRATIONS` step so older backups stay importable.
+- Dates are stored as `{"$date": ISO}` and every row is validated before import (invalid dates or numbers are rejected), because the file is untrusted input.
+
+**Why:** with no backend, clearing browser data would otherwise lose everything; a file the user owns keeps the privacy model intact.
+
+---
+
+## Design Decision: Content-Security-Policy and Static Hosting
+
+GitHub Pages cannot send response headers, so SvelteKit's `kit.csp` (hash mode, `vite.config.ts`) writes the policy as a `<meta>` tag into every prerendered page. The policy allows only the site itself plus `https://api.nbp.pl` for `connect-src`, so data cannot leave the browser except as NBP rate requests. `'unsafe-inline'` is allowed for styles only (Unovis injects `<style>` elements). The directive list and its verification are in HOW-IT-WORKS ("Content-Security-Policy").
+
+The app runs on SvelteKit 3 with the static adapter. Internal imports use the `#lib/*` alias from `package.json` `imports` (not `$lib`) for everything under `src/lib`; core code in `src/core` does not import from `src/lib`.
+
+---
 
 ## DB v16: one bump for plan-10 changes
 
