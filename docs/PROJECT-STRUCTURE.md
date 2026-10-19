@@ -11,50 +11,80 @@ klopit/
 ├── src/
 │   ├── core/                     # Pure TypeScript tax domain logic (NO Svelte)
 │   │   ├── index.ts              # Barrel exports
-│   │   ├── types.ts              # All TypeScript types & interfaces
-│   │   ├── nbp.ts                # NBP exchange rate fetcher & cache
+│   │   ├── types.ts              # All TypeScript types & interfaces (BrokerId, ParsedStatement, ...)
+│   │   ├── nbp.ts                # NBP exchange rate fetcher
 │   │   ├── parsers/
-│   │   │   ├── types.ts          # Parser interfaces
-│   │   │   ├── registry.ts       # Broker parser registry
-│   │   │   ├── csv-parser.ts     # Base class for CSV parsers
-│   │   │   ├── interactive-brokers.ts  # IB-specific parser
-│   │   │   └── ...
+│   │   │   ├── types.ts          # ParserDefinition (CSV / PDF), StatementParser
+│   │   │   ├── index.ts          # ALL_PARSERS (register new brokers here)
+│   │   │   ├── registry.ts       # getParserDefinition(), supportedBrokers()
+│   │   │   ├── shared/           # csv-parser.ts, csv-utils.ts
+│   │   │   ├── ibkr/             # Interactive Brokers CSV: index, sections, entity-country
+│   │   │   ├── ibi/              # IBI PDF: index, confirmation, espp, rsu, pdf-extract, companies, shared
+│   │   │   └── schwab/           # Charles Schwab CSV (equity awards): index
 │   │   ├── portfolio/
-│   │   │   ├── fifo.ts           # FIFO matching algorithm
-│   │   │   └── ...
+│   │   │   └── analyzer.ts       # Portfolio analysis for the dashboard
 │   │   └── tax/
-│   │       ├── calculator.ts     # Main tax calculation function
+│   │       ├── calculator.ts     # calculateTaxes(): orchestrates the pure pipeline
+│   │       ├── capital-gains.ts  # Per-account FIFO matching, cost basis, carry-ins
+│   │       ├── accounts.ts       # Account keys and FIFO queue keys
+│   │       ├── transfers.ts      # Account-to-account transfers of lots
+│   │       ├── shortfall.ts      # Explains sells of shares an account does not hold
+│   │       ├── incentive.ts      # RSU / ESPP regime: extra cost of incentive buy lots
+│   │       ├── corporate-actions.ts  # Splits and mergers
+│   │       ├── dividends.ts      # Dividends, withholding, treaty cap
+│   │       ├── credit-interest.ts    # Broker credit interest
+│   │       ├── loss-carry-forward.ts # Prior-year loss deduction (poz. 30)
+│   │       ├── opp.ts            # 1.5% OPP donation
 │   │       ├── pit38.ts          # PIT-38 form field builder
+│   │       ├── pit-zg.ts         # PIT/ZG attachment per country
+│   │       ├── aggregates.ts     # Sums, grouping, rounded payment amounts
 │   │       ├── rounding.ts       # Rounding rules
+│   │       ├── period.ts         # Tax-year period helpers
+│   │       ├── country.ts, country-names.ts, symbol-country.ts, treaty-rates.ts
 │   │       └── ...
 │   │
-│   ├── lib/
-│   │   ├── db.ts                 # Dexie database schema & initialization
+│   ├── lib/                      # Imported as `#lib/...` (package `imports`)
+│   │   ├── db.ts                 # Dexie database schema (current version v16) & initialization
+│   │   ├── db-tables.ts          # INPUT_TABLES / DERIVED_TABLES classification
+│   │   ├── db-migrations.ts, db-hooks.ts
 │   │   ├── nav.ts                # Navigation & page metadata
 │   │   ├── services/
 │   │   │   ├── session.ts        # Session CRUD (create, read, update, delete)
-│   │   │   ├── import.ts         # CSV import orchestration
-│   │   │   ├── tax.ts            # Tax calculation coordination
-│   │   │   └── data.ts           # Row-level CRUD (trades, dividends, etc)
+│   │   │   ├── import.ts         # Import orchestration (parser lookup, parse, bulkAdd)
+│   │   │   ├── import-files.ts   # Multi-file import wrapper used by the UI
+│   │   │   ├── import-warnings.ts
+│   │   │   ├── tax.ts            # Tax calculation coordination (rates -> calculator -> persist)
+│   │   │   ├── rates.ts          # NBP rate cache (Dexie), fixing lookups, session prefetch
+│   │   │   ├── data.ts           # Row-level CRUD (trades, dividends, etc)
+│   │   │   ├── accounts.ts       # Accounts of a session
+│   │   │   ├── carry-in.ts       # Carry-in positions
+│   │   │   ├── incentive.ts      # RSU / ESPP regime per symbol
+│   │   │   └── backup.ts         # Backup export / import (JSON, BACKUP_MIGRATIONS)
 │   │   ├── utils/
 │   │   │   ├── live-query.svelte.ts    # Dexie → Svelte reactivity bridge
-│   │   │   ├── format-pln.ts    # PLN currency formatting
+│   │   │   ├── stale.ts          # isSessionStale()
+│   │   │   ├── tax-form-status.ts # Incomplete / stale checks that block copying values
+│   │   │   ├── format-pln.ts     # PLN currency formatting
 │   │   │   └── ...
-│   │   ├── state/
-│   │   │   └── session.svelte.ts # Shared session state (for data + tax-form)
+│   │   ├── state/                # Shared state (session.svelte.ts, theme, sidebar, logger, ...)
+│   │   ├── constants/            # FAQ, acronyms, support funds
 │   │   ├── components/
-│   │   │   ├── SessionSelector.svelte
-│   │   │   ├── BrokerSelect.svelte
-│   │   │   └── ...
-│   │   └── paraglide/
-│   │       ├── messages.js       # Generated i18n messages
-│   │       └── ...
+│   │   │   ├── ui/               # Small shared widgets (ThemeToggle, LanguagePicker, ...)
+│   │   │   ├── layout/           # Header, Sidebar, Footer
+│   │   │   ├── home/             # Home page blocks
+│   │   │   ├── docs/             # Docs page helpers (grounding links, legal claims)
+│   │   │   ├── PriorLossTable.svelte
+│   │   │   └── DeleteConfirm.svelte
+│   │   └── paraglide/            # Generated i18n runtime and messages (gitignored)
 │   │
-│   ├── routes/
+│   ├── routes/                   # Every route is prerendered for every locale
 │   │   ├── +layout.svelte        # Root layout (nav, language switcher)
 │   │   ├── +layout.ts            # Prerender config
 │   │   ├── +page.svelte          # Home page
-│   │   ├── about/
+│   │   ├── about/, support/, settings/ (includes backup export / import)
+│   │   ├── rates/                # NBP rates browser
+│   │   ├── prior-losses/         # Prior-year losses
+│   │   ├── docs/                 # Static docs: brokers, ibkr, ibi (espp, rsu), pit-38, pit-zg, faq, ...
 │   │   ├── dashboard/
 │   │   │   ├── +page.svelte      # Dashboard page (orchestrator)
 │   │   │   ├── MetricCards.svelte
@@ -66,43 +96,39 @@ klopit/
 │   │   │   ├── +page.svelte      # Data page (orchestrator)
 │   │   │   ├── SessionBar.svelte
 │   │   │   ├── ActionBar.svelte
-│   │   │   ├── ImportDialog.svelte
+│   │   │   ├── ImportDialog.svelte, ImportPanel.svelte
 │   │   │   ├── DataTabs.svelte
-│   │   │   ├── TradesTable.svelte
-│   │   │   ├── TradeForm.svelte
-│   │   │   ├── DividendsTable.svelte
-│   │   │   ├── WithholdingTable.svelte
-│   │   │   ├── CorporateActionsTable.svelte
-│   │   │   ├── CarryInTable.svelte
+│   │   │   ├── TradesTable.svelte, TradeForm.svelte, TransferForm.svelte
+│   │   │   ├── DividendsTable.svelte, WithholdingTable.svelte
+│   │   │   ├── CorporateActionsTable.svelte, CarryInTable.svelte
+│   │   │   ├── CreditInterestTable.svelte, CountryMappingTable.svelte
+│   │   │   ├── IncentiveRegimeBar.svelte
 │   │   │   └── ...
 │   │   └── tax-form/
-│   │       ├── +page.svelte      # Tax form page (orchestrator)
+│   │       ├── +page.svelte      # Tax form page (orchestrator, auto-calc, Recalculate button, stale banner)
+│   │       ├── SectionA.svelte
 │   │       ├── SectionC.svelte   # Capital gains section
 │   │       ├── SectionD.svelte   # Tax calculation section
+│   │       ├── SectionE.svelte, SectionF.svelte  # Placeholders (crypto not calculated)
 │   │       ├── SectionG.svelte   # Dividend tax section
 │   │       ├── SectionH.svelte   # Monthly tax section (placeholder)
+│   │       ├── PitZgView.svelte  # PIT/ZG attachment
+│   │       ├── DocumentSidebar.svelte, FormField.svelte
 │   │       ├── OppDonation.svelte # Charity donation input
 │   │       └── ...
 │   │
 │   ├── app.html                  # SvelteKit HTML shell
 │   ├── app.d.ts                  # SvelteKit global types
 │   ├── app.css                   # Global styles
-│   └── hooks.ts                  # Paraglide i18n hooks
+│   ├── hooks.server.ts           # Paraglide middleware (fills lang/dir at prerender)
+│   └── hooks.ts                  # Paraglide reroute (de-localizes URLs)
 │
 ├── test/
-│   ├── core.test.ts              # Generic core tests
-│   ├── calculator.test.ts        # Tax calculation tests
-│   ├── pit38.test.ts             # PIT-38 form field tests
-│   ├── capital-gains.test.ts     # Gains/losses tests
-│   ├── dividends.test.ts         # Dividend tax tests
-│   ├── fifo.test.ts              # FIFO algorithm tests
-│   ├── interactive-brokers.test.ts # IB parser tests
-│   ├── nbp.test.ts               # Rate fetching tests
-│   ├── rounding.test.ts          # Rounding edge cases
-│   ├── fixtures/
-│   │   └── ib/
-│   │       └── sample-statement.csv # Test CSV sample
-│   └── ...
+│   ├── *.test.ts                 # One file per module (core, calculator, pit38, capital-gains,
+│   │                             #   per-account-fifo, transfers, incentive-*, backup, db-upgrade,
+│   │                             #   ibkr*, ibi*, schwab, nbp, rates-service, rounding, ...)
+│   ├── helpers/                  # fake-nbp.ts
+│   └── fixtures/                 # ib/*.csv, schwab/, ibi-rsu-sample.txt
 │
 ├── messages/
 │   ├── en.json                   # English translations
@@ -112,18 +138,20 @@ klopit/
 ├── docs/
 │   ├── HOW-IT-WORKS.md           # User-friendly feature guide
 │   ├── DESIGN-DECISIONS.md       # Architecture & philosophy
-│   ├── (this file)
-│   ├── superpowers/
-│   │   ├── plans/                # Implementation plans for features
-│   │   └── specs/                # Detailed architecture specs
-│   └── ...
+│   ├── ROADMAP.md                # Planned features
+│   ├── CHANGELOG.md              # Release history (generated)
+│   └── (this file)
 │
+├── examples/                     # Sample activity statement
+├── static/                       # Static assets (icons, theme-init.js, robots.txt, ...)
+├── scripts/                      # generate-ai-metadata.ts
 ├── build/                        # Pre-rendered static HTML (generated)
-├── vite.config.ts                # Vite, SvelteKit and Paraglide config
+├── vite.config.ts                # Vite, SvelteKit (adapter, kit.csp, prerender) and Paraglide config
+├── .mise.toml                    # Pinned Node 26 / pnpm 12
 ├── .oxlintrc.json                # oxlint config
 ├── .oxfmtrc.json                 # oxfmt config
 ├── tsconfig.json                 # TypeScript config
-├── package.json                  # Dependencies
+├── package.json                  # Dependencies, scripts, `#lib` imports
 └── README.md
 ```
 
@@ -131,7 +159,7 @@ klopit/
 
 ## Data Flow: Import → Calculate → Display
 
-### 1. User Imports Broker CSV
+### 1. User Imports a Broker Statement (CSV or PDF)
 
 ```
 User action: Click "Import" → Select file → Choose broker
@@ -139,15 +167,16 @@ User action: Click "Import" → Select file → Choose broker
 ↓
 
 ImportDialog (UI)
-  → calls importFile() service
+  → calls importFiles() (import-files.ts), one file at a time → importFile()
 
 ↓
 
 import.ts (service)
-  → read file as text
   → get ParserDefinition from registry
-  → create parser instance
-  → feed lines one-by-one
+  → CSV parser (kind 'csv'): read file as text, createParser(),
+    feed lines one-by-one, finish()
+  → PDF parser (kind 'pdf'): read file as ArrayBuffer,
+    parse({ buffer }) (async)
   → get ParsedStatement
 
 ↓
@@ -158,7 +187,11 @@ ParsedStatement contains:
   - withholdingTaxes[]
   - corporateActions[]
   - carryInPositions[]
+  - transactionFees[]
+  - creditInterests[]
+  - symbolToIsin (Map)
   - warnings[]
+  - skippedRows[]
 
 ↓
 
@@ -170,6 +203,7 @@ import.ts (service)
     - DividendRecord[]
     - CorporateActionRecord[]
     - CarryInPositionRecord[]
+    - withholding taxes, transaction fees, credit interests
 
 ↓
 
@@ -204,82 +238,73 @@ TradesTable re-renders
 
 ---
 
-### 3. User Clicks "Calculate Taxes"
+### 3. Tax Calculation (automatic, or Recalculate)
 
 ```
-User action: Go to /tax-form → Click "Calculate"
+User action: Go to /tax-form
+  - session has data but no results → calculation starts automatically
+  - results exist but data changed afterwards → "stale" banner; the
+    single Recalculate button in the PIT-38 header (highlighted when
+    stale or incomplete) runs it again
 
 ↓
 
 +page.svelte (orchestrator)
-  → calls calculateTaxes() from tax.ts service
+  → calls calculateSessionTaxes() from tax.ts service
+  → while results are stale or incomplete, copying PIT-38 values is blocked
+    (utils/stale.ts, utils/tax-form-status.ts)
 
 ↓
 
 tax.ts (service)
   → query IndexedDB:
-    - all trades for session
-    - all dividends for session
-    - prior year loss (optional)
+    - all trades, dividends, withholding taxes, fees, credit interests
+    - corporate actions, carry-in positions, symbol country overrides
+    - prior year losses (optional)
+  → prefetch NBP rates (rates.ts, cached in db.nbpRates)
+  → enrich trades / dividends / credit interests with NBP rates
   → call core/tax/calculator.ts
 
 ↓
 
-calculator.ts (pure TS)
-  1. Fetch NBP rates (via nbp.ts)
-     - Use cache if available
-     - Fallback to last business day
-     - Store in cache
+calculator.ts (pure TS, no network)
+  1. calculateCapitalGains() (tax/capital-gains.ts)
+     - per-account FIFO queues, account transfers, carry-ins
+     - incentive (RSU / ESPP) cost for incentive buy lots
+     - cost basis and gain/loss per sell, in PLN
 
-  2. Convert all trades to PLN
-     - Use historical NBP rate from trade date
+  2. calculateDividends() (tax/dividends.ts)
+     - match withholding taxes, apply per-dividend treaty cap
+     - PLN tax owed per dividend
 
-  3. Enrich trades with computed fields
-     - FIFO match for each sell (via portfolio/fifo.ts)
-     - Calculate cost basis
-     - Calculate gain/loss
+  3. calculateCreditInterest()
 
-  4. Sum trades by type (gains/losses)
+  4. computeLossDeduction() (tax/loss-carry-forward.ts)
+     - prior-year losses applied to the capital gain (poz. 30)
 
-  5. Calculate capital gains tax
-     - totalGain × 19%
-     - Apply rounding rules
+  5. buildSummary() → TaxSummary
 
-  6. Enrich dividends with computed fields
-     - converted to PLN
-     - match withholding taxes
-     - calculate PLN owed
+  6. buildPit38() (tax/pit38.ts)
+     - map amounts to form field numbers
+     - rounding via tax/aggregates.ts and tax/rounding.ts
 
-  7. Calculate dividend tax
-     - totalDividends × 19% = total tax
-     - minus foreign withholding
-     - result = tax owed to Poland
-
-  8. Apply prior year losses (if any)
-     - cap at 50% per year
-     - reduce tax base
-
-  9. Build Pit38Fields
-     - map all amounts to form field numbers
-     - apply final rounding
+  7. buildPitZg() (tax/pit-zg.ts)
 
 ↓
 
-Returns: {
-  tradeResults: TradeResult[],
-  dividendResults: DividendResult[],
-  taxSummary: TaxSummary,
-  pit38Fields: Pit38Fields
+Returns (TaxCalculationResult): {
+  trades, dividends, creditInterests,
+  summary, pit38, pitZg, lossDeduction, carryInWarnings
 }
 
 ↓
 
 tax.ts (service)
   → save to IndexedDB:
-    - TaxSummaryRecord
+    - TaxSummaryRecord (includes pit38 fields)
     - TradeResultRecord[] (for dashboard charts)
-    - DividendResultRecord[]
-    - pit38Fields (inside TaxSummaryRecord)
+    - DividendResultRecord[], CreditInterestResultRecord[]
+  → session.calculatedAt updated
 
 ↓
 
@@ -339,24 +364,32 @@ User sees dashboard ✓
 
 ## Feature Location Matrix
 
-| Feature             | Where It Lives                    | Entry Point                 |
-| ------------------- | --------------------------------- | --------------------------- |
-| **CSV Parser**      | `src/core/parsers/`               | `registry.ts`               |
-| **Exchange Rates**  | `src/core/nbp.ts`                 | Called by calculator        |
-| **FIFO Algorithm**  | `src/core/portfolio/fifo.ts`      | Called by calculator        |
-| **Tax Calc**        | `src/core/tax/calculator.ts`      | `tax.ts` service            |
-| **PIT-38 Mapping**  | `src/core/tax/pit38.ts`           | Called by calculator        |
-| **Rounding Rules**  | `src/core/tax/rounding.ts`        | Called by pit38.ts          |
-| **Database Schema** | `src/lib/db.ts`                   | Initialized on app load     |
-| **Session Service** | `src/lib/services/session.ts`     | Create/read/delete years    |
-| **Import Service**  | `src/lib/services/import.ts`      | Upload CSV                  |
-| **Tax Service**     | `src/lib/services/tax.ts`         | Calculate button            |
-| **Data CRUD**       | `src/lib/services/data.ts`        | Edit/delete rows            |
-| **Session State**   | `src/lib/state/session.svelte.ts` | Shared by /data & /tax-form |
-| **i18n Messages**   | `messages/{en,pl,uk}.json`        | Auto-loaded by Paraglide    |
-| **Data Page UI**    | `src/routes/data/`                | `/data`                     |
-| **Dashboard UI**    | `src/routes/dashboard/`           | `/dashboard`                |
-| **Tax Form UI**     | `src/routes/tax-form/`            | `/tax-form`                 |
+| Feature                | Where It Lives                                  | Entry Point                   |
+| ---------------------- | ----------------------------------------------- | ----------------------------- |
+| **CSV + PDF Parsers**  | `src/core/parsers/`                             | `index.ts` (`ALL_PARSERS`)    |
+| **Exchange Rates**     | `src/core/nbp.ts`, `src/lib/services/rates.ts`  | Called by `tax.ts` service    |
+| **FIFO Algorithm**     | `src/core/tax/capital-gains.ts`                 | Called by calculator          |
+| **Account Transfers**  | `src/core/tax/transfers.ts`                     | Called by capital-gains       |
+| **RSU / ESPP Regime**  | `src/core/tax/incentive.ts`                     | Called by capital-gains       |
+| **Tax Calc**           | `src/core/tax/calculator.ts`                    | `tax.ts` service              |
+| **Dividends**          | `src/core/tax/dividends.ts`                     | Called by calculator          |
+| **Credit Interest**    | `src/core/tax/credit-interest.ts`               | Called by calculator          |
+| **Loss Carry-Forward** | `src/core/tax/loss-carry-forward.ts`            | Called by calculator          |
+| **PIT-38 Mapping**     | `src/core/tax/pit38.ts`                         | Called by calculator          |
+| **PIT/ZG**             | `src/core/tax/pit-zg.ts`                        | Called by calculator          |
+| **Rounding Rules**     | `src/core/tax/rounding.ts`, `aggregates.ts`     | Called by pit38.ts            |
+| **Database Schema**    | `src/lib/db.ts`                                 | Initialized on app load       |
+| **Session Service**    | `src/lib/services/session.ts`                   | Create/read/delete years      |
+| **Import Service**     | `src/lib/services/import.ts`, `import-files.ts` | Upload CSV / PDF              |
+| **Tax Service**        | `src/lib/services/tax.ts`                       | Auto-calc / Recalculate       |
+| **Data CRUD**          | `src/lib/services/data.ts`                      | Edit/delete rows              |
+| **Backup**             | `src/lib/services/backup.ts`                    | `/settings` export / import   |
+| **Session State**      | `src/lib/state/session.svelte.ts`               | Shared by /data & /tax-form   |
+| **i18n Messages**      | `messages/{en,pl,uk}.json`                      | Auto-loaded by Paraglide      |
+| **CSP**                | `vite.config.ts` (`kit.csp`)                    | Meta tag on prerendered pages |
+| **Data Page UI**       | `src/routes/data/`                              | `/data`                       |
+| **Dashboard UI**       | `src/routes/dashboard/`                         | `/dashboard`                  |
+| **Tax Form UI**        | `src/routes/tax-form/`                          | `/tax-form`                   |
 
 ---
 
@@ -366,23 +399,21 @@ User sees dashboard ✓
 
 ```
 test/
-├── core.test.ts           # Types & utility functions
-├── calculator.test.ts     # Tax calculation (gains, dividends, tax owed)
-├── pit38.test.ts          # PIT-38 field mapping
-├── capital-gains.test.ts  # Specific gain/loss scenarios
-├── dividends.test.ts      # Dividend + withholding tax
-├── fifo.test.ts           # FIFO matching algorithm
-├── rounding.test.ts       # Rounding edge cases (PLN, groszy)
-├── nbp.test.ts            # Rate fetching & caching
-├── interactive-brokers.test.ts  # IB CSV parser
+├── *.test.ts      # One file per module, e.g.:
+│                  #   core, calculator, pit38, capital-gains, per-account-fifo,
+│                  #   transfers, incentive-regime, dividends, loss-carry-forward,
+│                  #   rounding, nbp, rates-service, registry, ibkr, ibi, schwab,
+│                  #   backup, db-upgrade, db-input-preservation, app-bundle (CSP)
+├── helpers/       # fake-nbp.ts
 └── fixtures/
-    └── ib/
-        └── sample-statement.csv   # Test data
+    ├── ib/*.csv                # IBKR statements
+    ├── schwab/                 # Schwab CSVs
+    └── ibi-rsu-sample.txt      # IBI RSU PDF text
 ```
 
 **What**: Pure `src/core/` functions with mock data  
 **Tools**: Node.js `test` runner + `assert/strict`  
-**Run**: `pnpm test:unit:local`
+**Run**: `pnpm test:unit:local` (loads TypeScript via `@oxc-node/core`; plain `node --test` cannot run `.ts` files)
 
 ### Level 2: Service Integration (No full UI)
 
@@ -413,9 +444,8 @@ Planned future tests using Svelte testing utilities for:
    - Add `CryptoResult` interface
    - Update `ParsedStatement` to include `cryptoTrades[]`
 
-2. **`src/core/parsers/interactive-brokers.ts`**
-   - Add `parseCryptoTrade()` method
-   - Handle crypto rows in `processRow()`
+2. **`src/core/parsers/ibkr/index.ts`** (or the relevant broker parser)
+   - Parse crypto rows into the new `cryptoTrades[]`
 
 3. **`src/core/tax/calculator.ts`**
    - Add `calculateCryptoTax()` function (similar to capital gains)
@@ -436,8 +466,7 @@ Planned future tests using Svelte testing utilities for:
    - Add crypto tab to DataTabs
 
 8. **`src/routes/tax-form/`**
-   - Add `SectionE.svelte` (crypto gains)
-   - Add `SectionF.svelte` (crypto tax)
+   - Fill the existing `SectionE.svelte` / `SectionF.svelte` placeholders (crypto is not calculated today)
 
 9. **`test/`**
    - Add `crypto-trades.test.ts`
@@ -446,7 +475,7 @@ Planned future tests using Svelte testing utilities for:
 10. **`messages/{en,pl,uk}.json`**
     - Add crypto-related i18n keys
 
-**No changes needed to:** Parser registry, core interfaces (already extensible)
+**No changes needed to:** `ALL_PARSERS` and `BrokerId` (only a new broker touches them), `registry.ts`
 
 ---
 
@@ -454,15 +483,19 @@ Planned future tests using Svelte testing utilities for:
 
 ### External npm Packages
 
-| Package            | Purpose               | Size              |
-| ------------------ | --------------------- | ----------------- |
-| **SvelteKit**      | Web framework         | ~500 KB           |
-| **Svelte 5**       | UI components (runes) | ~50 KB            |
-| **Dexie**          | IndexedDB wrapper     | ~30 KB            |
-| **Paraglide JS**   | i18n (compile-time)   | ~5 KB             |
-| **Unovis**         | Charts library        | ~800 KB           |
-| **Tailwind CSS**   | Styling               | ~50 KB (PurgeCSS) |
-| **@lucide/svelte** | Icons                 | ~100 KB           |
+| Package            | Purpose                                   | Size              |
+| ------------------ | ----------------------------------------- | ----------------- |
+| **SvelteKit 3**    | Web framework                             | ~500 KB           |
+| **Svelte 5**       | UI components (runes)                     | ~50 KB            |
+| **Dexie**          | IndexedDB wrapper                         | ~30 KB            |
+| **unpdf**          | PDF text extraction (IBI parser)          | —                 |
+| **typeid-js**      | Record ids                                | —                 |
+| **svelty-picker**  | Date/time picker                          | —                 |
+| **@fontsource/\*** | Self-hosted fonts (Onest, JetBrains Mono) | —                 |
+| **Paraglide JS**   | i18n (compile-time)                       | ~5 KB             |
+| **Unovis**         | Charts library                            | ~800 KB           |
+| **Tailwind CSS**   | Styling                                   | ~50 KB (PurgeCSS) |
+| **@lucide/svelte** | Icons                                     | ~100 KB           |
 
 ### Internal Dependencies
 
@@ -502,7 +535,8 @@ pnpm dev
 ```
 pnpm build
   → SvelteKit + Vite
-  → Pre-render all routes (3 langs × 5 pages = 15 static HTMLs)
+  → Pre-render every route for every locale (en, pl, uk), plus pl/uk slug aliases
+  → kit.csp emits a Content-Security-Policy <meta> tag per page
   → Output: build/
   → Minify JavaScript
   → Inline critical CSS
@@ -513,7 +547,7 @@ pnpm build
 ```
 /build → GitHub Pages
   → Static files only (no server)
-  → Works offline
+  → No backend; network only for uncached NBP rates (no service worker)
   → Instant load (no processing)
 ```
 
@@ -521,15 +555,15 @@ pnpm build
 
 ## Common Development Tasks
 
-| Task          | Command                | Files                               |
-| ------------- | ---------------------- | ----------------------------------- |
-| Run tests     | `pnpm test:unit:local` | `test/`                             |
-| Type check    | `pnpm lint:types`      | All `.ts` / `.svelte`               |
-| Lint          | `pnpm lint`            | svelte-check, oxlint, oxfmt --check |
-| Format        | `pnpm format`          | oxfmt, run manually                 |
-| Build         | `pnpm build`           | → `build/`                          |
-| Dev server    | `pnpm dev`             | → `http://localhost:5173`           |
-| Generate i18n | (automatic)            | → `src/lib/paraglide/`              |
+| Task          | Command                                                               | Files                               |
+| ------------- | --------------------------------------------------------------------- | ----------------------------------- |
+| Run tests     | `pnpm test:unit:local`                                                | `test/`                             |
+| Type check    | `pnpm lint:types`                                                     | All `.ts` / `.svelte`               |
+| Lint          | `pnpm lint`                                                           | svelte-check, oxlint, oxfmt --check |
+| Format        | `pnpm format`                                                         | oxfmt, run manually                 |
+| Build         | `pnpm build`                                                          | → `build/`                          |
+| Dev server    | `pnpm dev`                                                            | → `http://localhost:5173`           |
+| Generate i18n | `pnpm i18n` (or automatic via the Paraglide Vite plugin in dev/build) | → `src/lib/paraglide/` (gitignored) |
 
 ---
 
@@ -547,7 +581,7 @@ pnpm build
 
 4. **Services orchestrate** (import → parse → save → calculate)
 
-5. **Components never do DB operations directly** (always via services)
+5. **Components may read via Dexie `liveQuery`; all writes go through `src/lib/services/*`**
 
 6. **Types are one source of truth** (`src/core/types.ts`)
 
@@ -559,10 +593,12 @@ pnpm build
 | ------------------------ | --------------------------------------------------------- |
 | **calculator.ts**        | Main tax computation: gains, dividends, tax owed          |
 | **pit38.ts**             | Maps calculated results to PIT-38 form field numbers      |
-| **fifo.ts**              | Matches sales to purchases (first-in-first-out)           |
+| **capital-gains.ts**     | Matches sales to purchases (per-account FIFO)             |
+| **backup.ts**            | Exports / imports all input data as a JSON backup         |
 | **nbp.ts**               | Fetches & caches exchange rates from Polish National Bank |
-| **registry.ts**          | Broker parser lookup table                                |
+| **parsers/index.ts**     | `ALL_PARSERS`: the registered broker parsers              |
+| **registry.ts**          | Parser lookup (`getParserDefinition`, `supportedBrokers`) |
 | **live-query.svelte.ts** | Bridges Dexie's reactive queries to Svelte components     |
-| **service/import.ts**    | Orchestrates CSV → Parse → DB insert                      |
-| **service/tax.ts**       | Orchestrates: fetch rates → calculate → persist results   |
+| **services/import.ts**   | Orchestrates file → parse → DB insert                     |
+| **services/tax.ts**      | Orchestrates: fetch rates → calculate → persist results   |
 | **db.ts**                | Dexie schema definition (all tables & indexes)            |
