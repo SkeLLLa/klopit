@@ -1,8 +1,5 @@
 allowBuilds:
-  esbuild: true
   maplibre-gl: false
-  unrs-resolver: false
 overrides:
   cookie: ^0.7.0
-  postcss: ^8.5.10
   uuid: ^14.0.0
