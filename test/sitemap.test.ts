@@ -63,8 +63,9 @@ function readSitemap(): { xml: string; entries: Entry[] } {
 }
 
 function pageFor(loc: string): string {
-  assert.ok(loc.startsWith(SITE), `${loc} is not on ${SITE}`);
-  const file = join(buildDir, loc.slice(SITE.length), 'index.html');
+  const url = new URL(loc);
+  assert.equal(url.origin, SITE, `${loc} is not on ${SITE}`);
+  const file = join(buildDir, url.pathname, 'index.html');
   assert.ok(existsSync(file), `${loc} has no built page`);
   return readFileSync(file, 'utf8');
 }

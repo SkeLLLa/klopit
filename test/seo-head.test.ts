@@ -51,11 +51,11 @@ function jsonLdNodes(html: string): Node[] {
 
 function decode(value: string): string {
   return value
-    .replaceAll('&amp;', '&')
     .replaceAll('&quot;', '"')
     .replaceAll('&#39;', "'")
     .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>');
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&');
 }
 
 void test('built pages share one entity graph and localized head metadata', (t) => {
