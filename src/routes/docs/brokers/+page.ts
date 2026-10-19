@@ -106,7 +106,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       {
         q: 'Which tax features does kloPIT support?',
-        a: 'kloPIT calculates FIFO, converts NBP exchange rates, handles foreign dividends with treaty credit limits, PIT-38 sections C/D/G, PIT/ZG per country and prior-year losses.',
+        a: 'kloPIT calculates FIFO, converts NBP exchange rates, handles foreign dividends with treaty credit limits, PIT-38 sections C/D/G, PIT/ZG where foreign tax on gains is credited, and prior-year losses.',
       },
     ],
   },

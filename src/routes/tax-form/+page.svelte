@@ -19,6 +19,7 @@
   import DocumentSidebar from './DocumentSidebar.svelte';
   import { setCopyDisabled } from './FormField.svelte';
   import PitZgView from './PitZgView.svelte';
+  import { requiredPitZg } from '../../core/tax/pit-zg.js';
   import SectionA from './SectionA.svelte';
   import SectionC from './SectionC.svelte';
   import SectionD from './SectionD.svelte';
@@ -70,7 +71,7 @@
 
   const pitZgList = $derived(taxSummary?.pitZg ?? []);
   const pitZgCountries = $derived(
-    pitZgList.filter((z) => z.required).map((z) => z.country),
+    requiredPitZg(pitZgList).map((z) => z.country),
   );
   const pitZgInformationalCountries = $derived(
     pitZgList.filter((z) => !z.required).map((z) => z.country),

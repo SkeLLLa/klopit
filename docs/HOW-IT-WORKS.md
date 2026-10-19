@@ -128,7 +128,7 @@ kloPIT generates PIT/ZG for **share income reported in PIT/ZG section C.3** alon
 - Income from abroad: item 29
 - Tax paid abroad on that income: item 30
 
-PIT/ZG is **required only for countries where foreign tax on the gain was paid and is credited** (art. 30b ust. 5a/5b updof; MF "Broszura do PIT-38 za 2025 r.", Część L). Under the treaties share gains are taxed only in Poland (OECD MC art. 13 ust. 5), so such countries are shown muted as "Not required — income taxed only in Poland (informational)" and are not counted as attachments. The country is inferred from ISIN country mappings, and dividend ISINs are reused to fill the country for the same symbol when trade rows do not have a usable ISIN country.
+PIT/ZG is **required only for countries where foreign tax on the gain is credited** (art. 30b ust. 5a/5b updof; MF "Broszura do PIT-38 za 2025 r.", Część L). Share gains are normally taxable only in Poland under the treaties (OECD MC art. 13 ust. 5), but kloPIT does not assert that: it only knows that no foreign tax on gains is recorded. Such countries are shown muted as "Not required — no foreign tax on capital gains recorded for this country (informational)" and are not counted as attachments. The country is inferred from ISIN country mappings, and dividend ISINs are reused to fill the country for the same symbol when trade rows do not have a usable ISIN country.
 
 **Capital gains always use the ISIN-prefix country.** An ADR such as TSM (`US8740391003`) is US in `TradeResult.country` and in PIT/ZG, even when its dividends come from another state. Only dividends use a different country for ADRs (see step 1 in "Dividend Tax"). A user country override can be scoped to dividends, gains or both (a missing scope means both). When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
 
@@ -647,7 +647,7 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 
 **Implementation:** `pit-zg.ts`
 
-**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) and PIT/ZG(8) section C.3 — PIT/ZG is filed per country for income/tax settled in PIT-38 under art. 30b.
+**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) and PIT/ZG(8) section C.3 — PIT/ZG is filed per country, but only for income under art. 30b where foreign tax is credited (art. 30b ust. 5a/5b).
 
 **Official grounding for field precision and labels:**
 
@@ -667,13 +667,15 @@ PIT/ZG is generated from sell trades by country. In the PIT/ZG view:
 
 If item 29 is zero, item 30 is also shown as zero because it is tax paid abroad from the income in item 29.
 
-**Required vs. informational:** `PitZgFields.required` is `true` only when `tradeForeignTaxPln > 0` (art. 30b ust. 5a/5b updof; MF PIT-38 brochure, Część L: "do których ma zastosowanie metoda odliczenia podatku zapłaconego za granicą"; PIT/ZG(8) header). Countries with no foreign tax stay in the list with `required: false`; the tax form lists them separately and muted, and `requiredPitZg()` returns only the required ones. `TradeResult.foreignTaxPln` is currently always 0 for gains (nothing sets it), so today every capital-gains row is informational; the logic is general and a non-zero value makes the country required.
+**Required vs. informational:** `PitZgFields.required` is `true` only when the **credited** foreign tax is above 0 (art. 30b ust. 5a/5b updof; MF PIT-38 brochure, Część L: "do których ma zastosowanie metoda odliczenia podatku zapłaconego za granicą"; PIT/ZG(8) header). `creditableForeignTaxPln = min(tradeForeignTaxPln, 19% × country gain, polish tax due × country gain / Σ country gains)`, where the Polish tax due is `summary.capitalGainTaxPostLcfPln` (after section D offsets and loss carry-forward). So a country with a net loss, an overall loss, or a carry-forward that brings the tax to 0 gets credit 0 and is not required. Countries that are not required stay in the list with `required: false`; the tax form lists them separately and muted, and `requiredPitZg()` returns only the required ones. `TradeResult.foreignTaxPln` is currently always 0 for gains (nothing sets it), so today every capital-gains row is informational; the logic is general and a non-zero value makes the country required.
+
+**Known gap:** the proportional split of the Polish tax across countries is an approximation of the per-country limit in art. 30b ust. 5a; it does not model, for example, which country's gains a carry-forward loss was set against. It only affects whether credit is 0 or not in edge cases and is irrelevant while no foreign tax on gains is recorded.
 
 Foreign dividends are art. 30a flat-rate income and stay in PIT-38 section G by default. They do not create PIT/ZG entries unless the user enables the compatibility setting.
 
 **Optional dividend compatibility setting:**
 
-The `/settings` page exposes **Show dividends in PIT/ZG**, disabled by default. When enabled, PIT/ZG also shows helper dividend rows per country, next to the official PIT-38 section G values. This setting is intentionally narrow and does not replace the official PIT-38 section G dividend calculation.
+The `/settings` page exposes **Show dividends in PIT/ZG**, disabled by default. When enabled, PIT/ZG also shows informational dividend rows (never required: PIT/ZG has no dividend field), next to the official PIT-38 section G values. This setting is intentionally narrow and does not replace the official PIT-38 section G dividend calculation.
 
 **Country determination:** Extracted from the ISIN prefix (first 2 characters, ISO 3166-1 alpha-2), plus manual overrides from the country mapping table. Dividend ISIN mappings are reused for the same symbol when trade rows lack a usable ISIN country or resolve to `XX`. The displayed country name is always generated in Polish, regardless of app language, to match the official Polish form.
 
@@ -691,7 +693,9 @@ For each country:
     lossPln = max(costPln − proceedsPln, 0)
     If gainPln == 0:
         tradeForeignTaxPln = 0
-    required = tradeForeignTaxPln > 0
+    cap = min(19% * gainPln, polishTaxDue * gainPln / Σ gainPln)
+    creditableForeignTaxPln = min(tradeForeignTaxPln, cap)
+    required = creditableForeignTaxPln > 0
 
 If showDividendsInPitZg:
     For each dividend:
@@ -957,7 +961,7 @@ The app supports **three languages:**
 - ✅ Corporate actions (stock splits)
 - ✅ Multi-currency support (USD, EUR)
 - ✅ PIT-38 form fields sections C, D, G
-- ✅ PIT/ZG C.3 per-country attachment values for PIT-38 share income
+- ✅ PIT/ZG C.3 attachment values for PIT-38 share income, required only where foreign tax on gains is credited
 - ✅ OPP 1.5% Section J helper fields
 - ✅ Credit interest (broker cash interest, art. 30a)
 - ⏳ Cryptocurrency (framework in place, not yet implemented)
@@ -1007,7 +1011,7 @@ The app supports **three languages:**
 **Step 6: File with tax authority**
 
 - Copy values from `/tax-form` into official PIT-38 on podatki.gov.pl
-- Fill in PIT/ZG attachment rows shown by kloPIT (one per country when share income is present)
+- Fill in the PIT/ZG attachment rows kloPIT marks as required (only countries where foreign tax on gains is credited)
 - Submit and pay before April 30
 
 ---
@@ -1074,7 +1078,7 @@ Key Polish tax law provisions used in kloPIT calculations:
 | **FIFO**             | First In, First Out — method to match sales with purchases                         |
 | **NBP**              | Narodowy Bank Polski (Polish National Bank) — provides official exchange rates     |
 | **PIT-38**           | Polish tax form for capital gains and dividends                                    |
-| **PIT/ZG**           | Attachment to PIT-38 for foreign income/tax — one per country                      |
+| **PIT/ZG**           | Attachment to PIT-38 for foreign income with credited foreign tax — per country    |
 | **OPP**              | Optional 1.5% request to transfer part of tax due to a public benefit organization |
 | **Withholding Tax**  | Tax deducted by foreign broker (usually 15% US dividends)                          |
 | **Carry-In**         | Shares owned from prior tax years                                                  |

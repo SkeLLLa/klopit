@@ -269,4 +269,122 @@ void describe('buildPitZg', () => {
     });
     assert.equal(result[0].required, false);
   });
+
+  void it('keeps dividend rows with withholding informational', () => {
+    const result = buildPitZg({
+      trades: [],
+      dividends: [makeDivResult({ withholdingTaxPln: 30 })],
+      showDividends: true,
+    });
+    assert.equal(result[0].required, false);
+    assert.equal(result[0].proceedsPln, undefined);
+    assert.equal(result[0].dividendForeignTaxPln, 30);
+    assert.deepEqual(requiredPitZg(result), []);
+  });
+
+  void it('nets mixed gain and loss sells within a country', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 10000,
+          costPln: 4000,
+          foreignTaxPln: 300,
+        }),
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 1000,
+          costPln: 5000,
+          foreignTaxPln: 0,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    assert.equal(result[0].gainPln, 2000);
+    assert.equal(result[0].lossPln, 0);
+    assert.equal(result[0].tradeForeignTaxPln, 300);
+    // credit is capped by 19% of the 2000 gain = 380 -> 300 stays
+    assert.equal(result[0].creditableForeignTaxPln, 300);
+    assert.equal(result[0].required, true);
+  });
+
+  void it('zeroes foreign tax and drops required when the gain is 0', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 1000,
+          costPln: 1000,
+          foreignTaxPln: 80,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    assert.equal(result[0].tradeForeignTaxPln, 0);
+    assert.equal(result[0].required, false);
+  });
+
+  void it('caps the credit at 19% of the country gain', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 2000,
+          costPln: 1000,
+          foreignTaxPln: 500,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    assert.equal(result[0].creditableForeignTaxPln, 190);
+    assert.equal(result[0].required, true);
+  });
+
+  void it('is not required when Polish tax due is 0 after offsets', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 2000,
+          costPln: 1000,
+          foreignTaxPln: 100,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+      polishTaxDuePln: 0,
+    });
+    assert.equal(result[0].creditableForeignTaxPln, 0);
+    assert.equal(result[0].required, false);
+  });
+
+  void it('splits the Polish tax due proportionally across countries', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 3000,
+          costPln: 1000,
+          foreignTaxPln: 300,
+        }),
+        makeSellResult({
+          country: 'FR',
+          proceedsPln: 2000,
+          costPln: 1000,
+          foreignTaxPln: 300,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+      polishTaxDuePln: 100,
+    });
+    const de = result.find((entry) => entry.country === 'DE');
+    const fr = result.find((entry) => entry.country === 'FR');
+    // DE: 100 * 2000/3000, FR: 100 * 1000/3000
+    assert.ok(Math.abs((de?.creditableForeignTaxPln ?? 0) - 66.6667) < 0.001);
+    assert.ok(Math.abs((fr?.creditableForeignTaxPln ?? 0) - 33.3333) < 0.001);
+  });
 });

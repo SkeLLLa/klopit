@@ -438,10 +438,15 @@ export interface PitZgFields {
 
   /**
    * Whether the attachment must be filed: only when foreign tax on capital
-   * gains was paid and is credited (art. 30b ust. 5a/5b updof). Otherwise the
-   * income is taxed only in Poland and the row is informational.
+   * gains is credited (art. 30b ust. 5a/5b updof). Otherwise no foreign tax on
+   * gains is recorded and the row is informational.
    */
   required: boolean;
+  /**
+   * Foreign tax on gains that can be credited (art. 30b ust. 5a cap); 0 = not
+   * required.
+   */
+  creditableForeignTaxPln?: number;
 
   // Capital gains / share income (PIT/ZG C.3, present for sell trades)
   proceedsPln?: number;

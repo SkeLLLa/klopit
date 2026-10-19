@@ -1,14 +1,24 @@
-import type { DividendResult, PitZgFields, TradeResult } from '../types.js';
+import {
+  TAX_RATE,
+  type DividendResult,
+  type PitZgFields,
+  type TradeResult,
+} from '../types.js';
 import { getPolishCountryName } from './country-names.js';
 
 export interface BuildPitZgArgs {
   trades: TradeResult[];
   dividends: DividendResult[];
   showDividends: boolean;
+  /**
+   * Polish capital-gains tax actually due after section D offsets and loss
+   * carry-forward (poz. 35 base). Caps the credit overall; omitted = no cap.
+   */
+  polishTaxDuePln?: number;
 }
 
 export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
-  const { trades, dividends, showDividends } = args;
+  const { trades, dividends, showDividends, polishTaxDuePln } = args;
   const countries = new Map<string, PitZgFields>();
 
   function getEntry(country: string): PitZgFields {
@@ -44,13 +54,6 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     }
   }
 
-  // PIT/ZG is required only where foreign tax on the gain was paid and is
-  // credited (art. 30b ust. 5a/5b updof). Country-only dividend rows stay
-  // informational as well: dividends are settled in PIT-38 section G.
-  for (const entry of countries.values()) {
-    entry.required = (entry.tradeForeignTaxPln ?? 0) > 0;
-  }
-
   if (showDividends) {
     for (const div of dividends) {
       const entry = getEntry(div.country);
@@ -60,6 +63,27 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
       entry.deductibleDividendTaxPln =
         (entry.deductibleDividendTaxPln ?? 0) + div.deductibleWithholdingPln;
     }
+  }
+
+  // PIT/ZG is required only where a foreign tax is actually credited
+  // (art. 30b ust. 5a/5b updof). The credit is capped by the Polish tax on
+  // that country's income (19% of its gain) and, proportionally, by the tax
+  // really due after loss offsets and carry-forward, so a credit of 0 means
+  // not required. Dividend-only compatibility rows are never required:
+  // dividends are credited in PIT-38 section G (art. 30a).
+  const totalGain = [...countries.values()].reduce(
+    (sum, entry) => sum + (entry.gainPln ?? 0),
+    0,
+  );
+  for (const entry of countries.values()) {
+    const gain = entry.gainPln ?? 0;
+    const paid = entry.tradeForeignTaxPln ?? 0;
+    let cap = gain * TAX_RATE;
+    if (polishTaxDuePln !== undefined && totalGain > 0) {
+      cap = Math.min(cap, (polishTaxDuePln * gain) / totalGain);
+    }
+    entry.creditableForeignTaxPln = Math.max(Math.min(paid, cap), 0);
+    entry.required = entry.creditableForeignTaxPln > 0;
   }
 
   return [...countries.values()].toSorted((a, b) =>

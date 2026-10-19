@@ -561,11 +561,11 @@ Can't use progressive tax brackets (which would require income info outside scop
 
 **Decision:**
 
-- PIT/ZG is required only for foreign income to which the foreign-tax-credit method applies (art. 30b ust. 5a/5b updof; MF "Broszura do PIT-38 za 2025 r.", Część L; PIT/ZG(8) header). Share gains are taxable only in Poland under the treaties (OECD MC art. 13 ust. 5), so no foreign tax arises.
-- `PitZgFields.required = tradeForeignTaxPln > 0`. Countries with zero foreign tax stay in the result (users who filed them before can still see the values) but are shown muted as "Not required — income taxed only in Poland (informational)" and excluded from the attachment list via `requiredPitZg()`.
-- Dividends are unchanged: art. 30a income goes to PIT-38 section G; the optional compatibility rows are informational unless a country also has foreign tax on gains.
+- PIT/ZG is required only for foreign income to which the foreign-tax-credit method applies (art. 30b ust. 5a/5b updof; MF "Broszura do PIT-38 za 2025 r.", Część L; PIT/ZG(8) header). Share gains are normally taxable only in Poland under the treaties (OECD MC art. 13 ust. 5), but because kloPIT never records foreign tax on gains (`foreignTaxPln` is always 0) the UI says "no foreign tax on capital gains recorded", not "taxed only in Poland".
+- `PitZgFields.required = creditableForeignTaxPln > 0`, where the credit is the paid foreign tax capped by 19% of the country gain (art. 30b ust. 5a) and proportionally by the Polish tax due after offsets and loss carry-forward (`summary.capitalGainTaxPostLcfPln`). A credit of 0 therefore means not required (net loss, overall loss, carry-forward to 0). Not-required countries stay in the result, shown muted, and `requiredPitZg()` returns the filing list.
+- Dividend rows (optional compatibility setting) are never required and carry their own notice: PIT/ZG C.3 covers art. 30b only; dividends are credited in PIT-38 section G (art. 30a). The setting is labelled "informational".
 
-**Trade-offs:** `TradeResult.foreignTaxPln` is always 0 for gains today, so all gains rows are informational until a source of foreign capital-gains tax exists.
+**Trade-offs:** The per-country split of the Polish tax is proportional to country gains, an approximation of the ust. 5a limit. Until a source of foreign tax on gains exists, every gains row is informational.
 
 ---
 
