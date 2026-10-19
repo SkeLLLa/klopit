@@ -53,6 +53,7 @@ export async function updateSession(args: {
       | 'reduceAdrFeesFromDividends'
       | 'useSettlementDateForTradeRates'
       | 'schwabFmvNoticeDismissed'
+      | 'perAccountFifoNoticePending'
     >
   >;
 }): Promise<void> {

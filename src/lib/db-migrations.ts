@@ -141,3 +141,21 @@ export function migrateCarryInPositionV14(
     row.costBasisSource = 'missing';
   }
 }
+
+/** Row shape the v16 upgrade reads: only the owning session and account. */
+export interface LegacyAccountRow {
+  sessionId: string;
+  account?: string;
+}
+
+/**
+ * V16 helper: a session needs the per-account FIFO notice when its data comes
+ * from more than one broker or securities account.
+ */
+export function needsPerAccountFifoNotice(args: {
+  files: readonly { broker: string }[];
+  accounts: readonly string[];
+}): boolean {
+  const brokers = new Set(args.files.map((f) => f.broker));
+  return brokers.size > 1 || new Set(args.accounts).size > 1;
+}

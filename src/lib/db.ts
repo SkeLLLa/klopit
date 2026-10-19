@@ -22,8 +22,10 @@ import { installStaleHooks } from './db-hooks.js';
 import {
   buildSessionSymbolIsinMap,
   migrateCarryInPositionV14,
+  needsPerAccountFifoNotice,
   renameInteractiveBrokersToIbkr,
   stripLegacyPriorYearLoss,
+  type LegacyAccountRow,
   type LegacyCarryInRow,
   type LegacySessionRecord,
   type LegacyCorporateActionIsinRow,
@@ -68,6 +70,12 @@ export interface SessionRecord {
   useSettlementDateForTradeRates?: boolean;
   /** The "re-import Schwab statements for FMV data" notice was dismissed. */
   schwabFmvNoticeDismissed?: boolean;
+  /**
+   * Set by the v16 upgrade on sessions that mix several brokers / accounts:
+   * FIFO now runs per account, so their results may have changed. Cleared when
+   * the user dismisses the notice. Never set on sessions created after v16.
+   */
+  perAccountFifoNoticePending?: boolean;
 }
 
 export interface ImportedFileRecord {
@@ -197,6 +205,14 @@ export interface NbpRateRecord {
 // Database
 // ---------------------------------------------------------------------------
 
+/*
+ * Schema upgrade policy (CONTRIBUTING.md, "Database Schema Upgrades"):
+ * - Input tables (INPUT_TABLES) are never cleared or dropped by an upgrade.
+ * - Derived data (DERIVED_TABLES) may be invalidated; affected sessions must
+ *   then be marked stale or reset to 'draft' so results are recomputed.
+ * - Every version bump must update the lists in `db-tables.ts` and extend
+ *   `test/db-input-preservation.test.ts` with the new N-1 -> N step.
+ */
 export class KlopitDB extends Dexie {
   sessions!: EntityTable<SessionRecord, 'id'>;
   trades!: EntityTable<TradeRecord, 'id'>;
@@ -392,7 +408,7 @@ export class KlopitDB extends Dexie {
           session.dataUpdatedAt = new Date();
         });
     });
-    // v15 (v14 is reserved for Plan 03): cached `rate: null` NBP entries
+    // v15: cached `rate: null` NBP entries
     // could be "not yet published" days stored as holidays, which made later
     // lookups walk back to an older rate. Drop all cached nulls (cheap to
     // refetch; real rates are kept) and flag calculated sessions as stale so
@@ -408,6 +424,49 @@ export class KlopitDB extends Dexie {
         .modify((session) => {
           if (session.status === 'calculated') {
             session.dataUpdatedAt = new Date();
+          }
+        });
+    });
+    // v16: plan-10 data and calculation changes shipped together: poz. 49
+    // rounding, gross proceeds with commission moved into cost, per-lot
+    // incentive regime, ADR / PIL dividend country and override scopes, the
+    // optional `account` field with per-account FIFO (art. 24 ust. 10 updof),
+    // transfers stored as `corporateActions` rows of type 'transfer', and
+    // dated carry-in placement. All new fields are optional and unindexed
+    // (`account` is not queried by index), so no schema change and no row is
+    // rewritten. Calculated sessions are marked stale so results are
+    // recomputed; sessions that mix several brokers / accounts also get a
+    // one-time notice, as their results can change.
+    this.version(16).upgrade(async (tx) => {
+      const accounts = new Map<string, Set<string>>();
+      await Promise.all(
+        ['trades', 'carryInPositions', 'dividends'].map((table) =>
+          tx
+            .table<LegacyAccountRow>(table)
+            .toCollection()
+            .each((row) => {
+              if (!row.account) return;
+              const set = accounts.get(row.sessionId) ?? new Set<string>();
+              set.add(row.account);
+              accounts.set(row.sessionId, set);
+            }),
+        ),
+      );
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          if (session.status === 'calculated') {
+            session.calculatedAt = undefined;
+            session.dataUpdatedAt = new Date();
+          }
+          if (
+            needsPerAccountFifoNotice({
+              files: session.files,
+              accounts: [...(accounts.get(session.id) ?? [])],
+            })
+          ) {
+            session.perAccountFifoNoticePending = true;
           }
         });
     });

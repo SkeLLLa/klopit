@@ -727,3 +727,7 @@ Dashboard re-renders as you edit trades (real-time reaction).
 | **Simplicity**           | Three pages, one session per year, one tax rate (19%)     |
 | **Flexibility**          | Parser registry, adapter patterns, pure core logic        |
 | **Standards compliance** | FIFO method, PIT-38 fields, NBP rates, Polish tax rules   |
+
+## DB v16: one bump for plan-10 changes
+
+All plan-10 data and calculation changes ship in a single Dexie version (v16). No index changes and no rows are rewritten (`account`, `incentive` and override `scope` are optional and unindexed). The upgrade marks calculated sessions stale so results are recomputed. Because FIFO now runs per account (art. 24 ust. 10 updof), results of sessions that mix several brokers or accounts can change. The upgrade flags those sessions with `perAccountFifoNoticePending` (decided once during the upgrade, so sessions created later never see it); the Data page shows a dismissible notice and dismissing clears the flag.
