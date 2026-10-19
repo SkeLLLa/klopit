@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { calculateTaxes } from '../src/core/tax/calculator.js';
 import {
   buildPitZg,
   creditableGainsForeignTaxPln,
   requiredPitZg,
 } from '../src/core/tax/pit-zg.js';
-import type { DividendResult, TradeResult } from '../src/core/types.js';
+import type {
+  DividendResult,
+  EnrichedTrade,
+  TaxPeriod,
+  TradeResult,
+} from '../src/core/types.js';
 
 function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
   return {
@@ -54,6 +60,22 @@ function makeDivResult(
   };
 }
 
+/** Explicit poz. 33 / poz. 28 the way the old defaults derived them. */
+function zg(args: {
+  trades: TradeResult[];
+  dividends: DividendResult[];
+  showDividends: boolean;
+}) {
+  const income = args.trades
+    .filter((t) => t.type === 'sell')
+    .reduce((sum, t) => sum + (t.proceedsPln - t.costPln), 0);
+  return buildPitZg({
+    ...args,
+    taxBeforeCreditPln: Math.max(income, 0) * 0.19,
+    totalIncomePln: income,
+  });
+}
+
 const sell = (country: string, gain: number, tax: number) =>
   makeSellResult({
     country,
@@ -74,7 +96,7 @@ const run = (trades: TradeResult[], t: number, d: number) =>
 
 void describe('buildPitZg', () => {
   void it('returns empty array for no results', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [],
       dividends: [],
       showDividends: false,
@@ -83,7 +105,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('includes sell trades by country by default', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'US',
@@ -107,7 +129,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('includes sell trades even when no foreign tax was paid', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'US',
@@ -125,7 +147,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('does not show PIT/ZG item 30 tax when item 29 income is zero', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'US',
@@ -145,7 +167,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('ignores buy trades', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           type: 'buy',
@@ -161,7 +183,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('does not include dividends by default', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [],
       dividends: [makeDivResult()],
       showDividends: false,
@@ -170,7 +192,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('includes dividends when the compatibility setting is enabled', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [],
       dividends: [
         makeDivResult({
@@ -192,7 +214,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('merges trades and dividends by country when dividends are enabled', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'US',
@@ -222,7 +244,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('sorts results by country code', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({ country: 'US' }),
         makeSellResult({ country: 'DE' }),
@@ -235,7 +257,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('marks a country with zero foreign tax as not required', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({ country: 'US', foreignTaxPln: 0 }),
         makeSellResult({ country: 'DE', foreignTaxPln: 0 }),
@@ -249,7 +271,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('marks a country with foreign tax as required and counts it', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({ country: 'US', foreignTaxPln: 0 }),
         makeSellResult({ country: 'DE', foreignTaxPln: 500 }),
@@ -268,7 +290,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('does not require a country whose net result is a loss', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'DE',
@@ -284,7 +306,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('keeps dividend-only compatibility rows informational', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [],
       dividends: [makeDivResult({ country: 'US' })],
       showDividends: true,
@@ -293,7 +315,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('keeps dividend rows with withholding informational', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [],
       dividends: [makeDivResult({ withholdingTaxPln: 30 })],
       showDividends: true,
@@ -305,7 +327,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('nets mixed gain and loss sells within a country', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'DE',
@@ -332,7 +354,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('zeroes foreign tax and drops required when the gain is 0', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'DE',
@@ -349,7 +371,7 @@ void describe('buildPitZg', () => {
   });
 
   void it('caps the credit at 19% of the country gain', () => {
-    const result = buildPitZg({
+    const result = zg({
       trades: [
         makeSellResult({
           country: 'DE',
@@ -452,5 +474,182 @@ void describe('buildPitZg', () => {
       assert.equal(creditableGainsForeignTaxPln(list), 0);
       assert.equal(requiredPitZg(list).length, 0);
     });
+  });
+});
+
+const taxPeriod2024: TaxPeriod = {
+  year: 2024,
+  from: new Date(2024, 0, 1),
+  to: new Date(2024, 11, 31),
+};
+
+function enriched(overrides: Partial<EnrichedTrade>): EnrichedTrade {
+  return {
+    symbol: 'AAPL',
+    currency: 'PLN',
+    datetime: new Date(2024, 1, 1),
+    quantity: 1,
+    price: 0,
+    proceeds: 0,
+    commission: 0,
+    commissionCurrency: 'PLN',
+    type: 'buy',
+    exchangeRate: 1,
+    commissionExchangeRate: 1,
+    rateUnavailable: false,
+    ...overrides,
+  };
+}
+
+function position(args: {
+  symbol: string;
+  cost: number;
+  proceeds: number;
+  foreignTax?: number;
+}): EnrichedTrade[] {
+  return [
+    enriched({ symbol: args.symbol, price: args.cost, proceeds: args.cost }),
+    enriched({
+      symbol: args.symbol,
+      datetime: new Date(2024, 5, 1),
+      price: args.proceeds,
+      proceeds: args.proceeds,
+      type: 'sell',
+      ...(args.foreignTax === undefined
+        ? {}
+        : { foreignTax: args.foreignTax, foreignTaxExchangeRate: 1 }),
+    }),
+  ];
+}
+
+function calc(trades: EnrichedTrade[], countries: [string, string][]) {
+  return calculateTaxes({
+    trades,
+    dividends: [],
+    creditInterests: [],
+    withholdingTaxes: [],
+    corporateActions: [],
+    carryInPositions: [],
+    taxPeriod: taxPeriod2024,
+    symbolCountryMap: new Map(countries),
+  });
+}
+
+void describe('PIT/ZG review fixes (plan 13)', () => {
+  void it('M-3: credit uses the raw foreign tax of a net-negative country', () => {
+    // DE +5000 untaxed, US PTP +1000 taxed 300, US AAPL -2000: T = 760, D = 4000.
+    const list = buildPitZg({
+      trades: [
+        sell('DE', 5000, 0),
+        { ...sell('US', 1000, 300), symbol: 'PTP' },
+        { ...sell('US', -2000, 0), symbol: 'AAPL' },
+      ],
+      dividends: [],
+      showDividends: false,
+      taxBeforeCreditPln: 760,
+      totalIncomePln: 4000,
+    });
+    assert.equal(creditableGainsForeignTaxPln(list), 190);
+    const us = list.find((e) => e.country === 'US');
+    // poz. 30 display stays zeroed: the country's net is a loss.
+    assert.ok(us);
+    assert.equal(us.tradeForeignTaxPln, 0);
+    assert.equal(us.required, true);
+  });
+
+  void it('minor 1: PL and XX never receive a credit', () => {
+    for (const country of ['PL', 'XX']) {
+      assert.equal(
+        run([sell(country, 1000, 100), sell('DE', 2000, 0)], 570, 3000),
+        0,
+      );
+    }
+  });
+
+  void it('minor 3: info and unmatched rows are not in the dividend section', () => {
+    const list = buildPitZg({
+      trades: [],
+      dividends: [
+        makeDivResult({ withholdingTaxPln: 30 }),
+        makeDivResult({
+          amountPln: 0,
+          withholdingTaxPln: 79,
+          deductibleWithholdingPln: 0,
+          isInfo: true,
+          warnings: [{ kind: 'wht-unmatched' }],
+        }),
+      ],
+      showDividends: true,
+      taxBeforeCreditPln: 0,
+      totalIncomePln: 0,
+    });
+    assert.equal(list[0].dividendForeignTaxPln, 30);
+  });
+
+  void it('Z5 wired through calculateTaxes: PIT/ZG credit caps at poz. 33', () => {
+    const r = calc(
+      position({
+        symbol: 'DE1',
+        cost: 1000,
+        proceeds: 2000.4,
+        foreignTax: 1000,
+      }),
+      [['DE1', 'DE']],
+    );
+    assert.equal(r.pit38[33], 190);
+    const de = r.pitZg.find((e) => e.country === 'DE');
+    assert.equal(de?.creditableForeignTaxPln, 190);
+  });
+
+  void it('M-3 through calculateTaxes', () => {
+    const r = calc(
+      [
+        ...position({ symbol: 'DE1', cost: 1000, proceeds: 6000 }),
+        ...position({
+          symbol: 'PTP',
+          cost: 1000,
+          proceeds: 2000,
+          foreignTax: 300,
+        }),
+        ...position({ symbol: 'AAPL', cost: 3000, proceeds: 1000 }),
+      ],
+      [
+        ['DE1', 'DE'],
+        ['PTP', 'US'],
+        ['AAPL', 'US'],
+      ],
+    );
+    assert.equal(r.pit38[28], 4000);
+    assert.equal(r.pit38[33], 760);
+    assert.equal(r.pit38[34], 190);
+  });
+
+  void it('minor 3: unmatched WHT does not enter the WHT total or PIT/ZG', () => {
+    const r = calculateTaxes({
+      trades: [],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [
+        {
+          symbol: 'XYZ',
+          currency: 'USD',
+          date: new Date(2024, 4, 10),
+          amount: -20,
+          exchangeRate: 4,
+          rateUnavailable: false,
+        },
+      ],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['XYZ', 'US']]),
+      showDividendsInPitZg: true,
+    });
+    assert.equal(r.dividends.length, 1);
+    assert.equal(r.summary.totalWithholdingPln, 0);
+    assert.equal(
+      r.pitZg.find((e) => e.country === 'US')?.dividendForeignTaxPln,
+      undefined,
+    );
   });
 });

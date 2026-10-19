@@ -1,5 +1,4 @@
 import {
-  TAX_RATE,
   type DividendResult,
   type PitZgFields,
   type TradeResult,
@@ -11,10 +10,10 @@ export interface BuildPitZgArgs {
   trades: TradeResult[];
   dividends: DividendResult[];
   showDividends: boolean;
-  /** PIT-38 poz. 33: 19% of rounded poz. 31. Omitted = 19% of net income. */
-  taxBeforeCreditPln?: number | undefined;
-  /** PIT-38 poz. 28: net income before loss carry-forward. Omitted = sells' net. */
-  totalIncomePln?: number | undefined;
+  /** PIT-38 poz. 33: 19% of rounded poz. 31. */
+  taxBeforeCreditPln: number;
+  /** PIT-38 poz. 28: net income before loss carry-forward. */
+  totalIncomePln: number;
 }
 
 export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
@@ -26,6 +25,7 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     totalIncomePln,
   } = args;
   const countries = new Map<string, PitZgFields>();
+  const paidByCountry = new Map<string, number>();
 
   function getEntry(country: string): PitZgFields {
     let entry = countries.get(country);
@@ -49,6 +49,10 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     entry.costPln = (entry.costPln ?? 0) + trade.costPln;
     entry.tradeForeignTaxPln =
       (entry.tradeForeignTaxPln ?? 0) + trade.foreignTaxPln;
+    paidByCountry.set(
+      trade.country,
+      (paidByCountry.get(trade.country) ?? 0) + trade.foreignTaxPln,
+    );
   }
 
   for (const entry of countries.values()) {
@@ -62,6 +66,7 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
 
   if (showDividends) {
     for (const div of dividends) {
+      if (div.isInfo) continue;
       const entry = getEntry(div.country);
       entry.dividendIncomePln = (entry.dividendIncomePln ?? 0) + div.amountPln;
       entry.dividendForeignTaxPln =
@@ -79,10 +84,8 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
   // Dividend-only compatibility rows are never required: dividends are
   // credited in PIT-38 section G (art. 30a).
   const allSells = trades.filter((trade) => trade.type === 'sell');
-  const income =
-    totalIncomePln ??
-    allSells.reduce((sum, t) => sum + (t.proceedsPln - t.costPln), 0);
-  const tax = taxBeforeCreditPln ?? Math.max(income, 0) * TAX_RATE;
+  const income = totalIncomePln;
+  const tax = taxBeforeCreditPln;
   const abroadIncome = Math.max(
     allSells
       .filter((t) => t.country !== 'PL' && t.country !== 'XX')
@@ -100,9 +103,15 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
         .reduce((sum, t) => sum + (t.proceedsPln - t.costPln), 0),
       0,
     );
-    const limit = income > 0 ? tax * Math.min(taxedIncome / income, 1) : 0;
+    // No credit for Poland or an unknown country. The paid tax is the raw sum
+    // of the taxed sells: a net-loss country shows 0 in poz. 30 (display) but
+    // its taxed sells still count against the limit.
+    const limit =
+      income > 0 && entry.country !== 'PL' && entry.country !== 'XX'
+        ? tax * Math.min(taxedIncome / income, 1)
+        : 0;
     entry.creditableForeignTaxPln = Math.max(
-      Math.min(entry.tradeForeignTaxPln ?? 0, limit),
+      Math.min(paidByCountry.get(entry.country) ?? 0, limit),
       0,
     );
     totalCredit += entry.creditableForeignTaxPln;
