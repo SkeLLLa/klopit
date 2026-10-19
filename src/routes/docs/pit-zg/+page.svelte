@@ -30,7 +30,7 @@
     },
     {
       key: 'art30b',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
       label: m.page_pitzg_links_lexlege_title(),
       quote: '„z odpłatnego zbycia papierów wartościowych”',
     },

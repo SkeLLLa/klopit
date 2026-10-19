@@ -19,7 +19,7 @@
     {
       key: 'art30a',
       label: m.docs_ib_adr_source_pit(),
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/',
       quote: '„z dywidend ... pobiera się 19%”',
     },
     {

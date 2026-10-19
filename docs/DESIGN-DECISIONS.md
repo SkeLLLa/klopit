@@ -134,7 +134,7 @@ That explicit choice is paired with **fail-loud section classification** inside 
 
 ### Why FIFO?
 
-Polish tax law **requires FIFO** when specific lot identification is not possible ([art. 24 ust. 10 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). Since pooled brokerage accounts (like Interactive Brokers) don't allow identifying specific lots at the tax level, FIFO is the legally mandated method.
+Polish tax law **requires FIFO** when specific lot identification is not possible ([art. 24 ust. 10 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). Since pooled brokerage accounts (like Interactive Brokers) don't allow identifying specific lots at the tax level, FIFO is the legally mandated method.
 
 **Added benefit:** FIFO naturally tracks which shares you still own (the queue tail), useful for future features like specific lot selection.
 
@@ -187,7 +187,7 @@ kloPIT imports ADR/GDR/CDI accrual rows as transaction fees, but the default tax
 | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | These rows should be imported because they represent actual ADR/GDR/CDI account fees.                                           | [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php)                                                                                                         |
 | Separate cash-account debits should not be silently netted against dividend income.                                             | [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php)                                                                                                         |
-| The safest Polish PIT default is no cost reduction for art. 30a dividend income.                                                | [PIT Act art. 30a, especially ust. 1 pkt 4 and ust. 6](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                                                                         |
+| The safest Polish PIT default is no cost reduction for art. 30a dividend income.                                                | [PIT Act art. 30a, especially ust. 1 pkt 4 and ust. 6](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                                                                         |
 | PIT-38 section G remains the reporting target for foreign art. 30a dividend tax and the art. 30a ust. 9 foreign-tax credit.     | [Ministry of Finance PIT-38 guidance for 2025](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/)                                                                                                  |
 | The optional setting exists because public sources do not directly resolve every broker-reporting pattern for ADR/GDR/CDI fees. | [IBKR says to consult the ADR/GDR/CDI prospectus for fee details](https://www.interactivebrokers.com/en/pricing/other-fees.php), while Polish PIT art. 30a does not mention this broker-specific fee form. |
 
@@ -675,7 +675,7 @@ The shares a carry-in snapshot adds (those the imported trades do not explain) a
 
 ### Why
 
-[Art. 24 ust. 10 updof](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) orders FIFO by actual acquisition date, and the user's dated row is the evidence of that date. Placing the shares older than every import let an imported sell consume shares that, by the user's own date, did not exist yet, giving a wrong cost in both directions. When honouring the date leaves an imported sell short, the existing `carry-in-inconsistent` warning is shown and the form is a draft.
+[Art. 24 ust. 10 updof](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) orders FIFO by actual acquisition date, and the user's dated row is the evidence of that date. Placing the shares older than every import let an imported sell consume shares that, by the user's own date, did not exist yet, giving a wrong cost in both directions. When honouring the date leaves an imported sell short, the existing `carry-in-inconsistent` warning is shown and the form is a draft.
 
 ---
 

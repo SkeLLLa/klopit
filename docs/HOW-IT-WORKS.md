@@ -107,7 +107,7 @@ The form displays PIT-38 sections in the same order as the official form:
 
 3. **Sections E & F — Crypto** (currently placeholders, to be implemented)
 
-4. **Section G — Dividend Tax Summary** ([art. 30a](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/))
+4. **Section G — Dividend Tax Summary** ([art. 30a](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/))
    - Total dividend income
    - Withholding tax paid abroad (capped per-dividend)
    - Additional tax owed to Poland (~4% after US withholding)
@@ -115,14 +115,14 @@ The form displays PIT-38 sections in the same order as the official form:
 5. **Section H — Monthly Flat-Rate Tax** (placeholder)
    - Monthly fields are shown as unsupported zero placeholders
 
-6. **Section J — OPP 1.5% Request** ([art. 45c](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/))
+6. **Section J — OPP 1.5% Request** ([art. 45c](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/))
    - Optional KRS, requested amount, purpose, and consent fields
    - The requested amount is displayed as 1.5% of supported PIT-38 tax due from poz. 35, rounded down to full 10 groszy
    - This is a request to redirect part of tax already due; it does not reduce the PIT-38 tax-to-pay value
 
 **PIT/ZG attachment:**
 
-kloPIT generates PIT/ZG for **share income reported in PIT/ZG section C.3** alongside PIT-38 ([art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)). PIT/ZG reports:
+kloPIT generates PIT/ZG for **share income reported in PIT/ZG section C.3** alongside PIT-38 ([art. 45 ust. 1a ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)). PIT/ZG reports:
 
 - Country of income origin: item 6 country name and item 7 country code
 - Income from abroad: item 29
@@ -168,7 +168,7 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 
 **Why:** You trade in USD or EUR, but Polish taxes are reported in PLN.
 
-**Legal basis:** [Art. 11a ust. 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) — income in foreign currencies is converted to PLN using the average NBP exchange rate from **the last business day preceding** the date of income. For costs: [art. 11a ust. 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) applies the same NBP rate principle (the last business day before the cost was incurred).
+**Legal basis:** [Art. 11a ust. 1 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) — income in foreign currencies is converted to PLN using the average NBP exchange rate from **the last business day preceding** the date of income. For costs: [art. 11a ust. 2](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) applies the same NBP rate principle (the last business day before the cost was incurred).
 
 **How it works:**
 
@@ -178,7 +178,7 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 - Stores the rate for your records
 - If the session setting **Use estimated T+2 settlement dates for trade rates** is enabled, trade proceeds, costs, and commissions instead use the last Polish business day before the estimated T+2 settlement date. Dividends, withholding tax, credit interest, and corporate-action cash keep using their own event dates.
 
-**Why the last business day before?** Polish tax law requires it ([art. 11a ust. 1](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)). Weekends and holidays don't have rates, so we go back to the last trading day.
+**Why the last business day before?** Polish tax law requires it ([art. 11a ust. 1](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)). Weekends and holidays don't have rates, so we go back to the last trading day.
 
 **Implementation detail:** Each trade/dividend carries two exchange rates resolved before calculation:
 
@@ -195,24 +195,24 @@ By default both rates are the average NBP Table A rate from the last business da
 
 ### 2. FIFO Method (First In, First Out)
 
-**Legal basis:** [Art. 24 ust. 10 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) — when a taxpayer sells securities acquired at different prices and it is not possible to identify specific lots, the FIFO method must be used. This is the default method required by law for pooled brokerage accounts.
+**Legal basis:** [Art. 24 ust. 10 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) — when a taxpayer sells securities acquired at different prices and it is not possible to identify specific lots, the FIFO method must be used. This is the default method required by law for pooled brokerage accounts.
 
 **Exact algorithm** (`capital-gains.ts`):
 
-**Step 1 — Prepare carry-in positions.** Shares owned before the imported history starts (carry-ins) still carry their acquisition cost. Under [art. 23 ust. 1 pkt 38](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-23/) with [art. 30b ust. 2 pkt 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) that cost is deductible in the year the shares are **sold**, not in the year they were bought, so nothing was "already claimed". Each carry-in gets a PLN cost before the FIFO run:
+**Step 1 — Prepare carry-in positions.** Shares owned before the imported history starts (carry-ins) still carry their acquisition cost. Under [art. 23 ust. 1 pkt 38](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-23/) with [art. 30b ust. 2 pkt 1 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) that cost is deductible in the year the shares are **sold**, not in the year they were bought, so nothing was "already claimed". Each carry-in gets a PLN cost before the FIFO run:
 
 - `costBasisPln` entered by the user is used as is.
-- `costBasis` in a foreign currency is converted at the NBP rate from the last business day before the acquisition date ([art. 11a ust. 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)), so a foreign-currency cost requires an acquisition date. A cost without a currency is treated as PLN.
-- A cost explicitly confirmed as zero is 0. This is only for shares from a qualifying incentive program not taxed when received ([art. 24 ust. 11](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)); RSU or ESPP shares taxed at vesting or purchase have that taxed value as their cost.
+- `costBasis` in a foreign currency is converted at the NBP rate from the last business day before the acquisition date ([art. 11a ust. 2](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)), so a foreign-currency cost requires an acquisition date. A cost without a currency is treated as PLN.
+- A cost explicitly confirmed as zero is 0. This is only for shares from a qualifying incentive program not taxed when received ([art. 24 ust. 11](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)); RSU or ESPP shares taxed at vesting or purchase have that taxed value as their cost.
 - Otherwise the cost is **missing**: it counts as 0 PLN, but every sale that consumes the lot is flagged (`costBasisMissing`) on the dashboard and in the transactions table, and the tax form is marked as incomplete (copying disabled) until the cost is entered.
 
 A carry-in must belong to a year before the tax year, and its acquisition date (if any) must fall on or before December 31 of that year.
 
 Carry-ins are keyed by ISIN when known (the parser back-fills it from the statement's instrument list), falling back to the ISIN of a trade or corporate action with the same symbol, then to the symbol, so they match the trades that sell them. A corporate action's ISIN is not used for a symbol whose trades have no ISIN, since those trades are keyed by symbol.
 
-**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date, so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). An undated carry-in is placed just before the first imported trade of the instrument after the previous snapshot (and never after the end of its year), because shares the imported history cannot explain are assumed to be older than it. On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
+**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date, so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). An undated carry-in is placed just before the first imported trade of the instrument after the previous snapshot (and never after the end of its year), because shares the imported history cannot explain are assumed to be older than it. On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
 
-Carry-ins are treated as per-instrument **snapshots**: "held N shares at the end of year Y". Years are processed in ascending order. The holding implied by the imported events (and earlier snapshots) at December 31 of Y is compared with the snapshot. The shares it does not explain are modelled as one lot, priced like the oldest row, placed as follows. When every row of the snapshot has an acquisition date, that lot is placed at the earliest row date, even if imported trades are older or newer than it: FIFO is ordered by actual acquisition date ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)), so an imported sell dated before it cannot consume those shares (if that leaves imported sells short, the snapshot is reported as `carry-in-inconsistent` and the form is a draft). If any row is undated, the lot goes before the earliest imported trade since the previous snapshot, as above. FIFO sells that lot before any later imported buy: the part that imported sells consume (shares sold before the snapshot) is seeded as a separate lot at that placement, and the part that survives to December 31 is the share of the snapshot the imported buys do not explain. The rest of the snapshot is explained by imported buys:
+Carry-ins are treated as per-instrument **snapshots**: "held N shares at the end of year Y". Years are processed in ascending order. The holding implied by the imported events (and earlier snapshots) at December 31 of Y is compared with the snapshot. The shares it does not explain are modelled as one lot, priced like the oldest row, placed as follows. When every row of the snapshot has an acquisition date, that lot is placed at the earliest row date, even if imported trades are older or newer than it: FIFO is ordered by actual acquisition date ([art. 24 ust. 10](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)), so an imported sell dated before it cannot consume those shares (if that leaves imported sells short, the snapshot is reported as `carry-in-inconsistent` and the form is a draft). If any row is undated, the lot goes before the earliest imported trade since the previous snapshot, as above. FIFO sells that lot before any later imported buy: the part that imported sells consume (shares sold before the snapshot) is seeded as a separate lot at that placement, and the part that survives to December 31 is the share of the snapshot the imported buys do not explain. The rest of the snapshot is explained by imported buys:
 
 - If imported buys explain the whole snapshot, no carry-in row is seeded and a warning is shown (a later-year snapshot of the same shares, or a position fully explained by imported buys, is not double counted). Such rows need no acquisition cost and are not listed as missing one.
 - If they explain part of it, only the rest is seeded. The latest-acquired rows are reduced first, a warning is shown, and the cost of a partly seeded row is pro-rated per share (with a separate warning).
@@ -262,7 +262,7 @@ If the queue is empty before all shares are consumed, the calculator does not st
 
 #### FIFO per securities account
 
-[Art. 24 ust. 10 updof](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) applies FIFO "odrębnie dla każdego rachunku papierów wartościowych" — separately for each securities account. Every trade, carry-in and corporate action therefore carries an `account` (`<broker>:<id>`, e.g. `ibkr:U123`, `schwab:default`, `manual:<label>`) and the queue key is `account|ISIN-or-symbol`. A sell at one account never consumes lots of another, even when those are older. Inside an account a specific lot may still be identified (IBI `lotId`), as confirmed by the tax authority ruling KIS 0112-KDWL.4011.2.2025.1.TW.
+[Art. 24 ust. 10 updof](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) applies FIFO "odrębnie dla każdego rachunku papierów wartościowych" — separately for each securities account. Every trade, carry-in and corporate action therefore carries an `account` (`<broker>:<id>`, e.g. `ibkr:U123`, `schwab:default`, `manual:<label>`) and the queue key is `account|ISIN-or-symbol`. A sell at one account never consumes lots of another, even when those are older. Inside an account a specific lot may still be identified (IBI `lotId`), as confirmed by the tax authority ruling KIS 0112-KDWL.4011.2.2025.1.TW.
 
 - **Rows without an account (legacy).** If the session's rows have at most one distinct account, unstamped rows join it and the results are the same as before accounts existed. With several accounts, attributing an unstamped row to an account is always a guess, so it is never silent. Per instrument, dry runs over its connected component (the instrument plus everything tied to it by mergers or symbol/ISIN changes) compare the rows kept apart (the `unassigned` account) with the rows joined to each account that holds anything in its component (so an account with only the merger target's rows counts) (matched by ISIN or symbol, also across brokers that key differently). An account takes the rows only when joining lowers the instrument's total shortfall and adds none to that account; exactly one such account gives an informational `account-assumed` warning. With no shortfall, the rows stay apart and the result stays final only if joining any holder would leave the in-period sells unchanged. Every other case (several resolving accounts, none, or a choice that changes the result) stays `unassigned` and the `account-unassigned` warning makes the form a draft. Unassigned rows are never offered as transfer donors or receivers; assign an account on the Data page (the carry-in editor has the Account field too).
 - **Corporate actions.** An action with an account changes that account's queues only. An action without one (legacy, or manual "all accounts") applies to every account holding the instrument. The same split reported twice (e.g. by two brokers, or a manual entry next to a timestamped import) is applied once per account: two splits are the same when they fall on the same local calendar day with the same ratio.
@@ -295,8 +295,8 @@ gainLossPln = 82,620 − totalCostPln
 
 Polish law has two regimes for shares received under an employee incentive programme, and the app cannot tell which one applies to you. You choose it per lot on **Data → Trades** (a bulk action sets it for all RSU / ESPP lots of a symbol):
 
-- **Qualifying** — a programme of the company or its parent under a shareholders' resolution ([art. 24 ust. 11–12b](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). There is no income at acquisition; the cost on sale is the price actually paid plus commission (0 for RSU, the discounted price for ESPP).
-- **Taxed at acquisition** — the vest or purchase was taxed as income (for example on a PIT-11). The cost on sale is the price paid plus commission plus the income already taxed ([art. 23 ust. 1 pkt 38](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-23/)). Enter that income in PLN (`taxedIncomePln`, total for the lot); if left empty it is derived as (FMV per share − price) × quantity × the NBP rate of the vest date (last business day before it). That income always uses the vest-date rate, even when the settlement-date option is on for trades. With neither, the cost is missing.
+- **Qualifying** — a programme of the company or its parent under a shareholders' resolution ([art. 24 ust. 11–12b](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). There is no income at acquisition; the cost on sale is the price actually paid plus commission (0 for RSU, the discounted price for ESPP).
+- **Taxed at acquisition** — the vest or purchase was taxed as income (for example on a PIT-11). The cost on sale is the price paid plus commission plus the income already taxed ([art. 23 ust. 1 pkt 38](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-23/)). Enter that income in PLN (`taxedIncomePln`, total for the lot); if left empty it is derived as (FMV per share − price) × quantity × the NBP rate of the vest date (last business day before it). That income always uses the vest-date rate, even when the settlement-date option is on for trades. With neither, the cost is missing.
 
 There is **no default**. A buy lot with source `rsu` / `espp` and no regime costs only the price paid (0 for RSU) and is flagged as cost-missing, exactly like a carry-in without a cost: every sale that consumes it is `costBasisMissing`, the tax form is a draft and copying is disabled. Rows saved before this feature have no regime, so they become cost-missing until you choose. The extra cost is folded into the lot's per-share cost, so splits and mergers carry it, and the missing flag, unchanged.
 
@@ -332,7 +332,7 @@ Supports both forward splits (factor > 1) and reverse splits (factor < 1).
 
 #### Mergers (Cash-and-Stock)
 
-**Legal basis:** [Art. 24 ust. 8 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) — cost basis allocation in corporate reorganizations.
+**Legal basis:** [Art. 24 ust. 8 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) — cost basis allocation in corporate reorganizations.
 
 ```
 totalOldQty  = sum of all lot quantities
@@ -358,7 +358,7 @@ The cash portion is a **taxable event** (synthetic sell recorded in results if w
 
 ### 4. Capital Gains Tax (19%)
 
-**Legal basis:** [Art. 30b ust. 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) — income from the sale of securities is taxed at a flat rate of 19%.
+**Legal basis:** [Art. 30b ust. 1 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/) — income from the sale of securities is taxed at a flat rate of 19%.
 
 **Summary-level formula** (`buildSummary` in `calculator.ts`):
 
@@ -390,10 +390,10 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 
 **Legal basis:**
 
-- [Art. 30a ust. 1 pkt 4 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign dividends are taxed at a flat 19% (zryczałtowany podatek dochodowy).
-- [Art. 30a ust. 2 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — the rate is applied with regard to applicable double-tax treaties (UPO).
-- [Art. 30a ust. 9 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — domestic cap: the credit cannot exceed the 19% rate applied to gross income.
-- [Art. 30a ust. 11 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign flat-rate tax under art. 30a ust. 1 pkt 1-5 and the foreign tax paid under ust. 9 are reported in the tax return.
+- [Art. 30a ust. 1 pkt 4 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign dividends are taxed at a flat 19% (zryczałtowany podatek dochodowy).
+- [Art. 30a ust. 2 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — the rate is applied with regard to applicable double-tax treaties (UPO).
+- [Art. 30a ust. 9 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — domestic cap: the credit cannot exceed the 19% rate applied to gross income.
+- [Art. 30a ust. 11 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — foreign flat-rate tax under art. 30a ust. 1 pkt 1-5 and the foreign tax paid under ust. 9 are reported in the tax return.
 - [Official PIT-38 guidance on podatki.gov.pl](https://www.podatki.gov.pl/pit/twoj-e-pit/pit-38-za-2024) — identifies foreign art. 30a ust. 1 pkt 1-5 income, including dividends, as the source for the PIT-38 flat-rate tax and foreign-tax-credit fields.
 
 **Exact algorithm** (`dividends.ts` + `calculator.ts` + `treaty-rates.ts`):
@@ -419,7 +419,7 @@ For each dividend event in the tax period:
     withholdingTaxPln       = max(−sum of (tax.amount × tax.exchangeRate), 0)
 ```
 
-Only the dividend actually received is income ([art. 30a ust. 1 pkt 4](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)) and only tax actually paid abroad can be credited ([art. 30a ust. 9](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)), so a refunded withholding (`-15`, `+15`) nets to 0. Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date). If dividend rows in one event have different rates, PLN amounts are summed per row.
+Only the dividend actually received is income ([art. 30a ust. 1 pkt 4](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)) and only tax actually paid abroad can be credited ([art. 30a ust. 9](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)), so a refunded withholding (`-15`, `+15`) nets to 0. Each withholding tax entry may have its own exchange rate (the NBP rate from the last business day before the withholding date). If dividend rows in one event have different rates, PLN amounts are summed per row.
 
 Two non-fatal warnings flag suspicious nets: **net-negative** (the event's dividend rows sum below zero — usually a reversal dated differently from the original payment; the amount is floored to 0) and **wht-net-refund** (refunds exceed withholding — often a withheld amount entered as a positive number; withholding is floored to 0). Reversals posted on a different date than the original payment are not netted yet.
 
@@ -492,7 +492,7 @@ Why kloPIT handles them this way:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ADR/GDR/CDI accrual rows are real broker-account fees, not parser noise.                                                                                                               | IBKR documents ADR/GDR/CDI fees as pass-through custody/depository charges assessed to accounts holding the receipt on the record date: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php).                                                                     |
 | A fee that IBKR reports as a separate cash-account debit is treated separately from the dividend payment unless the user chooses otherwise.                                            | IBKR's fee page describes separate pass-through charges and recommends checking the instrument prospectus, so the statement row is imported as a fee instead of silently folding it into a dividend amount: [IBKR Other Fees — ADR/GDR/CDI Fees](https://www.interactivebrokers.com/en/pricing/other-fees.php). |
-| Default behavior is conservative: do not reduce the Polish art. 30a dividend base by ADR/GDR/CDI fees.                                                                                 | Polish PIT art. 30a ust. 1 pkt 4 covers dividends, and art. 30a ust. 6 states that the flat-rate tax for the listed income types is collected without reducing revenue by tax-deductible costs: [PIT Act art. 30a](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/).                 |
+| Default behavior is conservative: do not reduce the Polish art. 30a dividend base by ADR/GDR/CDI fees.                                                                                 | Polish PIT art. 30a ust. 1 pkt 4 covers dividends, and art. 30a ust. 6 states that the flat-rate tax for the listed income types is collected without reducing revenue by tax-deductible costs: [PIT Act art. 30a](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/).                 |
 | Foreign dividend tax and foreign tax credit remain in PIT-38 section G.                                                                                                                | The Ministry of Finance PIT-38 guidance for 2025 describes foreign art. 30a income, including dividends, and the art. 30a ust. 9 foreign-tax-credit cap: [podatki.gov.pl — PIT-38 za 2025 rok](https://www.podatki.gov.pl/twoj-e-pit/pit-38-za-2025-rok/).                                                      |
 | An opt-in setting exists because a user may have broker/prospectus/tax-advisor evidence that the fee should be treated as reducing a specific dividend rather than as a separate cost. | IBKR points users to the ADR/GDR/CDI prospectus for fee details, while the Polish sources above do not directly resolve every broker-reporting pattern. The setting keeps this judgment explicit and auditable.                                                                                                 |
 
@@ -519,7 +519,7 @@ When the setting **Reduce dividends by matched ADR/GDR fees** is enabled, kloPIT
 
 ### 6. Credit Interest Tax (19%)
 
-**Legal basis:** [Art. 30a ust. 1 pkt 3 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — interest on cash deposited with a broker is taxed at a flat 19% rate (zryczałtowany podatek dochodowy).
+**Legal basis:** [Art. 30a ust. 1 pkt 3 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) — interest on cash deposited with a broker is taxed at a flat 19% rate (zryczałtowany podatek dochodowy).
 
 **Implementation:** `credit-interest.ts`
 
@@ -528,7 +528,7 @@ Credit interest is broker-paid interest on uninvested cash balances (e.g., "USD 
 **Parser rules:**
 
 - Only rows with `Credit Interest for` in the description and positive amounts are captured
-- `Purchase Accrued Interest` rows are excluded per [art. 30a ust. 6](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) (no cost deduction allowed for flat-rate income)
+- `Purchase Accrued Interest` rows are excluded per [art. 30a ust. 6](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/) (no cost deduction allowed for flat-rate income)
 - Debit interest and other interest types are recorded as skipped rows
 
 **Per-row calculation:**
@@ -581,7 +581,7 @@ The official PIT-38(18) form distinguishes between two kinds of amount fields:
 
 This matters for UI copy/paste helpers: values copied into e-Urząd Skarbowy should match the precision implied by the official field label, not the internal floating-point representation used during intermediate calculations.
 
-#### Section C — Capital Gains/Losses ([art. 30b ust. 1](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/))
+#### Section C — Capital Gains/Losses ([art. 30b ust. 1](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/))
 
 ```
 poz20 = 0                                    // PIT-8C proceeds (N/A for foreign broker)
@@ -659,7 +659,7 @@ Not yet implemented. Fields poz53–poz65 are set to 0.
 
 **Implementation:** `pit-zg.ts`
 
-**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) and PIT/ZG(8) section C.3 — PIT/ZG is filed per country, but only for income under art. 30b where foreign tax is credited (art. 30b ust. 5a/5b).
+**Legal basis:** [Art. 45 ust. 1a ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/) and PIT/ZG(8) section C.3 — PIT/ZG is filed per country, but only for income under art. 30b where foreign tax is credited (art. 30b ust. 5a/5b).
 
 **Official grounding for field precision and labels:**
 
@@ -725,7 +725,7 @@ Results are sorted alphabetically by country code.
 
 **Implementation:** `src/core/tax/loss-carry-forward.ts`
 
-**Legal basis:** [Art. 9 ust. 3 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/) — losses from a given income source can be carried forward for up to **5 consecutive tax years** following the year in which they were incurred, with a cap of **50% of the original loss per year** (art. 9 ust. 3 pkt 1).
+**Legal basis:** [Art. 9 ust. 3 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/) — losses from a given income source can be carried forward for up to **5 consecutive tax years** following the year in which they were incurred, with a cap of **50% of the original loss per year** (art. 9 ust. 3 pkt 1).
 
 > _Option 2_ (one-shot deduction up to 5,000,000 PLN, art. 9 ust. 3 pkt 2) is **not** supported by the calculator. Users who qualify can still enter an equivalent gradual deduction schedule manually.
 
@@ -921,7 +921,7 @@ The app supports **three languages:**
    - Foreign tax is 0 for IBKR LLC (US portfolio interest exemption)
 6. **Summary** (`buildSummary`):
    - Aggregate proceeds, costs, and capital gain from all sell trades
-   - Aggregate dividend amounts and apply per-dividend withholding cap ([art. 30a ust. 9](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/))
+   - Aggregate dividend amounts and apply per-dividend withholding cap ([art. 30a ust. 9](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/))
    - Aggregate credit interest amounts and their 19% flat tax
    - Compute raw (unrounded) tax amounts for dashboard display
 7. **PIT-38** (`buildPit38`):
@@ -1013,7 +1013,7 @@ Import replaces all local data in one transaction after a confirmation. Calculat
 
 ## Example: Complete Year End Tax Filing
 
-**Scenario:** You're ready to file your 2025 Polish taxes before the April 30, 2026 deadline ([art. 45 ust. 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)).
+**Scenario:** You're ready to file your 2025 Polish taxes before the April 30, 2026 deadline ([art. 45 ust. 1 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)).
 
 **Step 1: Collect statements**
 
@@ -1084,26 +1084,26 @@ Key Polish tax law provisions used in kloPIT calculations:
 
 | Topic                                 | Legal basis                              | Link                                                                                                    |
 | ------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| PIT-38 form obligation                | Art. 45 ust. 1a pkt 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
-| Capital gains tax 19%                 | Art. 30b ust. 1 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                |
-| Dividend tax 19%                      | Art. 30a ust. 1 pkt 4 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
-| Credit interest tax 19%               | Art. 30a ust. 1 pkt 3 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
-| Foreign tax deduction cap             | Art. 30a ust. 9 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
-| FIFO method                           | Art. 24 ust. 10 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                 |
-| Exchange rate conversion              | Art. 11a ust. 1 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                |
-| Loss carry-forward (5 years)          | Art. 9 ust. 3 ustawy o PIT               | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)                  |
+| PIT-38 form obligation                | Art. 45 ust. 1a pkt 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| Capital gains tax 19%                 | Art. 30b ust. 1 ustawy o PIT             | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                |
+| Dividend tax 19%                      | Art. 30a ust. 1 pkt 4 ustawy o PIT       | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| Credit interest tax 19%               | Art. 30a ust. 1 pkt 3 ustawy o PIT       | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| Foreign tax deduction cap             | Art. 30a ust. 9 ustawy o PIT             | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| FIFO method                           | Art. 24 ust. 10 ustawy o PIT             | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                 |
+| Exchange rate conversion              | Art. 11a ust. 1 ustawy o PIT             | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                |
+| Loss carry-forward (5 years)          | Art. 9 ust. 3 ustawy o PIT               | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)                  |
 | Rounding to full PLN                  | Art. 63 § 1 Ordynacji podatkowej         | [lexlege.pl](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/)                                         |
 | Rounding up to full groszy (interest) | Art. 63 § 1a OP, art. 30a ust. 1 pkt 1–3 | [lexlege.pl](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/)                                         |
-| OPP 1.5% donation                     | Art. 45c ustawy o PIT                    | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/)                |
-| Filing deadline (April 30)            | Art. 45 ust. 1 ustawy o PIT              | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
-| PIT/ZG attachment                     | Art. 45 ust. 1a ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| OPP 1.5% donation                     | Art. 45c ustawy o PIT                    | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/)                |
+| Filing deadline (April 30)            | Art. 45 ust. 1 ustawy o PIT              | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| PIT/ZG attachment                     | Art. 45 ust. 1a ustawy o PIT             | [lexlege.pl](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
 | US-Poland tax treaty (dividends)      | Art. 11 Konwencji PL-US                  | [isap.sejm.gov.pl](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19760310178)                  |
 | DTT withholding rates (all countries) | Polish double-tax treaties (UPO)         | [PwC Worldwide Tax Summaries — Poland](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes) |
 
 **Full legal texts:**
 
 - [Ustawa o podatku dochodowym od osób fizycznych (PIT)](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19910800350) — Dz.U. 1991 nr 80 poz. 350
-- [Ordynacja podatkowa](https://lexlege.pl/ordynacja-podatkowa/) — Dz.U. 1997 nr 137 poz. 926
+- [Ordynacja podatkowa](https://lexlege.pb.pl/ordynacja-podatkowa/) — Dz.U. 1997 nr 137 poz. 926
 
 ---
 

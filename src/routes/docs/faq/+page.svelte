@@ -27,7 +27,7 @@
     {
       key: 'art11a',
       label: 'Ustawa o PIT, art. 11a',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
       quote: '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
     },
     {
@@ -45,7 +45,7 @@
     {
       key: 'art30b',
       label: 'Ustawa o PIT, art. 30b',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
       quote: '„podatek dochodowy wynosi 19% uzyskanego dochodu”',
     },
     {
@@ -57,7 +57,7 @@
     {
       key: 'art9',
       label: 'Ustawa o PIT, art. 9 ust. 3',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
       quote: '„nie może przekroczyć 50% wysokości tej straty”',
     },
     {

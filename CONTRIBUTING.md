@@ -73,10 +73,10 @@ If you change any tax logic, **you must cite the relevant legal basis** in the P
 
 | Topic                         | Legal source                                                                                                                        |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| FIFO cost basis method        | [Art. 24 ust. 10 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                           |
-| Capital gains tax (19%)       | [Art. 30b ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                                 |
-| Dividend flat-rate tax        | [Art. 30a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                                 |
-| NBP exchange rate rule        | [Art. 11a ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                                 |
+| FIFO cost basis method        | [Art. 24 ust. 10 ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                           |
+| Capital gains tax (19%)       | [Art. 30b ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                                 |
+| Dividend flat-rate tax        | [Art. 30a ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                                 |
+| NBP exchange rate rule        | [Art. 11a ustawy o PIT](https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                                 |
 | Rounding of tax amounts       | [Art. 63 § 1 and § 1a Ordynacji podatkowej](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/) (§ 1a: art. 30a ust. 1 pkt 1–3 only) |
 | PIT-38 form (current edition) | [podatki.gov.pl — PIT-38](https://www.podatki.gov.pl/pit/twoj-e-pit/pit-38-za-2024)                                                 |
 | NBP exchange rates API        | [api.nbp.pl](https://api.nbp.pl/)                                                                                                   |

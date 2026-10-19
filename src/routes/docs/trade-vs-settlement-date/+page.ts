@@ -69,7 +69,7 @@ const sourceBases: GroundingSource[] = [
   {
     key: 'art7',
     label: 'Art. 7 ustawy o obrocie instrumentami finansowymi - lexlege.pl',
-    href: 'https://lexlege.pl/ustawa-o-obrocie-instrumentami-finansowymi/art-7/',
+    href: 'https://lexlege.pb.pl/ustawa-o-obrocie-instrumentami-finansowymi/art-7/',
   },
   {
     key: 'mfShares',

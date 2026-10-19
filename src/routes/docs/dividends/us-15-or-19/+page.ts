@@ -141,7 +141,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       {
         key: 'art11a',
         label: 'Polish PIT Act, article 11a',
-        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
         quote:
           '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
@@ -277,7 +277,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       {
         key: 'art11a',
         label: 'Ustawa o PIT, art. 11a',
-        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
         quote:
           '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
@@ -413,7 +413,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       {
         key: 'art11a',
         label: 'Польський закон про PIT, ст. 11a',
-        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
         quote:
           '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
