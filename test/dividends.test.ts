@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { calculateDividends } from '../src/core/tax/dividends.js';
+import {
+  sectionGForeignFlatTax,
+  sumDeductibleWithholding,
+  sumDividendAddBack,
+  sumDividendIncome,
+} from '../src/core/tax/aggregates.js';
+import {
+  calculateDividends,
+  pairReversals,
+} from '../src/core/tax/dividends.js';
 import { buildSymbolCountryMaps } from '../src/core/tax/symbol-country.js';
 import type {
   DividendResult,
@@ -203,11 +212,17 @@ void describe('calculateDividends', () => {
       taxPeriod: taxPeriod2024,
     });
 
-    assert.equal(result.length, 1);
+    // The other-ISIN withholding is not silently dropped: it is reported as an
+    // unmatched row that credits nothing (plan 13, 2b).
+    const events = result.filter(
+      (r) => !r.warnings?.some((w) => w.kind === 'wht-unmatched'),
+    );
+    assert.equal(events.length, 1);
+    assert.equal(result.length, 2);
     // Only taxMatch should match (by ISIN)
     assert.ok(
-      Math.abs(result[0].withholdingTaxOriginal - 0.36) < 0.01,
-      `Should match by ISIN, got: ${String(result[0].withholdingTaxOriginal)}`,
+      Math.abs(events[0].withholdingTaxOriginal - 0.36) < 0.01,
+      `Should match by ISIN, got: ${String(events[0].withholdingTaxOriginal)}`,
     );
   });
 
@@ -815,5 +830,479 @@ void describe('calculateDividends legacy rows and PIL overrides', () => {
       r.warnings?.some((w) => w.kind === 'adr-country-conflict'),
       false,
     );
+  });
+});
+
+const d = (year: number, month: number, day: number) =>
+  new Date(year, month - 1, day);
+
+const taxPeriod2025: TaxPeriod = {
+  year: 2025,
+  from: new Date(2025, 0, 1),
+  to: new Date(2025, 11, 31),
+};
+
+function run(args: {
+  divs?: EnrichedRawDividend[];
+  taxes?: EnrichedWithholdingTax[];
+  period?: TaxPeriod;
+  sells?: { symbol: string; date: Date }[];
+}): DividendResult[] {
+  return calculateDividends({
+    dividends: args.divs ?? [],
+    withholdingTaxes: args.taxes ?? [],
+    taxPeriod: args.period ?? taxPeriod2024,
+    symbolCountryMap: new Map([
+      ['AAPL', 'US'],
+      ['XYZ', 'US'],
+    ]),
+    sells: args.sells,
+  });
+}
+
+function sectionG(rows: DividendResult[]) {
+  return sectionGForeignFlatTax({
+    dividendIncomePln: sumDividendIncome({ rows }),
+    dividendDeductiblePln: sumDeductibleWithholding({ rows }),
+    dividendAddBackPln: sumDividendAddBack({ rows }),
+    interestIncomePln: 0,
+    interestForeignTaxPln: 0,
+  });
+}
+
+function near(actual: number, expected: number, message?: string) {
+  assert.ok(
+    Math.abs(actual - expected) < 1e-9,
+    message ?? `${String(actual)} !== ${String(expected)}`,
+  );
+}
+const row = (date: Date, amount: number, id = 'AAPL') => ({
+  id,
+  currency: 'USD',
+  kind: 'dividend' as const,
+  date,
+  amount,
+});
+
+void describe('pairReversals', () => {
+  void it('pairs only exact opposite amounts', () => {
+    const pairs = pairReversals({
+      rows: [row(d(2024, 1, 1), 100), row(d(2024, 2, 1), -99)],
+      originalSign: 1,
+    });
+    assert.deepEqual(pairs, []);
+  });
+
+  void it('prefers the most recent original, then input order', () => {
+    const rows = [
+      row(d(2024, 3, 1), 10),
+      row(d(2024, 4, 1), 10),
+      row(d(2024, 4, 1), 10),
+      row(d(2024, 4, 10), -10),
+    ];
+    assert.deepEqual(pairReversals({ rows, originalSign: 1 }), [
+      { original: 1, reversal: 3 },
+    ]);
+  });
+
+  void it('never pairs with a later original, another id, or beyond 366 days', () => {
+    assert.deepEqual(
+      pairReversals({
+        rows: [row(d(2024, 5, 1), 10), row(d(2024, 4, 1), -10)],
+        originalSign: 1,
+      }),
+      [],
+    );
+    assert.deepEqual(
+      pairReversals({
+        rows: [row(d(2024, 4, 1), 10, 'MSFT'), row(d(2024, 4, 2), -10)],
+        originalSign: 1,
+      }),
+      [],
+    );
+    assert.deepEqual(
+      pairReversals({
+        rows: [row(d(2023, 1, 10), 10), row(d(2024, 1, 12), -10)],
+        originalSign: 1,
+      }).length,
+      0,
+    );
+    assert.equal(
+      pairReversals({
+        rows: [row(d(2023, 1, 10), 10), row(d(2024, 1, 11), -10)],
+        originalSign: 1,
+      }).length,
+      1,
+    );
+  });
+
+  void it('consumes each original once and honors rank and sign', () => {
+    const rows = [
+      row(d(2024, 1, 1), -5),
+      row(d(2024, 2, 1), -5),
+      row(d(2024, 3, 1), 5),
+    ];
+    assert.deepEqual(
+      pairReversals({
+        rows,
+        originalSign: -1,
+        rank: (original) => (original.date.getMonth() === 0 ? 0 : 1),
+      }),
+      [{ original: 0, reversal: 2 }],
+    );
+    assert.deepEqual(pairReversals({ rows, originalSign: -1 }), [
+      { original: 1, reversal: 2 },
+    ]);
+  });
+});
+
+void describe('calculateDividends — cross-date matching (plan 13)', () => {
+  void it('D1: cross-date full reversal nets to zero', () => {
+    const rows = run({
+      divs: [
+        makeDiv({ date: d(2024, 2, 15), amount: 100, exchangeRate: 4.0 }),
+        makeDiv({ date: d(2024, 3, 20), amount: -100, exchangeRate: 4.1 }),
+      ],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -15, exchangeRate: 4.0 }),
+        makeTax({ date: d(2024, 3, 20), amount: 15, exchangeRate: 4.1 }),
+      ],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].amountPln, 0);
+    near(rows[0].withholdingTaxPln, 0);
+    near(rows[0].deductibleWithholdingPln, 0);
+    assert.deepEqual(rows[0].warnings, [
+      { kind: 'reversed-later', reversalDate: '2024-03-20', crossYear: false },
+    ]);
+    const g = sectionG(rows);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [0, 0, 0]);
+  });
+
+  void it('D2: reversal plus re-post of a different amount', () => {
+    const rows = run({
+      divs: [
+        makeDiv({ date: d(2024, 2, 15), amount: 100, exchangeRate: 4.0 }),
+        makeDiv({ date: d(2024, 3, 20), amount: -100, exchangeRate: 4.1 }),
+        makeDiv({ date: d(2024, 3, 20), amount: 90, exchangeRate: 4.1 }),
+      ],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -15, exchangeRate: 4.0 }),
+        makeTax({ date: d(2024, 3, 20), amount: 15, exchangeRate: 4.1 }),
+        makeTax({ date: d(2024, 3, 20), amount: -13.5, exchangeRate: 4.1 }),
+      ],
+    });
+    assert.equal(rows.length, 2);
+    near(rows[0].amountPln, 0);
+    near(rows[0].withholdingTaxPln, 0);
+    near(rows[1].amountPln, 369);
+    near(rows[1].withholdingTaxPln, 55.35);
+    near(rows[1].deductibleWithholdingPln, 55.35);
+    near(rows[1].taxPlnGross, 70.11);
+    near(rows[1].taxToPayPln, 14.76);
+    const g = sectionG(rows);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [70.11, 55.35, 15]);
+  });
+
+  void it('D3: pure WHT refund later pairs at the withholding rate', () => {
+    const rows = run({
+      divs: [makeDiv({ date: d(2024, 2, 15), amount: 100, exchangeRate: 4.0 })],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -15, exchangeRate: 4.0 }),
+        makeTax({ date: d(2024, 4, 10), amount: 15, exchangeRate: 4.08 }),
+      ],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].withholdingTaxPln, 0);
+    near(rows[0].deductibleWithholdingPln, 0);
+    assert.ok(kinds(rows[0]).includes('reversed-later'));
+    const g = sectionG(rows);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [76, 0, 76]);
+  });
+
+  void it('D4: W-8BEN fix as WHT-only rows attaches by symbol', () => {
+    const rows = run({
+      divs: [makeDiv({ date: d(2024, 2, 15), amount: 100, exchangeRate: 4.0 })],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -30, exchangeRate: 4.0 }),
+        makeTax({ date: d(2024, 3, 20), amount: 30, exchangeRate: 4.1 }),
+        makeTax({ date: d(2024, 3, 20), amount: -15, exchangeRate: 4.1 }),
+      ],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].withholdingTaxPln, 61.5);
+    near(rows[0].deductibleWithholdingPln, 60);
+    assert.ok(kinds(rows[0]).includes('wht-matched-by-symbol'));
+    assert.ok(!kinds(rows[0]).includes('wht-lapse'));
+    const g = sectionG(rows);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [76, 60, 16]);
+  });
+
+  void it('D5: partial refund attaches at the event withholding rate', () => {
+    const rows = run({
+      divs: [makeDiv({ date: d(2024, 2, 15), amount: 100, exchangeRate: 4.0 })],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -15, exchangeRate: 4.0 }),
+        makeTax({ date: d(2024, 6, 3), amount: 5, exchangeRate: 3.95 }),
+      ],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].withholdingTaxPln, 40);
+    near(rows[0].deductibleWithholdingPln, 40);
+    near(rows[0].taxToPayPln, 36);
+    assert.ok(kinds(rows[0]).includes('wht-matched-by-symbol'));
+    const g = sectionG(rows);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [76, 40, 36]);
+  });
+
+  void it('D6: unmatched WHT becomes an explicit row', () => {
+    const taxes = [
+      makeTax({
+        symbol: 'XYZ',
+        date: d(2024, 5, 10),
+        amount: -20,
+        exchangeRate: 3.95,
+      }),
+    ];
+    const rows = run({ taxes });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].symbol, 'XYZ');
+    near(rows[0].amountPln, 0);
+    near(rows[0].withholdingTaxPln, 79);
+    near(rows[0].deductibleWithholdingPln, 0);
+    assert.deepEqual(rows[0].warnings, [{ kind: 'wht-unmatched' }]);
+    const g = sectionG(rows);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [0, 0, 0]);
+
+    const hinted = run({
+      taxes,
+      sells: [{ symbol: 'XYZ', date: d(2024, 5, 9) }],
+    });
+    assert.deepEqual(hinted[0].warnings, [
+      { kind: 'wht-unmatched', likelySaleTax: true },
+    ]);
+  });
+
+  void it('D7: ambiguous reversal pairs with the most recent original', () => {
+    const rows = run({
+      divs: [
+        makeDiv({ date: d(2024, 3, 1), amount: 10, exchangeRate: 4.0 }),
+        makeDiv({ date: d(2024, 4, 1), amount: 10, exchangeRate: 4.05 }),
+        makeDiv({ date: d(2024, 4, 10), amount: -10, exchangeRate: 4.06 }),
+      ],
+    });
+    assert.equal(rows.length, 2);
+    near(rows[0].amountPln, 40);
+    near(rows[1].amountPln, 0);
+  });
+
+  void it('D8: no pairing beyond 366 days', () => {
+    const rows = run({
+      divs: [
+        makeDiv({ date: d(2023, 1, 10), amount: 100, exchangeRate: 4.4 }),
+        makeDiv({ date: d(2024, 3, 1), amount: -100, exchangeRate: 4.3 }),
+      ],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].amountPln, 0);
+    assert.ok(kinds(rows[0]).includes('net-negative'));
+  });
+
+  const d9Divs = [
+    makeDiv({ date: d(2024, 12, 16), amount: 100, exchangeRate: 4.05 }),
+    makeDiv({ date: d(2025, 1, 14), amount: -100, exchangeRate: 4.12 }),
+  ];
+  const d9Taxes = [
+    makeTax({ date: d(2024, 12, 16), amount: -15, exchangeRate: 4.05 }),
+    makeTax({ date: d(2025, 1, 14), amount: 15, exchangeRate: 4.12 }),
+  ];
+
+  void it('D9: January reversal of a December dividend (both years)', () => {
+    const y2024 = run({ divs: d9Divs, taxes: d9Taxes });
+    assert.equal(y2024.length, 1);
+    near(y2024[0].amountPln, 0);
+    near(y2024[0].withholdingTaxPln, 0);
+    assert.deepEqual(y2024[0].warnings, [
+      { kind: 'reversed-later', reversalDate: '2025-01-14', crossYear: true },
+    ]);
+    const g = sectionG(y2024);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [0, 0, 0]);
+
+    const y2025 = run({ divs: d9Divs, taxes: d9Taxes, period: taxPeriod2025 });
+    assert.equal(y2025.length, 1);
+    near(y2025[0].amountPln, 0);
+    near(y2025[0].withholdingTaxPln, 0);
+    assert.deepEqual(y2025[0].warnings, [
+      { kind: 'reverses-prior-year', originalDate: '2024-12-16' },
+    ]);
+  });
+
+  void it('D9: Y+1 reversal without the Y row stays floored', () => {
+    const rows = run({
+      divs: [d9Divs[1]],
+      taxes: [d9Taxes[1]],
+      period: taxPeriod2025,
+    });
+    assert.ok(kinds(rows[0]).includes('net-negative'));
+  });
+
+  void it('D10: WHT refunded next year adds back the credit (art. 45 ust. 3a)', () => {
+    const divs = [
+      makeDiv({ date: d(2024, 12, 16), amount: 100, exchangeRate: 4.05 }),
+    ];
+    const taxes = [
+      makeTax({ date: d(2024, 12, 16), amount: -15, exchangeRate: 4.05 }),
+      makeTax({ date: d(2025, 2, 20), amount: 15, exchangeRate: 4.2 }),
+    ];
+    const y2024 = run({ divs, taxes });
+    assert.equal(y2024.length, 1);
+    near(y2024[0].withholdingTaxPln, 60.75);
+    assert.deepEqual(
+      y2024[0].warnings?.filter((w) => w.kind === 'wht-refunded-later'),
+      [{ kind: 'wht-refunded-later', refundDate: '2025-02-20' }],
+    );
+    const g24 = sectionG(y2024);
+    assert.deepEqual([g24.poz47, g24.poz48, g24.poz49], [76.95, 60.75, 16]);
+
+    const y2025 = run({ divs, taxes, period: taxPeriod2025 });
+    assert.equal(y2025.length, 1);
+    near(y2025[0].addBackPln ?? -1, 60.75);
+    assert.deepEqual(y2025[0].warnings, [
+      { kind: 'wht-refund-add-back', originalDate: '2024-12-16' },
+    ]);
+    const g25 = sectionG(y2025);
+    assert.deepEqual([g25.poz47, g25.poz48, g25.poz49], [60.75, 0, 61]);
+  });
+
+  void it('D10b: refund of the excess above the treaty cap adds back 0', () => {
+    const divs = [
+      makeDiv({ date: d(2024, 12, 16), amount: 100, exchangeRate: 4.05 }),
+    ];
+    const taxes = [
+      makeTax({ date: d(2024, 12, 16), amount: -30, exchangeRate: 4.05 }),
+      makeTax({ date: d(2025, 2, 20), amount: 15, exchangeRate: 4.2 }),
+    ];
+    const y2024 = run({ divs, taxes });
+    near(y2024[0].deductibleWithholdingPln, 60.75);
+    const y2025 = run({ divs, taxes, period: taxPeriod2025 });
+    near(y2025[0].addBackPln ?? -1, 0);
+    const g = sectionG(y2025);
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [0, 0, 0]);
+  });
+
+  void it('add-back reduces the credit before raising the dividend tax', () => {
+    const g = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: 100,
+      dividendAddBackPln: 30,
+      interestIncomePln: 0,
+      interestForeignTaxPln: 0,
+    });
+    assert.deepEqual([g.poz47, g.poz48, g.poz49], [190, 70, 120]);
+    const over = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: 20,
+      dividendAddBackPln: 50,
+      interestIncomePln: 0,
+      interestForeignTaxPln: 0,
+    });
+    assert.deepEqual([over.poz47, over.poz48, over.poz49], [220, 0, 220]);
+  });
+
+  void it('same-day [100, -100, 100] still nets to one payment', () => {
+    const rows = run({
+      divs: [
+        makeDiv({ amount: 100 }),
+        makeDiv({ amount: -100 }),
+        makeDiv({ amount: 100 }),
+      ],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].amountPln, 400);
+  });
+});
+
+void describe('calculateDividends — WHT accounting invariant (plan 13)', () => {
+  // Every in-period WHT row is netted into an event, or reported as an
+  // unmatched / info row. Single currency, no cross-year, so net withheld in
+  // the input equals the net the results show.
+  const scenarios: {
+    name: string;
+    divs: EnrichedRawDividend[];
+    taxes: EnrichedWithholdingTax[];
+  }[] = [
+    {
+      name: 'same-day net',
+      divs: [makeDiv({ date: d(2024, 2, 15), amount: 100 })],
+      taxes: [makeTax({ date: d(2024, 2, 15), amount: -15 })],
+    },
+    {
+      name: 'W-8BEN fix and partial refund',
+      divs: [makeDiv({ date: d(2024, 2, 15), amount: 100 })],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -30 }),
+        makeTax({ date: d(2024, 3, 20), amount: 30 }),
+        makeTax({ date: d(2024, 3, 20), amount: -15 }),
+        makeTax({ date: d(2024, 6, 3), amount: 5 }),
+      ],
+    },
+    {
+      name: 'WHT posted a day before its dividend',
+      divs: [makeDiv({ date: d(2024, 2, 16), amount: 100 })],
+      taxes: [makeTax({ date: d(2024, 2, 15), amount: -15 })],
+    },
+    {
+      name: 'unmatched symbol and unmatched far-away WHT',
+      divs: [makeDiv({ date: d(2024, 2, 15), amount: 100 })],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -15 }),
+        makeTax({ symbol: 'XYZ', date: d(2024, 5, 10), amount: -20 }),
+        makeTax({ symbol: 'XYZ', date: d(2024, 7, 10), amount: -4 }),
+      ],
+    },
+    {
+      name: 'reversal with refund and re-post',
+      divs: [
+        makeDiv({ date: d(2024, 2, 15), amount: 100 }),
+        makeDiv({ date: d(2024, 3, 20), amount: -100 }),
+        makeDiv({ date: d(2024, 3, 20), amount: 90 }),
+      ],
+      taxes: [
+        makeTax({ date: d(2024, 2, 15), amount: -15 }),
+        makeTax({ date: d(2024, 3, 20), amount: 15 }),
+        makeTax({ date: d(2024, 3, 20), amount: -13.5 }),
+      ],
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    void it(`accounts for all withholding: ${scenario.name}`, () => {
+      const rows = calculateDividends({
+        dividends: scenario.divs,
+        withholdingTaxes: scenario.taxes,
+        taxPeriod: taxPeriod2024,
+        symbolCountryMap: new Map([
+          ['AAPL', 'US'],
+          ['XYZ', 'US'],
+        ]),
+      });
+      const inputNet = scenario.taxes.reduce((s, t) => s - t.amount, 0);
+      const outputNet = rows.reduce((s, r) => s + r.withholdingTaxOriginal, 0);
+      near(outputNet, inputNet);
+    });
+  }
+
+  void it('reports every in-period WHT row of a cross-year refund', () => {
+    const rows = run({
+      divs: [
+        makeDiv({ date: d(2024, 12, 16), amount: 100, exchangeRate: 4.05 }),
+      ],
+      taxes: [
+        makeTax({ date: d(2024, 12, 16), amount: -15, exchangeRate: 4.05 }),
+        makeTax({ date: d(2025, 2, 20), amount: 15, exchangeRate: 4.2 }),
+      ],
+      period: taxPeriod2025,
+    });
+    assert.ok(rows.some((r) => r.date.getTime() === d(2025, 2, 20).getTime()));
   });
 });

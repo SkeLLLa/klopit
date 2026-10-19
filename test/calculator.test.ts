@@ -646,6 +646,9 @@ void describe('calculateTaxes', () => {
   });
 });
 
+// D-1 rate per posting date: 4.00 on 02-15, 4.10 on 03-20.
+const rateOn = (date: Date) => (date.getMonth() === 1 ? 4.0 : 4.1);
+
 void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
   void it('nets reversed dividends and refunded WHT end to end', () => {
     const text = readFileSync(
@@ -680,6 +683,52 @@ void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
     assert.equal(result.pit38[47], 76); // 400 * 0.19
     // Net WHT is 15 USD x 4.0 = 60 PLN (not 45 x 4.0 per row).
     assert.equal(result.pit38[48], 60);
+  });
+
+  void it('pairs a cross-date reversal and re-post (plan 13, D2)', () => {
+    const text = readFileSync(
+      join(
+        import.meta.dirname,
+        'fixtures',
+        'ib',
+        'dividend-cross-date-reversal.csv',
+      ),
+      'utf-8',
+    );
+    const parser = ibkrDefinition.createParser();
+    for (const line of text.split('\n')) {
+      parser.feed({ line });
+    }
+    const parsed = parser.finish();
+    assert.deepEqual(
+      parsed.dividends.map((x) => x.amount),
+      [100, -100, 90],
+    );
+    assert.deepEqual(
+      parsed.withholdingTaxes.map((w) => w.amount),
+      [-15, 15, -13.5],
+    );
+    const result = calculateTaxes({
+      trades: [],
+      dividends: parsed.dividends.map((x) => ({
+        ...x,
+        exchangeRate: rateOn(x.date),
+        rateUnavailable: false,
+      })),
+      withholdingTaxes: parsed.withholdingTaxes.map((w) => ({
+        ...w,
+        exchangeRate: rateOn(w.date),
+        rateUnavailable: false,
+      })),
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+    });
+
+    assert.equal(result.pit38[47], 70.11);
+    assert.equal(result.pit38[48], 55.35);
+    assert.equal(result.pit38[49], 15);
   });
 
   void it('loss deduction breakdown equals PIT-38 poz. 30 (grosz rounding)', () => {

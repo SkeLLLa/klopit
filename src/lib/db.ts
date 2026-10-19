@@ -160,6 +160,8 @@ export interface TaxSummaryRecord {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  /** See TaxSummary.totalDividendAddBackPln. Absent on older summaries. */
+  totalDividendAddBackPln?: number | undefined;
   totalCreditInterestPln: number;
   totalCreditInterestForeignTaxPln: number;
   capitalGainAfterLcfPln: number;

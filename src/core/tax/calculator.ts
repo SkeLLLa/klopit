@@ -21,6 +21,7 @@ import {
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
   sumDeductibleWithholding,
+  sumDividendAddBack,
   sumDividendIncome,
   sumProceeds,
   sumWithholding,
@@ -108,6 +109,9 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     symbolCountryMap: args.dividendSymbolCountryMap ?? countryMap,
     adrCountryConflicts: args.adrCountryConflicts,
     isinCountryMap: countryMap,
+    sells: trades
+      .filter((trade) => trade.type === 'sell')
+      .map((trade) => ({ symbol: trade.symbol, date: trade.datetime })),
   });
   const creditInterestResults = calculateCreditInterest({
     creditInterests,
@@ -183,10 +187,12 @@ function buildSummary(args: {
   const totalCreditInterestForeignTaxPln = sumCreditInterestForeignTax({
     rows: args.creditInterestResults,
   });
-  const dividendTaxOwedPln = Math.max(
-    totalDividendsPln * TAX_RATE - totalDeductibleWithholdingPln,
-    0,
-  );
+  const totalDividendAddBackPln = sumDividendAddBack({
+    rows: args.dividendResults,
+  });
+  const dividendTaxOwedPln =
+    Math.max(totalDividendsPln * TAX_RATE - totalDeductibleWithholdingPln, 0) +
+    totalDividendAddBackPln;
 
   const capitalGainAfterLcfPln = Math.max(
     Math.max(capitalGainPln, 0) - args.lossDeduction.deductedPln,
@@ -204,6 +210,7 @@ function buildSummary(args: {
     totalWithholdingPln,
     totalDeductibleWithholdingPln,
     dividendTaxOwedPln,
+    totalDividendAddBackPln,
     totalCreditInterestPln,
     totalCreditInterestForeignTaxPln,
     capitalGainAfterLcfPln,

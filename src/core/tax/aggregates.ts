@@ -27,6 +27,11 @@ export function sumDeductibleWithholding(args: {
   return args.rows.reduce((s, d) => s + d.deductibleWithholdingPln, 0);
 }
 
+/** Sum credit added back by later-year WHT refunds (art. 45 ust. 3a, PLN). */
+export function sumDividendAddBack(args: { rows: DividendResult[] }): number {
+  return args.rows.reduce((s, d) => s + (d.addBackPln ?? 0), 0);
+}
+
 /** Sum gross dividend tax (PLN). */
 export function sumDividendTaxGross(args: { rows: DividendResult[] }): number {
   return args.rows.reduce((s, d) => s + d.taxPlnGross, 0);
@@ -46,9 +51,12 @@ export function sumCreditInterestForeignTax(args: {
   return args.rows.reduce((s, row) => s + row.foreignTaxPln, 0);
 }
 
-/** Sum net dividend tax to pay after withholding credit (PLN). */
+/**
+ * Sum net dividend tax to pay after withholding credit (PLN), including the
+ * art. 45 ust. 3a add-back of refunded earlier-year credit.
+ */
 export function sumDividendTaxToPay(args: { rows: DividendResult[] }): number {
-  return args.rows.reduce((s, d) => s + d.taxToPayPln, 0);
+  return args.rows.reduce((s, d) => s + d.taxToPayPln + (d.addBackPln ?? 0), 0);
 }
 
 /** Sum sell proceeds (PLN). Includes all sell-type rows. */
@@ -123,10 +131,19 @@ export interface SectionGForeignFlatTax {
  * - Interest (art. 30a ust. 1 pkt 3): base and tax are rounded up to the grosz
  *   under art. 63 § 1a OP, which covers only pkt 1-3.
  * - Each foreign-tax credit is capped at its own part (art. 30a ust. 9).
+ * - A WHT refund of an earlier year's credit is added back (art. 45 ust. 3a). MF
+ *   gives no field for it, so it reduces poz. 48 and any remainder raises the
+ *   dividend part of poz. 47; poz. 49 is the same either way.
  */
 export function sectionGForeignFlatTax(args: {
   dividendIncomePln: number;
   dividendDeductiblePln: number;
+  /**
+   * Credit added back by WHT refunds received this year (art. 45 ust. 3a
+   * updof). Reduces the credit first; any remainder is added to the dividend
+   * tax.
+   */
+  dividendAddBackPln?: number | undefined;
   interestIncomePln: number;
   interestForeignTaxPln: number;
 }): SectionGForeignFlatTax {
@@ -139,9 +156,14 @@ export function sectionGForeignFlatTax(args: {
   // are zł,gr amounts, while poz. 49 is "po zaokrągleniu do pełnych złotych"
   // of poz. 47 − poz. 48. So the grosz-rounded tax and credit are subtracted
   // first, and only then is the difference rounded to full PLN.
-  const divTax = roundToGrosz({ amount: dividendIncome * TAX_RATE });
-  const divCredit = roundToGrosz({
-    amount: Math.min(dividendDeductible, divTax),
+  const addBack = Math.max(args.dividendAddBackPln ?? 0, 0);
+  const baseDivTax = roundToGrosz({ amount: dividendIncome * TAX_RATE });
+  const baseCredit = roundToGrosz({
+    amount: Math.min(dividendDeductible, baseDivTax),
+  });
+  const divCredit = roundToGrosz({ amount: Math.max(baseCredit - addBack, 0) });
+  const divTax = roundToGrosz({
+    amount: baseDivTax + Math.max(addBack - baseCredit, 0),
   });
   const divDue = roundToFullPln({
     amount: roundToGrosz({ amount: Math.max(divTax - divCredit, 0) }),

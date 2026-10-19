@@ -16,6 +16,7 @@ import {
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
   sumDeductibleWithholding,
+  sumDividendAddBack,
   sumDividendIncome,
   sumProceeds,
 } from './aggregates.js';
@@ -148,6 +149,7 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
   const sectionG = sectionGForeignFlatTax({
     dividendIncomePln: totalDividendsPln,
     dividendDeductiblePln: totalDeductibleWithholdingPln,
+    dividendAddBackPln: sumDividendAddBack({ rows: dividends }),
     interestIncomePln: totalCreditInterestPln,
     interestForeignTaxPln: totalCreditInterestForeignTaxPln,
   });

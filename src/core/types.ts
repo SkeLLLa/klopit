@@ -380,6 +380,47 @@ export type DividendWarning =
   | {
       /** WHT refunds exceed withholding for one event; WHT floored to 0. */
       kind: 'wht-net-refund';
+    }
+  | {
+      /**
+       * A reversal or refund posted on `reversalDate` was netted into this
+       * event. Across years the earlier return may need a correction (art. 81
+       * OP).
+       */
+      kind: 'reversed-later';
+      reversalDate: string;
+      crossYear: boolean;
+    }
+  | {
+      /** Info row: reverses a payment from an earlier period. */
+      kind: 'reverses-prior-year';
+      originalDate: string;
+    }
+  | {
+      /** WHT posted on `whtDate` was attached to this event by symbol. */
+      kind: 'wht-matched-by-symbol';
+      whtDate: string;
+    }
+  | {
+      /**
+       * Withholding with no dividend to attach to; credited as 0.
+       * `likelySaleTax`: a same-symbol sale is within days (US §1446(f)).
+       */
+      kind: 'wht-unmatched';
+      likelySaleTax?: boolean;
+    }
+  | {
+      /** WHT refunded on `refundDate` in a later year; see the add-back there. */
+      kind: 'wht-refunded-later';
+      refundDate: string;
+    }
+  | {
+      /**
+       * Info row: a refund of earlier-year WHT adds back the credit (art. 45
+       * ust. 3a).
+       */
+      kind: 'wht-refund-add-back';
+      originalDate: string;
     };
 
 /** Dividend with PLN conversion and matched withholding */
@@ -412,6 +453,11 @@ export interface DividendResult {
   taxPlnGross: number;
   /** Net tax to pay: max(taxPlnGross - deductibleWithholdingPln, 0). */
   taxToPayPln: number;
+  /**
+   * Credit taken in an earlier year that a refund received in this one adds
+   * back (art. 45 ust. 3a updof), PLN. Set on info rows only.
+   */
+  addBackPln?: number | undefined;
   warnings?: DividendWarning[] | undefined;
 }
 
@@ -479,6 +525,11 @@ export interface TaxSummary {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  /**
+   * Credit from earlier years added back by WHT refunds received this year
+   * (art. 45 ust. 3a updof). Included in `dividendTaxOwedPln`.
+   */
+  totalDividendAddBackPln?: number | undefined;
   totalCreditInterestPln: number;
   totalCreditInterestForeignTaxPln: number;
   /**
