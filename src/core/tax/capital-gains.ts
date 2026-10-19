@@ -924,7 +924,11 @@ function buildCarryInEvents(args: {
       placedByKey.set(key, placed);
       historyStart.set(
         key,
-        Math.min(undatedTime, placed[0].datetime.getTime()),
+        // Art. 24 ust. 10 updof: FIFO runs by actual acquisition date, so a
+        // fully dated snapshot is not older than its own earliest date.
+        rows.every((pos) => pos.acquisitionDate)
+          ? placed[0].datetime.getTime()
+          : Math.min(undatedTime, placed[0].datetime.getTime()),
       );
     }
 

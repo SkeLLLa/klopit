@@ -600,10 +600,9 @@ void describe('transfers between accounts', () => {
       const [dest, source] = sells(r.results);
       assert.equal(dest.costPln, 150);
       assert.equal(dest.costBasisMissing, undefined);
-      // Shares the imports do not explain count as older than every import
-      // (as without transfers): the Feb 2023 sell took 3 of them, so the
-      // source's last 5 are 2@40 (snapshot) + 3@30.
-      assert.equal(source.costPln, 170);
+      // The snapshot row is dated 2020, after the 2019 import (art. 24 ust.
+      // 10): the Feb 2023 sell took 3 of the 8@30, so the last 5 are 5@40.
+      assert.equal(source.costPln, 200);
       assert.equal(source.costBasisMissing, undefined);
       assert.equal(isDraft(r), false);
     });

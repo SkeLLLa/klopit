@@ -667,6 +667,18 @@ Rows without an account join the only account of the session (identical results)
 
 ---
 
+## Design Decision: Dated Carry-In Snapshots Are Placed by Their Date
+
+### Decision
+
+The shares a carry-in snapshot adds (those the imported trades do not explain) are placed at the earliest `acquisitionDate` of the snapshot when all its rows are dated. Only snapshots with an undated row are placed before every imported trade since the previous snapshot.
+
+### Why
+
+[Art. 24 ust. 10 updof](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) orders FIFO by actual acquisition date, and the user's dated row is the evidence of that date. Placing the shares older than every import let an imported sell consume shares that, by the user's own date, did not exist yet, giving a wrong cost in both directions. When honouring the date leaves an imported sell short, the existing `carry-in-inconsistent` warning is shown and the form is a draft.
+
+---
+
 ## Design Decision: Live Dashboard (Not Screenshots)
 
 ### Alternative: Static Report

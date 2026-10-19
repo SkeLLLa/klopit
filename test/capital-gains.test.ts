@@ -1845,7 +1845,9 @@ void describe('carry-in snapshots (regressions)', () => {
     );
   });
 
-  void it('N2: shares sold before a dated carry-in keep the imported buy', () => {
+  void it('N2: a sell before a dated carry-in is short by date, so it is reported', () => {
+    // art. 24 ust. 10: the 2 shares sold in June 2023 predate the carry-in's
+    // acquisition date (Sep 2023) and no imported buy covers them.
     const warnings: CarryInWarning[] = [];
     const result = calculateCapitalGains({
       trades: [
@@ -1866,12 +1868,63 @@ void describe('carry-in snapshots (regressions)', () => {
       onWarning: (w) => warnings.push(w),
     });
     assert.equal(result.length, 1);
-    assert.equal(result[0].costPln, 320); // the imported buy, not the carry-in
+    assert.equal(result[0].costBasisMissing, true);
+    assert.deepEqual(
+      warnings.map((w) => w.kind),
+      ['carry-in-inconsistent', 'shortfall-add-carry-in'],
+    );
+  });
+
+  // Imported: 8@30 (Mar 2023), sell 3 (Jun 2023); snapshot of 10 at the end of
+  // 2023, so 5 shares are unexplained. Then sell 5 in 2024.
+  const dateVsImports = (acquisitionDate?: Date) => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        plnTrade({
+          type: 'buy',
+          quantity: 8,
+          price: 30,
+          datetime: new Date(2023, 2, 1),
+        }),
+        sell(3, new Date(2023, 5, 1)),
+        sell(5, new Date(2024, 2, 1)),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({
+          quantity: 10,
+          costPln: 400,
+          costMissing: false,
+          acquisitionDate,
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    return { result, warnings };
+  };
+
+  void it('N-dated: a dated carry-in is not sold by an earlier imported sell', () => {
+    const { result, warnings } = dateVsImports(new Date(2023, 8, 1));
+    assert.equal(result.length, 1);
+    // By date the June sell took 3 of the 8 imported 30 PLN shares and the
+    // 2024 sell takes the 5 left, before the 40 PLN carry-in shares.
+    assert.equal(result[0].costPln, 150);
     assert.equal(result[0].costBasisMissing, undefined);
-    const overlap = warnings.find((w) => w.kind === 'carry-in-overlap');
-    assert.ok(overlap?.kind === 'carry-in-overlap');
-    assert.equal(overlap.coveredQuantity, 8);
-    assert.equal(overlap.year, 2023);
+    assert.ok(!warnings.some((w) => w.kind === 'carry-in-inconsistent'));
+  });
+
+  void it('N-undated: an undated carry-in is still older than every import', () => {
+    const { result } = dateVsImports(undefined);
+    assert.equal(result.length, 1);
+    // The June sell took 3 of the older 40 PLN shares: 2@40 + 3@30.
+    assert.equal(result[0].costPln, 170);
+  });
+
+  void it('N-dated-before: a carry-in dated before the imports is unchanged', () => {
+    const { result } = dateVsImports(new Date(2022, 0, 1));
+    assert.equal(result[0].costPln, 170);
   });
 
   void it('N4: merger lots reach a target keyed by ISIN without targetIsin', () => {
