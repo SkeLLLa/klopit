@@ -1195,10 +1195,12 @@ void describe('calculateCapitalGains — missing rate propagation', () => {
     });
     const cashSell = res.find((r) => r.source === 'corporate-action');
     const newSell = res.find((r) => r.symbol === 'NEW');
-    assert.equal(cashSell?.rateUnavailable, true);
-    assert.equal(cashSell?.costRateUnavailable, true);
-    assert.equal(newSell?.rateUnavailable, true);
-    assert.equal(newSell?.costRateUnavailable, true);
+    assert.ok(cashSell);
+    assert.ok(newSell);
+    assert.equal(cashSell.rateUnavailable, true);
+    assert.equal(cashSell.costRateUnavailable, true);
+    assert.equal(newSell.rateUnavailable, true);
+    assert.equal(newSell.costRateUnavailable, true);
   });
 
   void it('only flags sells that actually consume the rate-less lot', () => {
