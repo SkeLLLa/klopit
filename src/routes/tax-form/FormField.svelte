@@ -1,27 +1,33 @@
 <script module lang="ts">
   import { createContext } from 'svelte';
+  import { m } from '$lib/paraglide/messages.js';
+  import type { CopyBlock } from '$lib/utils/tax-form-status.js';
 
   /**
-   * Set by the tax-form page: while it returns true (e.g. some NBP rates are
-   * unavailable, so results are incomplete) value copying is disabled.
+   * Set by the tax-form page: while it returns a reason (stale session, or
+   * incomplete results such as unavailable NBP rates) value copying is disabled.
    */
-  export const [getCopyDisabled, setCopyDisabled] =
-    createContext<() => boolean>();
+  export const [getCopyBlock, setCopyBlock] = createContext<() => CopyBlock>();
 
-  /** Like `getCopyDisabled`, but never disabled outside the tax-form page. */
-  export function useCopyDisabled(): () => boolean {
+  /** Like `getCopyBlock`, but never blocked outside the tax-form page. */
+  export function useCopyBlock(): () => CopyBlock {
     try {
-      return getCopyDisabled();
+      return getCopyBlock();
     } catch {
-      return () => false;
+      return () => null;
     }
+  }
+
+  export function copyBlockMessage(reason: Exclude<CopyBlock, null>): string {
+    return reason === 'stale'
+      ? m.tax_form_copy_disabled_stale()
+      : m.tax_form_copy_disabled_incomplete();
   }
 </script>
 
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { Info } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
 
   let {
@@ -71,8 +77,9 @@
     return rawDecimalFormatter.format(value);
   });
 
-  const isCopyDisabled = useCopyDisabled();
-  const copyDisabled = $derived(isCopyDisabled());
+  const copyBlock = useCopyBlock();
+  const blockReason = $derived(copyBlock());
+  const copyDisabled = $derived(blockReason !== null);
 
   let copied = $state(false);
   let copiedResetTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -131,13 +138,13 @@
       : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-700'}
       {highlighted ? 'border-blue-300 bg-blue-50 font-semibold text-blue-900 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200 dark:hover:border-blue-600 dark:hover:bg-blue-900' : ''}
       {copied ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/50' : ''}"
-    title={copyDisabled
-      ? m.tax_form_copy_disabled_incomplete()
+    title={blockReason
+      ? copyBlockMessage(blockReason)
       : copied
         ? m.tax_copy_value_done()
         : m.tax_copy_value_title()}
-    aria-label={copyDisabled
-      ? m.tax_form_copy_disabled_incomplete()
+    aria-label={blockReason
+      ? copyBlockMessage(blockReason)
       : copied
         ? m.tax_copy_value_done()
         : m.tax_copy_value_title()}

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isTaxFormIncomplete } from '../src/lib/utils/tax-form-status.js';
+import {
+  copyBlockReason,
+  isTaxFormIncomplete,
+} from '../src/lib/utils/tax-form-status.js';
 
 void describe('isTaxFormIncomplete', () => {
   void it('is false without a summary or with zero counts', () => {
@@ -19,5 +22,26 @@ void describe('isTaxFormIncomplete', () => {
     ] as const) {
       assert.equal(isTaxFormIncomplete({ [key]: 1 }), true, key);
     }
+  });
+});
+
+void describe('copyBlockReason', () => {
+  void it('is null when neither stale nor incomplete', () => {
+    assert.equal(copyBlockReason({ stale: false, incomplete: false }), null);
+  });
+
+  void it('reports incomplete results', () => {
+    assert.equal(
+      copyBlockReason({ stale: false, incomplete: true }),
+      'incomplete',
+    );
+  });
+
+  void it('reports a stale session', () => {
+    assert.equal(copyBlockReason({ stale: true, incomplete: false }), 'stale');
+  });
+
+  void it('lets stale win over incomplete', () => {
+    assert.equal(copyBlockReason({ stale: true, incomplete: true }), 'stale');
   });
 });

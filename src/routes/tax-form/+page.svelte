@@ -1,6 +1,9 @@
 <script lang="ts">
   import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from 'lucide-svelte';
-  import { isTaxFormIncomplete } from '$lib/utils/tax-form-status.js';
+  import {
+    copyBlockReason,
+    isTaxFormIncomplete,
+  } from '$lib/utils/tax-form-status.js';
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
@@ -18,7 +21,7 @@
   import { oppTaxDueBase } from '../../core/tax/opp.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
-  import { setCopyDisabled } from './FormField.svelte';
+  import { setCopyBlock } from './FormField.svelte';
   import PitZgView from './PitZgView.svelte';
   import { requiredPitZg } from '../../core/tax/pit-zg.js';
   import SectionA from './SectionA.svelte';
@@ -58,14 +61,14 @@
   // Rows without an account of an instrument also held in an assigned account.
   const unassignedOverlapCount = $derived(taxSummary?.unassignedOverlapCount ?? 0);
   const incomplete = $derived(isTaxFormIncomplete(taxSummary));
-  // Incomplete results must not be filed: disable copying PIT-38 values.
-  setCopyDisabled(() => incomplete);
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,
       dataUpdatedAt: session?.dataUpdatedAt,
     }),
   );
+  // Stale or incomplete results must not be filed: disable copying PIT-38 values.
+  setCopyBlock(() => copyBlockReason({ stale, incomplete }));
 
   type ActiveDocument = 'pit38' | { pitZg: string };
   let activeDocument: ActiveDocument = $state('pit38');
@@ -229,11 +232,12 @@
     <!-- Stale banner -->
     {#if stale}
       <div
+        role="alert"
         class="flex items-center justify-between gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
       >
         <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-          <AlertTriangle size={16} />
-          <span>{m.tax_stale_banner()}</span>
+          <AlertTriangle size={16} class="shrink-0" aria-hidden="true" />
+          <span>{m.tax_form_stale_banner()}</span>
         </div>
         <button
           onclick={() => void handleRecalculate()}
@@ -362,7 +366,7 @@
         onselect={(doc) => (activeDocument = doc)}
       />
 
-      <div class={['min-w-0 flex-1', incomplete && 'opacity-60']}>
+      <div class={['min-w-0 flex-1', (incomplete || stale) && 'opacity-60']}>
         {#if typeof activeDocument === 'string'}
           <!-- PIT-38 sections -->
           <div class="space-y-4">

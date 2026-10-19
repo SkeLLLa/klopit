@@ -19,3 +19,18 @@ export function isTaxFormIncomplete(
     0
   );
 }
+
+export type CopyBlock = 'stale' | 'incomplete' | null;
+
+/**
+ * Why PIT-38 values must not be copied. Stale wins: recalculating comes first
+ * and may clear "incomplete".
+ */
+export function copyBlockReason(args: {
+  stale: boolean;
+  incomplete: boolean;
+}): CopyBlock {
+  if (args.stale) return 'stale';
+  if (args.incomplete) return 'incomplete';
+  return null;
+}

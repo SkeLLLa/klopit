@@ -1019,6 +1019,7 @@ The app supports **three languages:**
 
 - Dashboard shows: $18,500 gains, $2,800 tax owed, $150 dividend tax owed
 - Form shows exact PIT-38 field values to copy into your official filing
+- Copying is disabled while the session is stale (data changed since the last calculation, shown by an amber banner) or the results are incomplete; recalculate first. KRS, purpose details and consent in the OPP block stay copyable.
 
 **Step 6: File with tax authority**
 
