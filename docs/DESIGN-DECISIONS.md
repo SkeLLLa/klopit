@@ -659,7 +659,7 @@ When a sell exceeds an account's holding while another account held the instrume
 
 ### Legacy rows
 
-Rows without an account join the only account of the session (identical results). With several accounts they join the one account that holds the instrument; otherwise they go to `__unassigned__` (shown as "Unassigned"), and the form is a draft only if several accounts hold the instrument. A shortfall taints its queue: later sells are drafts too, so a pre-period gap cannot yield a silently final form.
+Rows without an account join the only account of the session (identical results). With several accounts they are computed in their own `__unassigned__` queue (shown as "Unassigned") and join an account only if that resolves a shortfall (an account ran short and they fill it, or they ran short and the account covers them), with an informational "account assumed" warning; several possible accounts keep them unassigned and draft the form. Joining by mere name match was rejected: a legacy lot or a manual carry-in could be absorbed by an account that did not own it, giving a wrong but final cost. A shortfall taints its queue: later sells are drafts too, so a pre-period gap cannot yield a silently final form. A suggested transfer likewise drafts the donor's later sells of that instrument, since the shares may have left its oldest lots.
 
 ---
 

@@ -316,6 +316,7 @@
   "home_why_online_label": "W pełni online",
   "home_why_oss_desc": "Kod na GitHub (AGPL-3.0).",
   "home_why_oss_label": "Open-source",
+  "import_warning_account_assumed": "{symbol}: {count} wierszy bez konta przypisano do {account}, bo tylko wtedy sprzedaże się zgadzają. FIFO jest prowadzone osobno dla każdego konta (art. 24 ust. 10 updof); jeśli to błędne, przypisz konto na stronie Dane.",
   "import_warning_account_unassigned": "{symbol}: część wierszy nie ma rachunku, a sesja ma kilka rachunków, więc trafiły na rachunek „unassigned”. FIFO jest liczone osobno dla każdego rachunku (art. 24 ust. 10 updof). Przypisz rachunek tym wierszom na stronie Dane.",
   "import_warning_account_unassigned_overlap": "{symbol}: część wierszy nie ma rachunku, a instrument jest też na innym rachunku, więc FIFO może być błędne. Przypisz rachunek tym wierszom na stronie Dane; do tego czasu formularz jest wersją roboczą.",
   "import_warning_carry_in_cost_missing": "Uzupełnij koszt nabycia pozycji z lat ubiegłych: {symbols}. Do tego czasu są liczone z kosztem 0 (Dane → Carry-in).",

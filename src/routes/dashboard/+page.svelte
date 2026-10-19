@@ -248,6 +248,12 @@
                 {:else}
                   {m.import_warning_account_unassigned({ symbol: warning.symbol })}
                 {/if}
+              {:else if warning.kind === 'account-assumed'}
+                {m.import_warning_account_assumed({
+                  symbol: warning.symbol,
+                  account: formatAccount(warning.account),
+                  count: String(warning.rows),
+                })}
               {:else if warning.kind === 'transfer-suggested'}
                 {m.import_warning_transfer_suggested({
                   symbol: warning.instrument,

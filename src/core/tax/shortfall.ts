@@ -1,6 +1,7 @@
 import type { EnrichedTrade } from '../types.js';
 import {
   instrumentBase,
+  instrumentGroup,
   instrumentNames,
   queueKey,
   UNASSIGNED_ACCOUNT,
@@ -60,6 +61,8 @@ export function shortfallWarnings(args: {
     const account = trade.account ?? '';
     const names = instrumentNames(trade, args.symbolToIsin);
     const base = instrumentBase(trade);
+    // The donor's shares are one pool however the receivers key the instrument.
+    const group = instrumentGroup(trade, args.symbolToIsin);
     const holdings =
       snapshots.get(trade.datetime.getTime()) ?? new Map<string, number>();
     const donors = args.accounts
@@ -71,7 +74,7 @@ export function shortfallWarnings(args: {
         );
         return {
           account: other,
-          available: held - (allocated.get(`${other}|${base}`) ?? 0),
+          available: held - (allocated.get(`${other}|${group}`) ?? 0),
         };
       })
       .filter((donor) => donor.available > EPS)
@@ -83,8 +86,8 @@ export function shortfallWarnings(args: {
       const quantity = Math.min(missing, donor.available);
       missing -= quantity;
       allocated.set(
-        `${donor.account}|${base}`,
-        (allocated.get(`${donor.account}|${base}`) ?? 0) + quantity,
+        `${donor.account}|${group}`,
+        (allocated.get(`${donor.account}|${group}`) ?? 0) + quantity,
       );
       add(
         `transfer|${donor.account}|${account}|${base}`,

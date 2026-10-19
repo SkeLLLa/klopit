@@ -918,7 +918,7 @@ void describe('calculateTaxes — unassignedOverlapCount', () => {
     const overlap = calc([
       tradeFor('ibkr:U1', 'buy'),
       tradeFor('schwab:default', 'buy'),
-      tradeFor(undefined, 'buy'),
+      tradeFor(undefined, 'sell'),
     ]);
     assert.equal(overlap.summary.unassignedOverlapCount, 1);
 

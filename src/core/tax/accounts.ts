@@ -50,21 +50,86 @@ export function instrumentNames(
 }
 
 /**
+ * Instrument identity across brokers: the ISIN (known or paired), else the
+ * symbol.
+ */
+export function instrumentGroup(
+  row: { isin?: string; symbol: string },
+  symbolToIsin: Map<string, string>,
+): string {
+  return (
+    row.isin ??
+    symbolToIsin.get(row.symbol.toUpperCase()) ??
+    row.symbol
+  ).toUpperCase();
+}
+
+/** Unstamped rows of one instrument in a session with several accounts. */
+export interface UnstampedGroup {
+  symbol: string;
+  isin?: string;
+  /** Accounts whose own rows name the instrument. */
+  candidates: string[];
+  rows: number;
+}
+
+/** Where a group's unstamped rows go: `account`, or stay `unassigned`. */
+export interface JoinDecision {
+  account?: string;
+  overlap: boolean;
+}
+
+/**
+ * Decide, per instrument, whether unstamped rows join a stamped account. They
+ * join only when that resolves a shortfall found with them in their own queue:
+ * an account ran short and they fill it, or they ran short and the account
+ * covers them. Consistent on their own, they stay apart (guessing an account
+ * could silently turn a correct cost into a wrong final one). Several possible
+ * accounts keep them unassigned and `overlap` drafts the form.
+ */
+export function decideJoins(
+  groups: Map<string, UnstampedGroup>,
+  shortfalls: { account: string; group: string }[],
+): Map<string, JoinDecision> {
+  const decisions = new Map<string, JoinDecision>();
+  for (const [group, info] of groups) {
+    const mine = shortfalls.filter((s) => s.group === group);
+    const unassignedShort = mine.some((s) => s.account === UNASSIGNED_ACCOUNT);
+    const shortAccounts = new Set(
+      mine
+        .filter((s) => s.account !== UNASSIGNED_ACCOUNT)
+        .map((s) => s.account),
+    );
+    const resolvers = unassignedShort
+      ? info.candidates
+      : info.candidates.filter((account) => shortAccounts.has(account));
+    if (resolvers.length === 1) {
+      decisions.set(group, { account: resolvers[0], overlap: false });
+    } else {
+      decisions.set(group, { overlap: resolvers.length > 1 });
+    }
+  }
+  return decisions;
+}
+
+/**
  * Rows without an account join the only account of the session. With several
- * accounts they join the single account that holds the instrument; if none or
- * several do, they go to `unassigned` (warned; it drafts the form only when
- * several accounts hold the instrument).
+ * accounts they go to `unassigned` unless `decisions` joins their instrument to
+ * an account (see `decideJoins`). Warnings: `account-unassigned` for the ones
+ * left apart, `account-assumed` for the joined ones.
  */
 export function assignAccounts(args: {
   trades: EnrichedTrade[];
   corporateActions: EnrichedCorporateAction[];
   carryInPositions: EnrichedCarryInPosition[];
   symbolToIsin: Map<string, string>;
+  decisions?: Map<string, JoinDecision>;
 }): {
   trades: EnrichedTrade[];
   carryInPositions: EnrichedCarryInPosition[];
   accounts: string[];
   warnings: CarryInWarning[];
+  unstamped: Map<string, UnstampedGroup>;
 } {
   const { symbolToIsin } = args;
   const distinct = new Set<string>();
@@ -87,10 +152,7 @@ export function assignAccounts(args: {
   }
 
   const single = [...distinct][0] ?? '';
-  const unassigned = new Map<
-    string,
-    { symbol: string; isin?: string; overlap: boolean }
-  >();
+  const unstamped = new Map<string, UnstampedGroup>();
   const resolve = (row: {
     account?: string;
     isin?: string;
@@ -98,19 +160,23 @@ export function assignAccounts(args: {
   }): string => {
     if (row.account) return row.account;
     if (distinct.size <= 1) return single;
-    const names = instrumentNames(row, symbolToIsin);
-    const matching = [...holders]
-      .filter(([, held]) => [...names].some((name) => held.has(name)))
-      .map(([account]) => account);
-    if (matching.length === 1) return matching[0];
-    const base = instrumentBase(row);
-    const known = unassigned.get(base);
-    unassigned.set(base, {
-      symbol: row.symbol,
-      isin: row.isin,
-      overlap: (known?.overlap ?? false) || matching.length > 1,
-    });
-    return UNASSIGNED_ACCOUNT;
+    const group = instrumentGroup(row, symbolToIsin);
+    const known = unstamped.get(group);
+    if (known) {
+      known.rows += 1;
+      known.isin ??= row.isin;
+    } else {
+      const names = instrumentNames(row, symbolToIsin);
+      unstamped.set(group, {
+        symbol: row.symbol,
+        isin: row.isin,
+        candidates: [...holders]
+          .filter(([, held]) => [...names].some((name) => held.has(name)))
+          .map(([account]) => account),
+        rows: 1,
+      });
+    }
+    return args.decisions?.get(group)?.account ?? UNASSIGNED_ACCOUNT;
   };
 
   const trades = args.trades.map((t) => ({ ...t, account: resolve(t) }));
@@ -124,11 +190,24 @@ export function assignAccounts(args: {
       ...carryInPositions.map((c) => c.account),
     ]),
   ].toSorted();
-  const warnings = [...unassigned.values()].map((u): CarryInWarning => ({
-    kind: 'account-unassigned',
-    ...u,
-  }));
-  return { trades, carryInPositions, accounts, warnings };
+  const warnings = [...unstamped].map(([group, u]): CarryInWarning => {
+    const decision = args.decisions?.get(group);
+    return decision?.account
+      ? {
+          kind: 'account-assumed',
+          symbol: u.symbol,
+          isin: u.isin,
+          account: decision.account,
+          rows: u.rows,
+        }
+      : {
+          kind: 'account-unassigned',
+          symbol: u.symbol,
+          isin: u.isin,
+          overlap: decision?.overlap ?? false,
+        };
+  });
+  return { trades, carryInPositions, accounts, warnings, unstamped };
 }
 
 /**

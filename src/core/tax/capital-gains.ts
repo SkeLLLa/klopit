@@ -10,7 +10,10 @@ import {
   actionTargets,
   assignAccounts,
   createSplitDeduper,
+  decideJoins,
   instrumentBase,
+  instrumentGroup,
+  instrumentNames,
   queueKey,
 } from './accounts.js';
 import {
@@ -82,6 +85,17 @@ export type CarryInWarning =
       symbol: string;
       isin?: string;
       overlap: boolean;
+    }
+  | {
+      /**
+       * Rows without an account were joined to `account`: the instrument ran
+       * short otherwise and that account resolves it. Informational.
+       */
+      kind: 'account-assumed';
+      symbol: string;
+      isin?: string;
+      account: string;
+      rows: number;
     }
   | {
       /**
@@ -167,16 +181,12 @@ function getOrCreateLots(
 export function calculateCapitalGains(
   args: CalculateCapitalGainsArgs,
 ): TradeResult[] {
-  const { corporateActions, taxPeriod } = args;
-  const symbolCountryMap = args.symbolCountryMap ?? new Map<string, string>();
-  const lotQueues = new Map<string, FifoLot[]>();
-  const results: TradeResult[] = [];
+  const { corporateActions } = args;
 
   // Names an instrument goes by across brokers (symbol <-> ISIN), over all
   // accounts: used to place unstamped rows and to find transfer donors.
-  const allTrades = args.trades;
   const globalIsin = buildSymbolIsinMap({
-    trades: allTrades,
+    trades: args.trades,
     corporateActions,
   });
   for (const pos of args.carryInPositions) {
@@ -184,13 +194,85 @@ export function calculateCapitalGains(
     if (pos.isin && !globalIsin.has(symbol)) globalIsin.set(symbol, pos.isin);
   }
 
-  const { trades, carryInPositions, accounts, warnings } = assignAccounts({
+  const assignArgs = {
     trades: args.trades,
     corporateActions,
     carryInPositions: args.carryInPositions,
     symbolToIsin: globalIsin,
+  };
+  // Unstamped rows first stand apart; they join an account only if that
+  // resolves a shortfall seen in this dry run.
+  let assigned = assignAccounts(assignArgs);
+  if (assigned.unstamped.size > 0) {
+    const dry = runPass({ ...args, onWarning: undefined, assigned });
+    assigned = assignAccounts({
+      ...assignArgs,
+      decisions: decideJoins(
+        assigned.unstamped,
+        dry.shortfalls.map(({ trade }) => ({
+          account: trade.account ?? '',
+          group: instrumentGroup(trade, globalIsin),
+        })),
+      ),
+    });
+  }
+  for (const warning of assigned.warnings) args.onWarning?.(warning);
+
+  const pass = runPass({ ...args, assigned, onWarning: args.onWarning });
+  const warnings = shortfallWarnings({
+    requests: pass.shortfalls,
+    accounts: assigned.accounts,
+    symbolToIsin: globalIsin,
+    holdingsAtTimes: (times) =>
+      simulateHoldings(
+        pass.timeline,
+        Infinity,
+        pass.isinMapFor,
+        assigned.accounts,
+        times,
+      ).snapshots,
   });
   for (const warning of warnings) args.onWarning?.(warning);
+
+  // A suggested transfer means the donor's own FIFO is unreliable too: the
+  // shares may have left its oldest lots, so its later sells are drafts.
+  for (const warning of warnings) {
+    if (warning.kind !== 'transfer-suggested') continue;
+    const names = instrumentNames(
+      { symbol: warning.instrument, isin: warning.isin },
+      globalIsin,
+    );
+    for (const [result, trade] of pass.sellOrigins) {
+      if (
+        trade.account === warning.fromAccount &&
+        trade.datetime >= warning.before &&
+        [...instrumentNames(trade, globalIsin)].some((name) => names.has(name))
+      ) {
+        result.costBasisMissing = true;
+      }
+    }
+  }
+
+  return pass.results;
+}
+
+function runPass(
+  args: CalculateCapitalGainsArgs & {
+    assigned: ReturnType<typeof assignAccounts>;
+  },
+): {
+  results: TradeResult[];
+  shortfalls: ShortfallRequest[];
+  timeline: TimelineEvent[];
+  isinMapFor: IsinMapFor;
+  sellOrigins: Map<TradeResult, EnrichedTrade>;
+} {
+  const { corporateActions, taxPeriod } = args;
+  const { trades, carryInPositions, accounts } = args.assigned;
+  const symbolCountryMap = args.symbolCountryMap ?? new Map<string, string>();
+  const lotQueues = new Map<string, FifoLot[]>();
+  const results: TradeResult[] = [];
+  const sellOrigins = new Map<TradeResult, EnrichedTrade>();
 
   // Build unified timeline (carry-ins are added below, after reconciliation)
   const timeline: TimelineEvent[] = [
@@ -265,6 +347,7 @@ export function calculateCapitalGains(
         symbolCountryMap,
       });
     } else {
+      const before = results.length;
       processTrade({
         trade: event.trade,
         lotQueues,
@@ -274,21 +357,13 @@ export function calculateCapitalGains(
         taintedQueues,
         shortfalls,
       });
+      if (results.length > before && event.trade.type === 'sell') {
+        sellOrigins.set(results[results.length - 1], event.trade);
+      }
     }
   }
 
-  for (const warning of shortfallWarnings({
-    requests: shortfalls,
-    accounts,
-    symbolToIsin: globalIsin,
-    holdingsAtTimes: (times) =>
-      simulateHoldings(timeline, Infinity, isinMapFor, accounts, times)
-        .snapshots,
-  })) {
-    args.onWarning?.(warning);
-  }
-
-  return results;
+  return { results, shortfalls, timeline, isinMapFor, sellOrigins };
 }
 
 /**

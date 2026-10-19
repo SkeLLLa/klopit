@@ -321,6 +321,7 @@
   "home_why_online_label": "Online",
   "home_why_oss_desc": "Code on GitHub (AGPL-3.0).",
   "home_why_oss_label": "Open-Source",
+  "import_warning_account_assumed": "{symbol}: {count} rows without an account were assumed to belong to {account}, because that is the only way the sales add up. FIFO is kept per account (art. 24 ust. 10 updof); if this is wrong, assign the account on the Data page.",
   "import_warning_account_unassigned": "{symbol}: some rows have no account, and the session has several accounts, so they were put in an \"unassigned\" account. FIFO is kept per account (art. 24 ust. 10 updof). Assign an account to these rows on the Data page.",
   "import_warning_account_unassigned_overlap": "{symbol}: some rows have no account, and the instrument is also held in another account, so FIFO may be wrong. Assign an account to these rows on the Data page; the form is a draft until then.",
   "import_warning_carry_in_cost_missing": "Enter the acquisition cost for prior-year positions: {symbols}. Until then they are calculated with cost 0 (Data → Carry-in).",
