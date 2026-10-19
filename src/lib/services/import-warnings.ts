@@ -85,6 +85,9 @@ function formatImportWarningMessage(args: {
   rowCount: number;
 }): string {
   // `kind` may come from a warning persisted by another app version.
+  if (args.section === 'Transfers' && args.kind === 'known-unsupported') {
+    return `${args.rowCount} stock transfers found — add a transfer on the Data page (art. 24 ust. 10)`;
+  }
   const format = importWarningFormatters[args.kind] as
     | ((section: string, count: string) => string)
     | undefined;

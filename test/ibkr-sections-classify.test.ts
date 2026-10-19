@@ -25,13 +25,13 @@ void describe('classifySection', () => {
       classifySection({ section: 'Change in Dividend Accruals' }),
       'supported',
     );
+    assert.equal(
+      classifySection({ section: 'Account Information' }),
+      'supported',
+    );
   });
 
   void it('classifies ignorable sections', () => {
-    assert.equal(
-      classifySection({ section: 'Account Information' }),
-      'ignorable',
-    );
     assert.equal(classifySection({ section: 'Net Asset Value' }), 'ignorable');
     assert.equal(classifySection({ section: 'Change in NAV' }), 'ignorable');
     assert.equal(classifySection({ section: 'Cash Report' }), 'ignorable');

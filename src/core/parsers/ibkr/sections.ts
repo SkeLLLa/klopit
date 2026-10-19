@@ -16,10 +16,11 @@ export const SUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
   'Mark-to-Market Performance Summary',
   'Interest',
   'Change in Dividend Accruals',
+  // Read for the account id stamped on trades, carry-ins and corporate actions.
+  'Account Information',
 ]);
 
 export const IGNORABLE_SECTIONS: ReadonlySet<string> = new Set([
-  'Account Information',
   'Net Asset Value',
   'Change in NAV',
   'Cash Report',
@@ -55,6 +56,9 @@ export const KNOWN_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
   'Bond Interest Received',
   'Transaction Fees',
   'Commission Detail',
+  // Stock transfers between accounts/brokers change FIFO lots; the user must
+  // enter them manually.
+  'Transfers',
 ]);
 
 export type SectionClassification =

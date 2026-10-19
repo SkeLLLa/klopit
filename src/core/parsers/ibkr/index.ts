@@ -1,5 +1,5 @@
 import { BrokerId } from '../../types.js';
-import type { RawDividend } from '../../types.js';
+import type { ParsedStatement, RawDividend } from '../../types.js';
 import { CsvStatementParser } from '../shared/csv-parser.js';
 import {
   cleanField,
@@ -76,6 +76,9 @@ class InteractiveBrokersParser extends CsvStatementParser {
           case 'Statement':
             this.parseStatement(fields);
             break;
+          case 'Account Information':
+            this.parseAccountInformation(fields);
+            break;
           case 'Financial Instrument Information':
             this.parseFinancialInstrument({ fields, rawLine });
             break;
@@ -106,6 +109,8 @@ class InteractiveBrokersParser extends CsvStatementParser {
         return;
       case 'known-unsupported':
       case 'unknown':
+        // Only stock transfers matter (and are warned about specifically).
+        if (section === 'Transfers' && !this.isStockTransfer(fields)) return;
         this.addSkippedRow({
           section,
           kind: classification,
@@ -207,6 +212,64 @@ class InteractiveBrokersParser extends CsvStatementParser {
       ...this.extractBestEffortSkippedFields({ section, fields }),
     });
     return true;
+  }
+
+  /** Account ids from Account Information, in statement order. */
+  private accounts: string[] = [];
+
+  /** Account stamped on rows that carry none of their own. */
+  private defaultAccount(): string | undefined {
+    const first = this.accounts[0];
+    return first ? `ibkr:${first}` : undefined;
+  }
+
+  /**
+   * Per-row account from an `Account` column (consolidated statements), or
+   * undefined when the section has no such column or the cell is empty.
+   */
+  private rowAccount(section: string, fields: string[]): string | undefined {
+    const idx = this.headerFor(section)?.indexOf('Account') ?? -1;
+    if (idx < 0) return undefined;
+    const id = this.field(fields, idx);
+    return id ? `ibkr:${id}` : undefined;
+  }
+
+  private isStockTransfer(fields: string[]): boolean {
+    const idx = this.headerFor('Transfers')?.indexOf('Asset Category') ?? -1;
+    return idx < 0 || this.field(fields, idx) === 'Stocks';
+  }
+
+  private parseAccountInformation(fields: string[]): void {
+    if (cleanField({ value: fields[2] ?? '' }) !== 'Account') return;
+    const id = cleanField({ value: fields[3] ?? '' });
+    if (id !== '' && !this.accounts.includes(id)) this.accounts.push(id);
+  }
+
+  override finish(): ParsedStatement {
+    const fallback = this.defaultAccount();
+    if (fallback) {
+      for (const row of [
+        ...this.trades,
+        ...this.carryInPositions,
+        ...this.corporateActions,
+      ]) {
+        row.account ??= fallback;
+      }
+    }
+    if (this.accounts.length > 1) {
+      const perRow = [
+        'Trades',
+        'Mark-to-Market Performance Summary',
+        'Corporate Actions',
+      ].some((section) => this.headerFor(section)?.includes('Account'));
+      if (!perRow) {
+        this.addWarning({
+          section: 'Account Information',
+          message: `Statement lists ${this.accounts.length} accounts (${this.accounts.join(', ')}) but rows carry no account column — all rows attributed to ${this.accounts[0]}`,
+        });
+      }
+    }
+    return super.finish();
   }
 
   private parseStatement(fields: string[]): void {
@@ -372,6 +435,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         commission,
         commissionCurrency,
         type,
+        account: this.rowAccount(section, fields),
       });
     } catch {
       this.reportParseFailure({
@@ -539,6 +603,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
           datetime,
           numerator,
           denominator,
+          account: this.rowAccount(section, fields),
         });
         return;
       }
@@ -597,6 +662,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
           cashCurrency,
           cashTotalProceeds:
             proceeds !== undefined ? Math.abs(proceeds) : undefined,
+          account: this.rowAccount(section, fields),
         });
         return;
       }
@@ -666,6 +732,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         quantity: priorQuantity,
         // 0 = statement year not known yet; resolved in finish().
         year: this.year > 0 ? this.year - 1 : 0,
+        account: this.rowAccount(section, fields),
       });
     } catch {
       this.reportParseFailure({

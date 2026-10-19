@@ -49,9 +49,13 @@ export async function importFile(args: ImportFileArgs): Promise<{
   });
   const warnings = deriveImportWarnings({ skippedRows: result.skippedRows });
 
+  // Parsers without per-account data (IBI, Schwab) get one default account.
+  const defaultAccount = `${result.broker}:default`;
+
   // Store parsed trades
   const trades: TradeRecord[] = result.trades.map((t) => ({
     ...t,
+    account: t.account ?? defaultAccount,
     sessionId: args.sessionId,
   }));
 
@@ -88,6 +92,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
   const corporateActions: CorporateActionRecord[] = result.corporateActions.map(
     (ca) => ({
       ...ca,
+      account: ca.account ?? defaultAccount,
       sessionId: args.sessionId,
     }),
   );
@@ -99,6 +104,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
       ...p,
       costBasisSource:
         p.costBasisSource ?? (isCarryInCostMissing(p) ? 'missing' : 'user'),
+      account: p.account ?? defaultAccount,
       sessionId: args.sessionId,
     }),
   );

@@ -56,6 +56,11 @@ export interface Trade {
    * tax computation. Currently set only by the IBI parsers.
    */
   plan?: string;
+  /**
+   * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows.
+   */
+  account?: string;
 }
 
 /** Raw dividend income */
@@ -81,6 +86,11 @@ export interface RawWithholdingTax {
 /** Corporate action */
 export interface CorporateAction {
   type: 'stock-split' | 'merger';
+  /**
+   * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows.
+   */
+  account?: string;
   symbol: string;
   isin?: string;
   datetime: Date;
@@ -135,6 +145,11 @@ export interface CarryInPosition {
   /** Optional manual PLN total cost override (skips the FX lookup). */
   costBasisPln?: number;
   costBasisSource?: CarryInCostBasisSource;
+  /**
+   * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows.
+   */
+  account?: string;
 }
 
 /** Carry-in position with its acquisition cost resolved to PLN. */
