@@ -705,6 +705,8 @@
   "data_incentive_bulk": "Ustaw reżim dla wszystkich pakietów {symbol}:",
   "data_incentive_dismiss": "Zamknij",
   "data_per_account_fifo_notice": "Twoje wyniki mogły się zmienić. Ta sesja zawiera dane z więcej niż jednego domu maklerskiego lub rachunku, a FIFO jest teraz stosowane osobno dla każdego rachunku (art. 24 ust. 10 ustawy o PIT). Sprawdź rachunki oraz wiersze bez przypisanego rachunku na stronie Dane, a następnie przelicz ponownie.",
+  "data_per_account_fifo_dismiss": "Zamknij",
+  "data_per_account_fifo_dismiss_label": "Zamknij informację o FIFO per rachunek",
   "data_schwab_fmv_notice": "Wyciągi Schwab w tej sesji zaimportowano, zanim zapisywano dane RSU i ESPP (wartość rynkowa FMV). Ponowny import w tej sesji zdublowałby wszystkie wiersze. Aby uzyskać dane FMV, utwórz nową sesję i zaimportuj w niej wszystkie wyciągi albo najpierw usuń stare transakcje Schwab pojedynczo na stronie Dane.",
   "import_warning_incentive_regime_missing": "Wybierz reżim podatkowy akcji pracowniczych (RSU / ESPP): {symbols}. Do tego czasu ich koszt jest oznaczony jako brakujący, a formularz podatkowy jest wersją roboczą (Dane → Transakcje).",
   "import_warning_sell_to_cover": "Liczba nabyć, przy których część akcji sprzedano lub zatrzymano na podatek (sell-to-cover): {count}. Importowane są tylko akcje netto; sprawdź w PIT-11 przychód opodatkowany przy nabyciu.",

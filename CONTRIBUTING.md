@@ -92,7 +92,7 @@ User input must survive every IndexedDB upgrade (`src/lib/db.ts`):
 - An upgrade **may clear derived tables** (trade/dividend/credit-interest results, tax summaries, NBP rate cache). When it does, it must also set the affected sessions to `'draft'` so results are recalculated.
 - The table lists live in `src/lib/db-tables.ts` (`INPUT_TABLES`, `DERIVED_TABLES`). Every new table must be classified there, and every version bump must update the lists and `test/db-input-preservation.test.ts`.
 - `test/db-input-preservation.test.ts` enforces this: it upgrades from every version v8–v15 to the latest and checks that all input rows survive, plus a realistic v15 → v16 case (accounts, incentive, transfers, override scopes).
-- Optional, unindexed fields need no schema change; only add an index when a query needs it. Mark calculated sessions stale (`calculatedAt = undefined`, `dataUpdatedAt = new Date()`) when a bump changes calculation results.
+- Optional, unindexed fields need no schema change; only add an index when a query needs it. Mark calculated sessions stale (keep `calculatedAt`, set `dataUpdatedAt = new Date()` so `isSessionStale` is true; clearing `calculatedAt` hides the stale banner) when a bump changes calculation results.
 - v16 bundles all plan-10 changes (rounding, gross proceeds, incentive regime, ADR/PIL country, accounts, transfers). It also sets `perAccountFifoNoticePending` on existing sessions that mix several brokers or accounts, for a one-time dismissible notice; new sessions never get it.
 
 ## Commit & PR Guidelines

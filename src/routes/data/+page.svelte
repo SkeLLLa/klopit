@@ -258,10 +258,12 @@
 
       {#if activeSession.perAccountFifoNoticePending}
         <div
+          role="status"
           class="flex items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
         >
           <span>{m.data_per_account_fifo_notice()}</span>
           <button
+            aria-label={m.data_per_account_fifo_dismiss_label()}
             onclick={() =>
               updateSession({
                 id: activeSession.id,
@@ -269,7 +271,7 @@
               })}
             class="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-800/40"
           >
-            {m.data_incentive_dismiss()}
+            {m.data_per_account_fifo_dismiss()}
           </button>
         </div>
       {/if}

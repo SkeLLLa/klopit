@@ -25,7 +25,6 @@ import {
   needsPerAccountFifoNotice,
   renameInteractiveBrokersToIbkr,
   stripLegacyPriorYearLoss,
-  type LegacyAccountRow,
   type LegacyCarryInRow,
   type LegacySessionRecord,
   type LegacyCorporateActionIsinRow,
@@ -204,6 +203,12 @@ export interface NbpRateRecord {
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
+
+/** Row shape the v16 upgrade reads: only the owning session and account. */
+export interface LegacyAccountRow {
+  sessionId: string;
+  account?: string;
+}
 
 /*
  * Schema upgrade policy (CONTRIBUTING.md, "Database Schema Upgrades"):
@@ -434,8 +439,9 @@ export class KlopitDB extends Dexie {
     // transfers stored as `corporateActions` rows of type 'transfer', and
     // dated carry-in placement. All new fields are optional and unindexed
     // (`account` is not queried by index), so no schema change and no row is
-    // rewritten. Calculated sessions are marked stale so results are
-    // recomputed; sessions that mix several brokers / accounts also get a
+    // rewritten. Calculated sessions are marked stale (`calculatedAt` is kept,
+    // `dataUpdatedAt` bumped, as in v15) so the stale banner and recalculate
+    // button appear; sessions that mix several brokers / accounts also get a
     // one-time notice, as their results can change.
     this.version(16).upgrade(async (tx) => {
       const accounts = new Map<string, Set<string>>();
@@ -457,7 +463,6 @@ export class KlopitDB extends Dexie {
         .toCollection()
         .modify((session) => {
           if (session.status === 'calculated') {
-            session.calculatedAt = undefined;
             session.dataUpdatedAt = new Date();
           }
           if (

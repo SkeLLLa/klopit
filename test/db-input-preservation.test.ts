@@ -6,6 +6,7 @@ import { Dexie } from 'dexie';
 
 import { DERIVED_TABLES, INPUT_TABLES } from '../src/lib/db-tables.js';
 import { KlopitDB } from '../src/lib/db.js';
+import { isSessionStale } from '../src/lib/utils/stale.js';
 
 /**
  * Policy guard (see CONTRIBUTING.md, "Database Schema Upgrades"): an upgrade
@@ -252,10 +253,26 @@ void describe('KlopitDB input-table preservation', () => {
       );
       for (const id of ['single', 'multi', 'accounts']) {
         const s = byId.get(id);
-        assert.equal(s?.calculatedAt, undefined, `${id} must be stale`);
-        assert.ok((s?.dataUpdatedAt?.getTime() ?? 0) > now.getTime());
+        assert.ok(s, id);
+        assert.equal(
+          isSessionStale({
+            calculatedAt: s.calculatedAt,
+            dataUpdatedAt: s.dataUpdatedAt,
+          }),
+          true,
+          `${id} must be stale`,
+        );
       }
-      assert.equal(byId.get('draft')?.calculatedAt, undefined);
+      const draft = byId.get('draft');
+      assert.ok(draft);
+      assert.equal(
+        isSessionStale({
+          calculatedAt: draft.calculatedAt,
+          dataUpdatedAt: draft.dataUpdatedAt,
+        }),
+        false,
+      );
+      assert.equal(draft.dataUpdatedAt?.getTime(), now.getTime());
 
       // One-time notice: only sessions mixing brokers / accounts.
       assert.equal(byId.get('single')?.perAccountFifoNoticePending, undefined);

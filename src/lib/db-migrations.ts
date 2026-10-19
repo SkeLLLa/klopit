@@ -142,12 +142,6 @@ export function migrateCarryInPositionV14(
   }
 }
 
-/** Row shape the v16 upgrade reads: only the owning session and account. */
-export interface LegacyAccountRow {
-  sessionId: string;
-  account?: string;
-}
-
 /**
  * V16 helper: a session needs the per-account FIFO notice when its data comes
  * from more than one broker or securities account.
