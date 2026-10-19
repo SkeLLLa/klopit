@@ -4,6 +4,13 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    ignore:
+      # Preset v10 needs conventional-changelog-writer >= 9, but the latest
+      # @semantic-release/release-notes-generator (14.x) still ships writer 8,
+      # so release notes fail with a "Missing helper" error. Lift this once
+      # the release-notes generator moves to writer 9.
+      - dependency-name: 'conventional-changelog-conventionalcommits'
+        update-types: ['version-update:semver-major']
     groups:
       production-major:
         dependency-type: 'production'
