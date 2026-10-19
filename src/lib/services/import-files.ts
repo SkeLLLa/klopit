@@ -1,7 +1,12 @@
 import { m } from '$lib/paraglide/messages.js';
 import { importFile } from '$lib/services/import.js';
 
-import type { BrokerId, ImportWarning, SkippedRow } from '../../core/types.js';
+import type {
+  BrokerId,
+  ImportWarning,
+  SellToCoverDetail,
+  SkippedRow,
+} from '../../core/types.js';
 
 export interface ImportFileResult {
   fileName: string;
@@ -10,7 +15,7 @@ export interface ImportFileResult {
   warnings: ImportWarning[];
   skippedRows: SkippedRow[];
   incentiveSymbolsMissingRegime: string[];
-  sellToCoverCount: number;
+  sellToCover: SellToCoverDetail[];
 }
 
 export async function importFiles(args: {
@@ -43,7 +48,7 @@ export async function importFiles(args: {
         warnings: result.warnings,
         skippedRows: result.skippedRows,
         incentiveSymbolsMissingRegime: result.incentiveSymbolsMissingRegime,
-        sellToCoverCount: result.sellToCoverCount,
+        sellToCover: result.sellToCover,
       });
     } catch (err) {
       results.push({
@@ -56,7 +61,7 @@ export async function importFiles(args: {
         warnings: [],
         skippedRows: [],
         incentiveSymbolsMissingRegime: [],
-        sellToCoverCount: 0,
+        sellToCover: [],
       });
     }
   }

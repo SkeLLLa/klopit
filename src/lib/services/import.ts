@@ -3,6 +3,7 @@ import type {
   BrokerId,
   ImportWarning,
   ParsedStatement,
+  SellToCoverDetail,
   SkippedRow,
 } from '../../core/types.js';
 import {
@@ -45,7 +46,7 @@ export async function importFile(args: ImportFileArgs): Promise<{
   /** Symbols whose RSU / ESPP lots in this file have no regime yet. */
   incentiveSymbolsMissingRegime: string[];
   /** Vests where the broker sold or withheld shares for taxes. */
-  sellToCoverCount: number;
+  sellToCover: SellToCoverDetail[];
 }> {
   const definition = getParserDefinition({ brokerId: args.brokerId });
   const result: ParsedStatement = await runParser({
@@ -165,8 +166,9 @@ export async function importFile(args: ImportFileArgs): Promise<{
     warnings,
     skippedRows: result.skippedRows,
     incentiveSymbolsMissingRegime: symbolsMissingIncentiveRegime(result.trades),
-    sellToCoverCount: result.warnings.filter((w) => w.kind === 'sell-to-cover')
-      .length,
+    sellToCover: result.warnings.flatMap((w) =>
+      w.sellToCover ? [w.sellToCover] : [],
+    ),
   };
 }
 

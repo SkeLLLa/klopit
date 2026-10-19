@@ -109,6 +109,21 @@ void describe('incentive shares cost basis', () => {
     assert.equal(result.costPln, 2000);
   });
 
+  void it('values FMV income at the vest-date rate when the trade uses settlement', () => {
+    const [result] = run([
+      makeTrade({
+        source: 'espp',
+        price: 40,
+        exchangeRate: 4.5,
+        incomeExchangeRate: 4,
+        incentive: { regime: 'taxed-at-acquisition', fmvPerShare: 50 },
+      }),
+      sell(),
+    ]);
+    // paid 10 * 40 * 4.5 = 1800, taxed income (50 - 40) * 10 * 4 = 400
+    assert.equal(result.costPln, 2200);
+  });
+
   void it('explicit taxedIncomePln wins over the FMV derivation', () => {
     const [result] = run([
       rsuBuy({

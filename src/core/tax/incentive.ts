@@ -15,7 +15,7 @@ export function isIncentiveBuy(
  *
  * - `qualifying` (art. 24 ust. 11-12b): nothing was taxed, cost = price paid.
  * - `taxed-at-acquisition`: the income already taxed — `taxedIncomePln`, else
- *   (FMV − price) × quantity at the buy-date rate. Neither available →
+ *   (FMV − price) × quantity at the vest-date NBP rate. Neither available →
  *   missing.
  * - No regime chosen: cost = price paid, flagged missing (no default regime).
  */
@@ -37,7 +37,10 @@ export function incentiveExtraCost(trade: EnrichedTrade): {
   if (incentive.fmvPerShare !== undefined) {
     const perShare = Math.max(incentive.fmvPerShare - trade.price, 0);
     return {
-      extraCostPln: perShare * trade.quantity * trade.exchangeRate,
+      extraCostPln:
+        perShare *
+        trade.quantity *
+        (trade.incomeExchangeRate ?? trade.exchangeRate),
       costMissing: false,
     };
   }

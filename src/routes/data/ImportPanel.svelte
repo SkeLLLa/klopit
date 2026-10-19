@@ -3,6 +3,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { importFiles } from '$lib/services/import-files.js';
   import type { ImportFileResult } from '$lib/services/import-files.js';
+  import { formatDate } from '$lib/utils/format-date.js';
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { supportedBrokers } from '../../core/parsers/registry.js';
   import { BrokerId } from '../../core/types.js';
@@ -146,7 +147,7 @@
                 : 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300'}"
             >
               {result.message}
-              {#if result.success && (result.incentiveSymbolsMissingRegime.length > 0 || result.sellToCoverCount > 0)}
+              {#if result.success && (result.incentiveSymbolsMissingRegime.length > 0 || result.sellToCover.length > 0)}
                 <div
                   class="mt-3 space-y-1 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
                 >
@@ -157,9 +158,20 @@
                       })}
                     </div>
                   {/if}
-                  {#if result.sellToCoverCount > 0}
+                  {#if result.sellToCover.length > 0}
                     <div>
-                      {m.import_warning_sell_to_cover({ count: String(result.sellToCoverCount) })}
+                      {m.import_warning_sell_to_cover({ count: String(result.sellToCover.length) })}
+                      <ul class="list-disc pl-5">
+                        {#each result.sellToCover as item (item.symbol + item.date.getTime())}
+                          <li>
+                            {m.import_warning_sell_to_cover_item({
+                              symbol: item.symbol,
+                              date: formatDate(item.date),
+                              shares: String(item.shares),
+                            })}
+                          </li>
+                        {/each}
+                      </ul>
                     </div>
                   {/if}
                 </div>

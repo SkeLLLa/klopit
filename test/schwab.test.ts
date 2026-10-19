@@ -73,6 +73,10 @@ void describe('SchwabParser', () => {
     assert.equal(result.warnings.length, 1);
     assert.match(result.warnings[0].message, /Sell-to-cover/);
     assert.match(result.warnings[0].message, /12 shares/);
+    const detail = result.warnings[0].sellToCover;
+    assert.equal(detail?.symbol, 'XYZ');
+    assert.equal(detail?.shares, 12);
+    assert.equal(detail?.date.getMonth(), 2);
 
     assert.equal(parseFixture('equity-awards.csv').warnings.length, 0);
   });

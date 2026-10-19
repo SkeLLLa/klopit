@@ -691,16 +691,16 @@
   "data_incentive_regime_clear": "Clear regime",
   "data_incentive_taxed_income": "Taxed income PLN",
   "data_incentive_from_fmv": "from FMV",
-  "data_incentive_title": "Employee shares (RSU / ESPP): choose the tax regime for each lot",
   "data_incentive_help_summary": "What are the regimes?",
   "data_incentive_help_qualifying": "Qualifying: a programme of the company or its parent under a shareholders' resolution (art. 24 ust. 11–12b updof). There is no income at acquisition; on sale the cost is the price actually paid (0 for RSU, the discounted price for ESPP).",
-  "data_incentive_help_taxed": "Taxed at acquisition: the vest or purchase was taxed as income (e.g. on a PIT-11). The cost on sale is the price paid plus the income already taxed (art. 23 ust. 1 pkt 38 updof). Enter the taxed income in PLN, or leave it empty to derive it from the FMV per share at the NBP rate.",
+  "data_incentive_help_taxed": "Taxed at acquisition: the vest or purchase was taxed as income (e.g. on a PIT-11). The cost on sale is the price paid plus the income already taxed (art. 23 ust. 1 pkt 38 updof). Enter the taxed income in PLN, or leave it empty to derive it from the FMV per share at the NBP rate of the vest date (the last business day before it; the settlement-date option does not apply to this income).",
   "data_incentive_help_check": "The app cannot tell which regime applies. Check your PIT-11 and your employer's programme terms. Until a regime is chosen the cost is flagged as missing and the tax form stays a draft.",
   "data_incentive_bulk": "Set regime for all {symbol} lots:",
   "data_incentive_dismiss": "Dismiss",
-  "data_schwab_fmv_notice": "This session has Schwab statements imported before fair market value (FMV) data was recorded. Re-import the Schwab statements to get FMV data for RSU and ESPP lots.",
+  "data_schwab_fmv_notice": "Schwab statements in this session were imported before RSU and ESPP data (fair market value) was recorded. Importing them again here would duplicate every row. To get FMV data, create a new session and import all your statements there, or first delete the old Schwab trades one by one on the Data page.",
   "import_warning_incentive_regime_missing": "Choose the tax regime of employee shares (RSU / ESPP): {symbols}. Until then their cost is flagged as missing and the tax form is a draft (Data → Trades).",
   "import_warning_sell_to_cover": "{count} vests had shares sold or withheld for taxes (sell-to-cover). Only the net shares are imported; check the income taxed at vest in your PIT-11.",
   "faq_13_question": "What is the cost of my RSU or ESPP shares when I sell them?",
-  "faq_13_answer": "It depends on how the shares were taxed when you received them, and kloPIT cannot know that, so you choose a regime per lot on the Data page. Qualifying programme (art. 24 ust. 11–12b updof): no income at acquisition, the cost is the price you paid (0 for RSU). Taxed at acquisition (e.g. on your PIT-11): the cost is the price paid plus the income already taxed. Until you choose, the cost is flagged as missing and the tax form stays a draft. Check your PIT-11 and your employer's programme terms."
+  "faq_13_answer": "It depends on how the shares were taxed when you received them, and kloPIT cannot know that, so you choose a regime per lot on the Data page. Qualifying programme (art. 24 ust. 11–12b updof): no income at acquisition, the cost is the price you paid (0 for RSU). Taxed at acquisition (e.g. on your PIT-11): the cost is the price paid plus the income already taxed. Until you choose, the cost is flagged as missing and the tax form stays a draft. Check your PIT-11 and your employer's programme terms.",
+  "import_warning_sell_to_cover_item": "{symbol}, vest {date}: {shares} shares sold or withheld"
 }

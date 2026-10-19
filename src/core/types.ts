@@ -232,6 +232,16 @@ export interface ParseWarning {
   message: string;
   /** Set for warnings the import UI reports in its own words. */
   kind?: 'sell-to-cover';
+  /** Vest details of a `sell-to-cover` warning. */
+  sellToCover?: SellToCoverDetail;
+}
+
+/** A vest where the broker sold or withheld shares for taxes. */
+export interface SellToCoverDetail {
+  symbol: string;
+  date: Date;
+  /** Shares sold or withheld (not in the imported net quantity). */
+  shares: number;
 }
 
 /** Classification of a CSV row that the parser intentionally skipped. */
@@ -522,6 +532,12 @@ export interface TaxPeriod {
 /** Trade with pre-resolved exchange rate */
 export interface EnrichedTrade extends Trade {
   exchangeRate: number;
+  /**
+   * NBP rate of the vest / purchase date itself, for valuing income taxed at
+   * acquisition. Set when `exchangeRate` is a settlement-date rate; falls back
+   * to `exchangeRate`.
+   */
+  incomeExchangeRate?: number;
   commissionExchangeRate: number;
   rateUnavailable: boolean;
 }

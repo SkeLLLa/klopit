@@ -246,6 +246,7 @@ class SchwabParser implements StatementParser {
         section: 'Schwab',
         line: args.line,
         kind: 'sell-to-cover',
+        sellToCover: { symbol, date: datetime, shares: sharesWithheld },
         message: `Sell-to-cover detected for ${symbol} vest on ${formatDate(datetime)}: ${String(sharesWithheld)} shares were sold or withheld for taxes and are not imported; only the ${String(quantity)} net shares are. Check the income taxed at vest in your PIT-11.`,
       });
     }
@@ -351,12 +352,14 @@ class SchwabParser implements StatementParser {
     line: number;
     message: string;
     kind?: ParseWarning['kind'];
+    sellToCover?: ParseWarning['sellToCover'];
   }): void {
     this.warnings.push({
       line: args.line,
       section: args.section,
       message: args.message,
       ...(args.kind ? { kind: args.kind } : {}),
+      ...(args.sellToCover ? { sellToCover: args.sellToCover } : {}),
     });
   }
 }

@@ -50,9 +50,13 @@
     });
   }
 
-  async function handleTaxedIncomeChange(trade: TradeRecord, value: string) {
-    const parsed = value.trim() === '' ? undefined : Number(value);
-    if (parsed !== undefined && (!Number.isFinite(parsed) || parsed < 0)) return;
+  async function handleTaxedIncomeChange(trade: TradeRecord, input: HTMLInputElement) {
+    const parsed = input.value.trim() === '' ? undefined : Number(input.value);
+    if (parsed !== undefined && (!Number.isFinite(parsed) || parsed < 0)) {
+      // Rejected: show the stored value again.
+      input.value = String(trade.incentive?.taxedIncomePln ?? '');
+      return;
+    }
     await updateTrade({
       id: trade.id as number,
       changes: { incentive: withTaxedIncomePln(trade.incentive, parsed) },
@@ -173,7 +177,7 @@
                         value={trade.incentive?.taxedIncomePln ?? ''}
                         disabled={trade.incentive?.regime !== 'taxed-at-acquisition'}
                         placeholder={trade.incentive?.fmvPerShare !== undefined ? m.data_incentive_from_fmv() : ''}
-                        onchange={(e) => handleTaxedIncomeChange(trade, e.currentTarget.value)}
+                        onchange={(e) => handleTaxedIncomeChange(trade, e.currentTarget)}
                         aria-label={m.data_incentive_taxed_income()}
                         class="w-28 rounded-md border border-slate-300 px-2 py-1 text-right text-xs tabular-nums disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800"
                       />

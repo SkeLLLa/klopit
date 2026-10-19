@@ -76,21 +76,27 @@ export function symbolsMissingIncentiveRegime(
 }
 
 /**
- * Sessions with Schwab files imported before FMV was recorded: their vests and
- * purchases lack `source` / `incentive`, so the user should re-import.
+ * Sessions with Schwab statements imported before RSU / ESPP data (source, FMV)
+ * was recorded. Legacy rows cannot be told apart reliably, so the user is
+ * pointed to a fresh session instead of a re-import. Clears once the session
+ * holds Schwab-stamped RSU / ESPP rows.
  */
 export function needsSchwabFmvNotice(args: {
   files: readonly { broker: string }[];
   trades: Pick<Trade, 'type' | 'source' | 'account'>[];
 }): boolean {
-  return (
-    args.files.some((f) => f.broker === 'schwab') &&
-    args.trades.some(
-      (t) =>
-        t.type === 'buy' &&
-        t.source === undefined &&
-        (t.account === undefined || t.account.startsWith('schwab:')),
-    )
+  if (!args.files.some((f) => f.broker === 'schwab')) return false;
+  const imported = args.trades.some(
+    (t) =>
+      t.account === 'schwab:default' &&
+      (t.source === 'rsu' || t.source === 'espp'),
+  );
+  if (imported) return false;
+  return args.trades.some(
+    (t) =>
+      t.type === 'buy' &&
+      t.source === undefined &&
+      (t.account === undefined || t.account === 'schwab:default'),
   );
 }
 

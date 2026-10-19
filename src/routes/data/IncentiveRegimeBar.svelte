@@ -24,7 +24,6 @@
 <div
   class="mb-3 space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
 >
-  <p class="font-medium">{m.data_incentive_title()}</p>
   <details class="text-xs">
     <summary class="cursor-pointer">{m.data_incentive_help_summary()}</summary>
     <div class="mt-2 space-y-1">

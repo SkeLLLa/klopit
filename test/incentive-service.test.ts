@@ -77,28 +77,51 @@ void describe('incentive service helpers', () => {
     );
   });
 
-  void it('shows the Schwab FMV notice only for legacy Schwab rows', () => {
+  void describe('Schwab notice', () => {
     const files = [{ broker: 'schwab' }];
-    assert.equal(
-      needsSchwabFmvNotice({
-        files,
-        trades: [trade({ account: 'schwab:default' })],
-      }),
-      true,
-    );
-    assert.equal(
-      needsSchwabFmvNotice({
-        files,
-        trades: [trade({ account: 'schwab:default', source: 'rsu' })],
-      }),
-      false,
-    );
-    assert.equal(
-      needsSchwabFmvNotice({
-        files: [{ broker: 'ibkr' }],
-        trades: [trade({})],
-      }),
-      false,
-    );
+
+    void it('shows for legacy Schwab rows without source', () => {
+      assert.equal(needsSchwabFmvNotice({ files, trades: [trade({})] }), true);
+      assert.equal(
+        needsSchwabFmvNotice({
+          files,
+          trades: [trade({ account: 'schwab:default' })],
+        }),
+        true,
+      );
+    });
+
+    void it('needs a Schwab file', () => {
+      assert.equal(
+        needsSchwabFmvNotice({
+          files: [{ broker: 'ibkr' }],
+          trades: [trade({})],
+        }),
+        false,
+      );
+    });
+
+    void it('ignores buys of other accounts', () => {
+      assert.equal(
+        needsSchwabFmvNotice({
+          files,
+          trades: [trade({ account: 'ibkr:U1' })],
+        }),
+        false,
+      );
+    });
+
+    void it('clears once Schwab-stamped RSU/ESPP rows exist (no manual-buy false positive)', () => {
+      assert.equal(
+        needsSchwabFmvNotice({
+          files,
+          trades: [
+            trade({ account: 'schwab:default', source: 'rsu' }),
+            trade({ source: undefined }),
+          ],
+        }),
+        false,
+      );
+    });
   });
 });
