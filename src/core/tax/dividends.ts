@@ -185,7 +185,7 @@ export function calculateDividends(
       warnings.push({ kind: 'unknown-country' });
     }
 
-    if (args.adrCountryConflicts?.has(div.symbol)) {
+    if (!isPil && args.adrCountryConflicts?.has(div.symbol)) {
       warnings.push({ kind: 'adr-country-conflict' });
     }
 

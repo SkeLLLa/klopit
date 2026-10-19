@@ -86,13 +86,26 @@
   });
 
   // ADR issuer countries stamped at import (non-indexed field, so filter in memory).
-  const adrDividendsQuery = useLiveQuery(() =>
-    db.dividends
+  const adrDividendsQuery = useLiveQuery(() => {
+    if (!sessionId) return [];
+    return db.dividends
       .where('sessionId')
       .equals(sessionId)
       .filter((d) => !!d.adrCountry)
-      .toArray(),
-  );
+      .toArray();
+  });
+
+  // Symbols with payment-in-lieu events: their country is the withholding state.
+  const pilSymbolsQuery = useLiveQuery(async () => {
+    if (!sessionId) return [] as string[];
+    const rows = await db.dividends
+      .where('sessionId')
+      .equals(sessionId)
+      .filter((d) => d.kind === 'payment-in-lieu')
+      .toArray();
+    return [...new Set(rows.map((d) => d.symbol))];
+  });
+  const pilSymbols = $derived(new Set(pilSymbolsQuery.current ?? []));
 
   const overridesQuery = useLiveQuery(() =>
     db.symbolCountryOverrides.where('sessionId').equals(sessionId).toArray(),
@@ -283,7 +296,11 @@
               </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300"
-                >{(dttRate * 100).toFixed(0)}%</td
+                >{(dttRate * 100).toFixed(0)}%{#if pilSymbols.has(entry.symbol)}
+                  <span class="block text-xs text-slate-500 dark:text-slate-400"
+                    >{m.data_country_pil_note()}</span
+                  >
+                {/if}</td
               >
             </tr>
           {/each}

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { calculateDividends } from '../src/core/tax/dividends.js';
+import { buildSymbolCountryMaps } from '../src/core/tax/symbol-country.js';
 import type {
   DividendResult,
   EnrichedRawDividend,
@@ -752,5 +753,67 @@ void describe('calculateDividends payment in lieu', () => {
       isinCountryMap: isinMap,
     });
     assert.equal(r.country, 'US');
+  });
+});
+
+void describe('calculateDividends legacy rows and PIL overrides', () => {
+  void it('matches a legacy dividend row (no kind) with a WHT row of kind dividend', () => {
+    const [r] = calculateDividends({
+      dividends: [makeDiv({ amount: 10 })],
+      withholdingTaxes: [makeTax({ amount: -1.5, kind: 'dividend' })],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+    });
+    assert.equal(r.withholdingTaxOriginal, 1.5);
+  });
+
+  void it('keeps a PIL event in the withholding country despite a both-scope override', () => {
+    const maps = buildSymbolCountryMaps({
+      trades: [],
+      dividends: [{ symbol: 'TSM', isin: 'US8740391003' }],
+      overrides: [{ symbol: 'TSM', country: 'TW', scope: 'both' }],
+    });
+    const results = calculateDividends({
+      dividends: [
+        makeDiv({ symbol: 'TSM', amount: 10 }),
+        makeDiv({ symbol: 'TSM', amount: 10, kind: 'payment-in-lieu' }),
+      ],
+      withholdingTaxes: [
+        makeTax({ symbol: 'TSM', amount: -1, taxCountry: 'TW' }),
+        makeTax({
+          symbol: 'TSM',
+          amount: -1.5,
+          kind: 'payment-in-lieu',
+          taxCountry: 'US',
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: maps.dividends,
+      isinCountryMap: maps.gains,
+    });
+    const countries = results.map((r) => r.country).toSorted();
+    assert.deepEqual(countries, ['TW', 'US']);
+    const lieu = results.find((r) =>
+      r.warnings?.some((w) => w.kind === 'pil-substitute'),
+    );
+    assert.ok(lieu);
+    assert.equal(lieu.country, 'US');
+    assert.equal(lieu.creditCapRate, 0.15);
+  });
+
+  void it('does not flag an ADR country conflict on a PIL event', () => {
+    const [r] = calculateDividends({
+      dividends: [
+        makeDiv({ symbol: 'TSM', amount: 10, kind: 'payment-in-lieu' }),
+      ],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['TSM', 'US']]),
+      adrCountryConflicts: new Set(['TSM']),
+    });
+    assert.equal(
+      r.warnings?.some((w) => w.kind === 'adr-country-conflict'),
+      false,
+    );
   });
 });

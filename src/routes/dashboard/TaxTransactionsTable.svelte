@@ -371,13 +371,13 @@
               : hasWhtNetRefund
                 ? m.dividend_warning_wht_net_refund_description()
                 : hasPilExcess
-                  ? m.dividend_warning_pil_excess_description()
+                  ? m.dividend_warning_pil_excess_description({ country: div.country })
                   : hasAdrConflict
                     ? m.dividend_warning_adr_country_conflict_description()
                     : hasUnknownCountry
                       ? m.dividend_warning_unknown_country_description()
                       : hasPilSubstitute
-                        ? m.dividend_warning_pil_substitute_description()
+                        ? m.dividend_warning_pil_substitute_description({ country: div.country })
                         : undefined}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}

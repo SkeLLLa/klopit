@@ -65,7 +65,11 @@ class InteractiveBrokersParser extends CsvStatementParser {
    * rows.
    */
   private whtCountriesBySymbol = new Map<string, Set<string>>();
-  /** Symbols with a non-PIL withholding row (with or without a usable suffix). */
+  /**
+   * Symbols with any withholding row, payment-in-lieu included (with or without
+   * a usable suffix). A PIL-only year therefore still warns about the ISIN
+   * country.
+   */
   private whtSymbols = new Set<string>();
 
   protected getBrokerId(): string {
@@ -288,7 +292,8 @@ class InteractiveBrokersParser extends CsvStatementParser {
           message: `ADR ${div.symbol} has conflicting withholding countries (${[...countries].toSorted().join(', ')}) — set the issuer country on the country mapping page`,
         });
       } else if (this.whtSymbols.has(div.symbol)) {
-        // Only warn when withholding exists: without it no credit depends on the country.
+        // Only warn when withholding exists (PIL included): without it no credit
+        // depends on the country.
         warned.add(div.symbol);
         const isin = div.isin ?? this.symbolToIsin.get(div.symbol);
         this.addWarning({

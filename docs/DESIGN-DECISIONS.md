@@ -549,9 +549,9 @@ Can't use progressive tax brackets (which would require income info outside scop
 - Art. 30a ust. 9 updof credits dividend tax by the treaty with the source state, which for an ADR is the issuer's residence. Capital gains (art. 30b) and PIT/ZG keep the ISIN-prefix country. The calculation therefore builds two maps, `gains` and `dividends`; `dividends` adds the ADR issuer country.
 - The IBKR parser marks ADRs from the `Type` column and learns the issuer country from the `- XX Tax` suffix of ordinary-dividend withholding rows, stored as non-indexed `isAdr` / `adrCountry` fields on dividend rows. Conflicting suffixes keep the ISIN country and warn rather than guess.
 - Country overrides carry a non-indexed `scope` (`dividends` | `gains` | `both`; missing = `both`), so existing overrides keep their meaning and a dividend override doesn't move gains.
-- Payments in lieu get `kind: 'payment-in-lieu'` and are separate events. Their country is the withholding country (`taxCountry`), falling back to the ISIN country; they never feed ADR learning, get no W-8BEN warning, and always carry an informational "substitute payment" warning. The classification of PIL as a dividend for PIT-38 is flagged for the user to verify, not decided by kloPIT.
+- Payments in lieu get `kind: 'payment-in-lieu'` and are separate events. Their country is the withholding country (`taxCountry`), falling back to the ISIN country; a user override always wins, except for payments in lieu, whose country is the state that withheld the tax (a US-withheld PIL is capped by the US treaty, not by an override to another state); they never feed ADR learning, get no W-8BEN warning, and always carry an informational "substitute payment" warning. The classification of PIL as a dividend for PIT-38 is flagged for the user to verify, not decided by kloPIT.
 
-**Trade-offs:** The ADR country lives on dividend rows only, so rows imported before this change need a re-import. The PIT/ZG "required only with foreign tax" labelling is a separate follow-up.
+**Trade-offs:** The ADR country lives on dividend rows only, so rows imported before this change need a re-import (legacy rows without `kind` count as ordinary dividends, so legacy payments in lieu are only separated after a re-import). The PIT/ZG "required only with foreign tax" labelling is a separate follow-up.
 
 ---
 
