@@ -68,7 +68,9 @@ export function instrumentGroup(
 export interface UnstampedGroup {
   symbol: string;
   isin?: string;
-  /** Accounts whose own rows name the instrument. */
+  /** Connected component of the instrument (see `createComponents`). */
+  component: string;
+  /** Accounts holding something in the component. */
   candidates: string[];
   rows: number;
 }
@@ -161,18 +163,22 @@ const EPS = 1e-9;
  */
 export function decideJoins(
   groups: Map<string, UnstampedGroup>,
-  evaluate: (group: string, account?: string) => ComponentStats,
+  evaluate: (
+    anchor: string,
+    joins: ReadonlyMap<string, string>,
+  ) => ComponentStats,
 ): Map<string, JoinDecision> {
   const decisions = new Map<string, JoinDecision>();
+  const none = new Map<string, string>();
   for (const [group, info] of groups) {
     if (info.candidates.length === 0) {
       decisions.set(group, { overlap: false });
       continue;
     }
-    const apart = evaluate(group);
+    const apart = evaluate(group, none);
     const joined = info.candidates.map((account) => ({
       account,
-      stats: evaluate(group, account),
+      stats: evaluate(group, new Map([[group, account]])),
     }));
     if (apart.shortfall > EPS) {
       const resolvers = joined.filter(
@@ -194,6 +200,31 @@ export function decideJoins(
       );
       decisions.set(group, { overlap: !same });
     }
+  }
+
+  // Joins that each work alone may overdraw an account together: check every
+  // component with several joins as a whole, else leave them all unassigned.
+  const byComponent = new Map<string, string[]>();
+  for (const [group, decision] of decisions) {
+    if (!decision.account) continue;
+    const component = groups.get(group)?.component ?? group;
+    byComponent.set(component, [...(byComponent.get(component) ?? []), group]);
+  }
+  for (const members of byComponent.values()) {
+    if (members.length < 2) continue;
+    const joins = new Map(
+      members.map((g) => [g, decisions.get(g)?.account ?? ''] as const),
+    );
+    const apart = evaluate(members[0], none);
+    const together = evaluate(members[0], joins);
+    const ok =
+      together.shortfall < apart.shortfall - EPS &&
+      [...joins.values()].every(
+        (account) =>
+          (together.shortfallByAccount.get(account) ?? 0) <=
+          (apart.shortfallByAccount.get(account) ?? 0) + EPS,
+      );
+    if (!ok) for (const g of members) decisions.set(g, { overlap: true });
   }
   return decisions;
 }
@@ -227,13 +258,16 @@ export function assignAccounts(args: {
     if (row.account) distinct.add(row.account);
   }
 
+  // Accounts hold components: an account with only the merger target's rows
+  // still holds what the unstamped rows of the old symbol turn into.
+  const componentOf = createComponents(args);
   const holders = new Map<string, Set<string>>();
   if (distinct.size > 1) {
     for (const row of [...args.trades, ...args.carryInPositions]) {
       if (!row.account) continue;
-      const names = holders.get(row.account) ?? new Set<string>();
-      for (const name of instrumentNames(row, symbolToIsin)) names.add(name);
-      holders.set(row.account, names);
+      const held = holders.get(row.account) ?? new Set<string>();
+      held.add(componentOf(row));
+      holders.set(row.account, held);
     }
   }
 
@@ -252,12 +286,13 @@ export function assignAccounts(args: {
       known.rows += 1;
       known.isin ??= row.isin;
     } else {
-      const names = instrumentNames(row, symbolToIsin);
+      const component = componentOf(row);
       unstamped.set(group, {
         symbol: row.symbol,
         isin: row.isin,
+        component,
         candidates: [...holders]
-          .filter(([, held]) => [...names].some((name) => held.has(name)))
+          .filter(([, held]) => held.has(component))
           .map(([account]) => account),
         rows: 1,
       });

@@ -237,28 +237,30 @@ export function calculateCapitalGains(
     for (const a of corporateActions) bucketOf(a).corporateActions.push(a);
 
     const apartStats = new Map<string, ComponentStats>();
-    const dry = (group: string, account?: string): ComponentStats => {
-      const component = componentOf({
-        symbol: apart.unstamped.get(group)?.symbol ?? group,
-        isin: apart.unstamped.get(group)?.isin,
-      });
-      if (!account) {
+    const dry = (
+      anchor: string,
+      joins: ReadonlyMap<string, string>,
+    ): ComponentStats => {
+      const component = apart.unstamped.get(anchor)?.component ?? anchor;
+      if (joins.size === 0) {
         const known = apartStats.get(component);
         if (known) return known;
       }
       const bucket = buckets.get(component);
-      if (!bucket)
+      if (!bucket) {
         return { shortfall: 0, shortfallByAccount: new Map(), signature: '' };
+      }
       const remap = <
         R extends { account?: string; isin?: string; symbol: string },
       >(
         row: R,
-      ): R =>
-        account &&
-        row.account === UNASSIGNED_ACCOUNT &&
-        instrumentGroup(row, globalIsin) === group
-          ? { ...row, account }
-          : row;
+      ): R => {
+        const account =
+          row.account === UNASSIGNED_ACCOUNT
+            ? joins.get(instrumentGroup(row, globalIsin))
+            : undefined;
+        return account ? { ...row, account } : row;
+      };
       const trades = bucket.trades.map(remap);
       const carryInPositions = bucket.carryInPositions.map(remap);
       const stats = componentStats(
@@ -278,7 +280,7 @@ export function calculateCapitalGains(
           },
         }),
       );
-      if (!account) apartStats.set(component, stats);
+      if (joins.size === 0) apartStats.set(component, stats);
       return stats;
     };
     assigned = assignAccounts({

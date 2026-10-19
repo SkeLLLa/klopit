@@ -1010,6 +1010,79 @@ void describe('per-account FIFO: unstamped rows across mergers', () => {
   }
 });
 
+const newBuy = (quantity: number, overrides: Partial<EnrichedTrade> = {}) =>
+  priced(40, new Date(2024, 0, 1), {
+    quantity,
+    account: A,
+    symbol: 'NEW',
+    isin: 'NEWISIN0000',
+    ...overrides,
+  });
+const newSell = (quantity: number) => ({
+  ...sell(quantity, new Date(2024, 5, 1), A),
+  symbol: 'NEW',
+  isin: 'NEWISIN0000',
+});
+const oldBuy = priced(50, new Date(2021, 0, 1));
+
+void describe('per-account FIFO: unstamped rows whose account holds only the merger target', () => {
+  void it('X2: the account is a candidate through the merger, so the result drafts', () => {
+    const { results, warnings } = run({
+      trades: [oldBuy, newBuy(20), newSell(20), trade(OTHER)],
+      corporateActions: [merger()],
+    });
+    assert.equal(onlySell(results).symbol, 'NEW');
+    assert.ok(isDraft(warnings));
+  });
+
+  void it('X2b: the join through the merger resolves the account shortfall', () => {
+    const { results, warnings } = run({
+      trades: [oldBuy, newBuy(10), newSell(20), trade(OTHER)],
+      corporateActions: [merger()],
+    });
+    assert.deepEqual(assumedAccounts(warnings), [A]);
+    assert.equal(onlySell(results).costBasisMissing, undefined);
+  });
+
+  void it('X2c: legacy sells over the merger draft too', () => {
+    const { warnings } = run({
+      trades: [
+        oldBuy,
+        sell(5, new Date(2022, 0, 1)),
+        newBuy(20),
+        newSell(20),
+        trade(OTHER),
+      ],
+      corporateActions: [merger()],
+    });
+    assert.ok(isDraft(warnings));
+  });
+
+  void it('CI2: an unstamped carry-in of the old symbol fills the target shortfall', () => {
+    const { warnings } = run({
+      trades: [newBuy(10), newSell(20), trade(OTHER)],
+      carryInPositions: [carryIn({ quantity: 5, year: 2022, costPln: 300 })],
+      corporateActions: [merger()],
+    });
+    assert.deepEqual(assumedAccounts(warnings), [A]);
+  });
+
+  void it('CMB: joins that only work one by one are not accepted together', () => {
+    const { warnings } = run({
+      trades: [
+        sell(10, new Date(2022, 0, 1)),
+        { ...newSell(10), account: undefined },
+        priced(10, new Date(2020, 0, 1), { account: A, quantity: 15 }),
+        newSell(10),
+        trade(OTHER),
+      ],
+      corporateActions: [merger()],
+    });
+    assert.deepEqual(assumedAccounts(warnings), []);
+    assert.ok(isDraft(warnings));
+  });
+});
+
 void describe('per-account FIFO: scale', () => {
   void it('many unstamped instruments stay fast', () => {
     const trades: EnrichedTrade[] = [];
