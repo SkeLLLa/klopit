@@ -7,6 +7,15 @@
    */
   export const [getCopyDisabled, setCopyDisabled] =
     createContext<() => boolean>();
+
+  /** Like `getCopyDisabled`, but never disabled outside the tax-form page. */
+  export function useCopyDisabled(): () => boolean {
+    try {
+      return getCopyDisabled();
+    } catch {
+      return () => false;
+    }
+  }
 </script>
 
 <script lang="ts">
@@ -85,13 +94,7 @@
     return rawDecimalFormatter.format(normalizedValue);
   });
 
-  const isCopyDisabled = (() => {
-    try {
-      return getCopyDisabled();
-    } catch {
-      return () => false; // rendered outside the tax-form page
-    }
-  })();
+  const isCopyDisabled = useCopyDisabled();
   const copyDisabled = $derived(isCopyDisabled());
 
   let copied = $state(false);
@@ -156,7 +159,11 @@
       : copied
         ? m.tax_copy_value_done()
         : m.tax_copy_value_title()}
-    aria-label={copied ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+    aria-label={copyDisabled
+      ? m.tax_form_missing_rates_title()
+      : copied
+        ? m.tax_copy_value_done()
+        : m.tax_copy_value_title()}
   >
     {formattedValue}
   </button>

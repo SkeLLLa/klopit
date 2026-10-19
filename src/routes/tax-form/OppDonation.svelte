@@ -7,6 +7,7 @@
   import { taxSupportFunds } from '$lib/constants/support-funds.js';
   import { debounce } from '$lib/utils/debounce.js';
   import { oppAmountPln } from '../../core/tax/opp.js';
+  import { useCopyDisabled } from './FormField.svelte';
 
   let {
     sessionId,
@@ -50,6 +51,9 @@
   const oppAmount = $derived(oppAmountPln({ taxDuePln: taxDueBase }));
 
   const oppAmountRaw = $derived(oppAmount.toFixed(2));
+  // The amount derives from poz. 35, so it is incomplete while rates are missing.
+  const isAmountCopyDisabled = useCopyDisabled();
+  const amountCopyDisabled = $derived(isAmountCopyDisabled());
   const consentRaw = $derived(consentValue ? 'X' : '');
   let copiedField = $state<string | undefined>();
   let copiedResetTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -228,9 +232,18 @@
       <button
         id="opp-amount"
         type="button"
-        class={valueButtonClass('amount', 'text-right font-semibold text-pink-700 dark:text-pink-300')}
-        title={copiedField === 'amount' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
-        aria-label={copiedField === 'amount' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+        class={valueButtonClass('amount', 'text-right font-semibold text-pink-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-pink-300')}
+        disabled={amountCopyDisabled}
+        title={amountCopyDisabled
+          ? m.tax_form_missing_rates_title()
+          : copiedField === 'amount'
+            ? m.tax_copy_value_done()
+            : m.tax_copy_value_title()}
+        aria-label={amountCopyDisabled
+          ? m.tax_form_missing_rates_title()
+          : copiedField === 'amount'
+            ? m.tax_copy_value_done()
+            : m.tax_copy_value_title()}
         onclick={() => void copyValue(oppAmountRaw, 'amount')}
       >
         {formatPlnValue(oppAmount)} zl
