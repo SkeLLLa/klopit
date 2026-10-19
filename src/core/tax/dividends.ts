@@ -98,6 +98,8 @@ export interface ReversalPair {
   reversal: number;
 }
 
+const cents = (amount: number) => Math.round(Math.abs(amount) * 100);
+
 /**
  * Pair each reversal with one unconsumed original of the same instrument,
  * currency and kind that is dated on or before it (at most 366 days earlier)
@@ -114,41 +116,61 @@ export function pairReversals<T extends PairableRow>(args: {
   const { rows, originalSign } = args;
   const groupKey = (row: T) =>
     `${row.id}|${row.currency.toUpperCase()}|${row.kind}`;
-  const originalsByGroup = new Map<string, number[]>();
+  const days = rows.map((row) => dayNumber(row.date));
+
+  // Originals bucketed by instrument group and amount in cents; each bucket is
+  // sorted most recent first, then input order.
+  const buckets = new Map<string, number[]>();
   const reversals: number[] = [];
   rows.forEach((row, index) => {
     if (row.amount * originalSign > 0) {
-      const key = groupKey(row);
-      const list = originalsByGroup.get(key);
+      const key = `${groupKey(row)}|${String(cents(row.amount))}`;
+      const list = buckets.get(key);
       if (list) list.push(index);
-      else originalsByGroup.set(key, [index]);
+      else buckets.set(key, [index]);
     } else if (row.amount * originalSign < 0) {
       reversals.push(index);
     }
   });
-  reversals.sort(
-    (a, b) => dayNumber(rows[a].date) - dayNumber(rows[b].date) || a - b,
-  );
+  for (const list of buckets.values()) {
+    list.sort((a, b) => days[b] - days[a] || a - b);
+  }
+  reversals.sort((a, b) => days[a] - days[b] || a - b);
 
   const consumed = new Set<number>();
   const pairs: ReversalPair[] = [];
   for (const reversalIndex of reversals) {
     const reversal = rows[reversalIndex];
-    const reversalDay = dayNumber(reversal.date);
+    const reversalDay = days[reversalIndex];
+    const group = groupKey(reversal);
+    const reversalCents = cents(reversal.amount);
     let best: { index: number; rank: number; day: number } | undefined;
-    for (const index of originalsByGroup.get(groupKey(reversal)) ?? []) {
-      if (consumed.has(index)) continue;
-      const original = rows[index];
-      const day = dayNumber(original.date);
-      if (day > reversalDay || reversalDay - day > PAIRING_WINDOW_DAYS) {
-        continue;
-      }
-      if (Math.abs(original.amount + reversal.amount) > AMOUNT_TOLERANCE) {
-        continue;
-      }
-      const rank = args.rank?.(original, reversal) ?? 0;
-      if (!best || rank < best.rank || (rank === best.rank && day > best.day)) {
-        best = { index, rank, day };
+    // The tolerance can straddle a cent boundary, so look at the neighbours.
+    for (const bucketCents of [
+      reversalCents,
+      reversalCents - 1,
+      reversalCents + 1,
+    ]) {
+      for (const index of buckets.get(`${group}|${String(bucketCents)}`) ??
+        []) {
+        const day = days[index];
+        if (reversalDay - day > PAIRING_WINDOW_DAYS) break;
+        if (day > reversalDay || consumed.has(index)) continue;
+        const original = rows[index];
+        if (Math.abs(original.amount + reversal.amount) > AMOUNT_TOLERANCE) {
+          continue;
+        }
+        const rank = args.rank?.(original, reversal) ?? 0;
+        if (
+          !best ||
+          rank < best.rank ||
+          (rank === best.rank &&
+            (day > best.day || (day === best.day && index < best.index)))
+        ) {
+          best = { index, rank, day };
+        }
+        // Unranked: the first valid entry is the most recent one.
+        if (!args.rank) break;
       }
     }
     if (best) {
@@ -231,6 +253,9 @@ interface ComputeArgs {
 }
 
 const isRefund = (leg: WhtLeg) => leg.row.amount > 0;
+
+const dividendNet = (event: DividendEvent) =>
+  event.divLegs.reduce((sum, leg) => sum + leg.row.amount, 0);
 
 /**
  * Compute the result row of one event from its legs (netting, ADR fees, treaty
@@ -365,6 +390,7 @@ function infoRow(args: {
   date: Date;
   warning: DividendWarning;
   addBackPln?: number;
+  rateUnavailable?: boolean;
 }): DividendResult {
   return {
     symbol: args.base.symbol,
@@ -377,13 +403,14 @@ function infoRow(args: {
     amountPln: 0,
     withholdingTaxPln: 0,
     exchangeRate: args.base.exchangeRate,
-    rateUnavailable: false,
+    rateUnavailable: args.rateUnavailable ?? false,
     country: args.base.country,
     creditCapRate: args.base.creditCapRate,
     deductibleWithholdingPln: 0,
     taxPlnGross: 0,
     taxToPayPln: 0,
     ...(args.addBackPln === undefined ? {} : { addBackPln: args.addBackPln }),
+    isInfo: true,
     warnings: [args.warning],
   };
 }
@@ -554,19 +581,20 @@ export function calculateDividends(
         `${group.id}|${group.currency.toUpperCase()}|${group.kind}`,
       ) ?? [];
     const groupDay = dayNumber(group.date);
-    let target: DividendEvent | undefined;
-    for (const candidate of candidates) {
-      const day = dayNumber(candidate.date);
-      if (
-        day <= groupDay &&
-        groupDay - day <= PAIRING_WINDOW_DAYS &&
-        (!target || day > dayNumber(target.date))
-      ) {
-        target = candidate;
+    const select = (pool: readonly DividendEvent[]) => {
+      let target: DividendEvent | undefined;
+      for (const candidate of pool) {
+        const day = dayNumber(candidate.date);
+        if (
+          day <= groupDay &&
+          groupDay - day <= PAIRING_WINDOW_DAYS &&
+          (!target || day > dayNumber(target.date))
+        ) {
+          target = candidate;
+        }
       }
-    }
-    if (!target) {
-      for (const candidate of candidates) {
+      if (target) return target;
+      for (const candidate of pool) {
         const day = dayNumber(candidate.date);
         if (
           day > groupDay &&
@@ -576,7 +604,13 @@ export function calculateDividends(
           target = candidate;
         }
       }
-    }
+      return target;
+    };
+    // Prefer an event that still pays something: credit on a reversed event
+    // would be capped at 0 and lost.
+    const target =
+      select(candidates.filter((c) => dividendNet(c) > AMOUNT_TOLERANCE)) ??
+      select(candidates);
     if (!target) {
       unmatchedEvents.push(group);
       continue;
@@ -604,11 +638,7 @@ export function calculateDividends(
   // netted into the event (art. 45 ust. 3a adds it back in its own year).
   for (const event of events.values()) {
     if (event.divLegs.length === 0) continue;
-    const dividendNet = event.divLegs.reduce(
-      (sum, leg) => sum + leg.row.amount,
-      0,
-    );
-    if (dividendNet <= 0) continue;
+    if (dividendNet(event) <= 0) continue;
     const eventYear = event.date.getFullYear();
     const kept: WhtLeg[] = [];
     for (const leg of event.whtLegs) {
@@ -622,6 +652,30 @@ export function calculateDividends(
     event.detached.sort(
       (a, b) => dayNumber(a.row.date) - dayNumber(b.row.date),
     );
+  }
+
+  // An ADR fee posted on the day of a payment that was later reversed to 0
+  // belongs to the re-post of the same instrument made on the reversal day.
+  for (const event of events.values()) {
+    const fees = adrFeeMap.get(event.key);
+    if (!fees || event.divLegs.length === 0) continue;
+    if (Math.abs(dividendNet(event)) > AMOUNT_TOLERANCE) continue;
+    const reversalDays = new Set(
+      event.divLegs.flatMap((leg) => leg.reversalDates.map(dayNumber)),
+    );
+    if (reversalDays.size === 0) continue;
+    const repost = [...events.values()].find(
+      (other) =>
+        other !== event &&
+        other.id === event.id &&
+        other.currency === event.currency &&
+        other.kind === event.kind &&
+        dividendNet(other) > AMOUNT_TOLERANCE &&
+        reversalDays.has(dayNumber(other.date)),
+    );
+    if (!repost) continue;
+    adrFeeMap.delete(event.key);
+    adrFeeMap.set(repost.key, [...(adrFeeMap.get(repost.key) ?? []), ...fees]);
   }
 
   const compute = (event: DividendEvent, legs: readonly WhtLeg[]) =>
@@ -698,7 +752,8 @@ export function calculateDividends(
     const refundedLater: Date[] = [];
     for (const leg of event.detached) {
       running.push(leg);
-      const after = compute(event, running).deductibleWithholdingPln;
+      const computed = compute(event, running);
+      const after = computed.deductibleWithholdingPln;
       const addBackPln = Math.max(previous - after, 0);
       previous = after;
       refundedLater.push(leg.row.date);
@@ -709,6 +764,7 @@ export function calculateDividends(
             date: leg.row.date,
             warning: { kind: 'wht-refund-add-back', originalDate },
             addBackPln,
+            rateUnavailable: computed.rateUnavailable,
           }),
         );
       }
@@ -753,36 +809,47 @@ export function calculateDividends(
     );
   }
 
-  // 2b: withholding with no dividend to attach to. Shown, never credited.
+  // 2b: withholding with no dividend to attach to. Shown, never credited. Only
+  // the legs posted in the period are reported, so a pair that spans two years
+  // shows each year its own leg.
   for (const group of unmatchedEvents) {
-    if (!inPeriod(group.date)) continue;
-    const legs = group.whtLegs;
+    const legs = group.whtLegs.filter((leg) => inPeriod(leg.row.date));
+    if (legs.length === 0) continue;
     const sample = legs[0];
+    const date =
+      legs.length === group.whtLegs.length ? group.date : sample.row.date;
     const taxCountry = legs.find((leg) => leg.row.taxCountry)?.row.taxCountry;
     const country =
       taxCountry ?? symbolCountryMap.get(sample.row.symbol) ?? 'XX';
-    const groupDay = dayNumber(group.date);
+    const groupDay = dayNumber(date);
     const likelySaleTax = (args.sells ?? []).some(
       (sell) =>
         sell.symbol.toUpperCase() === sample.row.symbol.toUpperCase() &&
         Math.abs(dayNumber(sell.date) - groupDay) <= SALE_TAX_HINT_DAYS,
     );
+    const netOriginal = legs.reduce((sum, leg) => sum + leg.row.amount, 0);
+    const netPln = legs.reduce(
+      (sum, leg) => sum + leg.row.amount * leg.rate,
+      0,
+    );
+    // A net refund has nothing to credit, but an earlier year's credit for it
+    // may need adding back (art. 45 ust. 3a).
+    const warning: DividendWarning =
+      netOriginal > 0
+        ? { kind: 'wht-refund-unmatched' }
+        : likelySaleTax
+          ? { kind: 'wht-unmatched', likelySaleTax: true }
+          : { kind: 'wht-unmatched' };
     infoRows.push({
       symbol: sample.row.symbol,
       currency: sample.row.currency,
-      date: group.date,
+      date,
       amountOriginal: 0,
-      withholdingTaxOriginal: Math.max(
-        -legs.reduce((sum, leg) => sum + leg.row.amount, 0),
-        0,
-      ),
+      withholdingTaxOriginal: Math.abs(netOriginal),
       adrFeeOriginal: 0,
       adrFeePln: 0,
       amountPln: 0,
-      withholdingTaxPln: Math.max(
-        -legs.reduce((sum, leg) => sum + leg.row.amount * leg.rate, 0),
-        0,
-      ),
+      withholdingTaxPln: Math.abs(netPln),
       exchangeRate: sample.rate,
       rateUnavailable: legs.some((leg) => leg.rateUnavailable),
       country,
@@ -790,11 +857,8 @@ export function calculateDividends(
       deductibleWithholdingPln: 0,
       taxPlnGross: 0,
       taxToPayPln: 0,
-      warnings: [
-        likelySaleTax
-          ? { kind: 'wht-unmatched', likelySaleTax: true }
-          : { kind: 'wht-unmatched' },
-      ],
+      isInfo: true,
+      warnings: [warning],
     });
   }
 

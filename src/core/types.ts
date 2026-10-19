@@ -431,6 +431,14 @@ export type DividendWarning =
        */
       kind: 'wht-refund-add-back';
       originalDate: string;
+    }
+  | {
+      /**
+       * Info row: a WHT refund with no withholding or dividend in the data. A
+       * credit taken for it in an earlier year must be added back (art. 45 ust.
+       * 3a); the earlier year's statement can be imported instead.
+       */
+      kind: 'wht-refund-unmatched';
     };
 
 /** Dividend with PLN conversion and matched withholding */
@@ -468,6 +476,13 @@ export interface DividendResult {
    * back (art. 45 ust. 3a updof), PLN. Set on info rows only.
    */
   addBackPln?: number | undefined;
+  /**
+   * Info row: carries a warning (and maybe an add-back), no income. Excluded
+   * from counts and withholding totals. On unmatched-WHT rows the withholding
+   * fields show the absolute net of the in-period rows (a refund shows its
+   * amount).
+   */
+  isInfo?: boolean | undefined;
   warnings?: DividendWarning[] | undefined;
 }
 

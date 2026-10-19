@@ -17,7 +17,10 @@ export function sumDividendIncome(args: { rows: DividendResult[] }): number {
 
 /** Sum total withholding tax paid abroad (PLN). */
 export function sumWithholding(args: { rows: DividendResult[] }): number {
-  return args.rows.reduce((s, d) => s + d.withholdingTaxPln, 0);
+  return args.rows.reduce(
+    (s, d) => (d.isInfo ? s : s + d.withholdingTaxPln),
+    0,
+  );
 }
 
 /** Sum treaty-capped deductible withholding (PLN). */
@@ -35,6 +38,29 @@ export function sumDividendAddBack(args: { rows: DividendResult[] }): number {
 /** Sum gross dividend tax (PLN). */
 export function sumDividendTaxGross(args: { rows: DividendResult[] }): number {
   return args.rows.reduce((s, d) => s + d.taxPlnGross, 0);
+}
+
+/**
+ * Dividend income split for the dashboard charts. `net + withholding + taxOwed`
+ * equals `income`; `addBack` (art. 45 ust. 3a) is tax on money received in an
+ * earlier year, so it stays a separate part on top of the income.
+ */
+export function dividendBreakdown(args: { rows: DividendResult[] }): {
+  income: number;
+  net: number;
+  withholding: number;
+  taxOwed: number;
+  addBack: number;
+} {
+  const income = Math.max(sumDividendIncome(args), 0);
+  const addBack = sumDividendAddBack(args);
+  return {
+    income,
+    net: income - income * TAX_RATE,
+    withholding: sumDeductibleWithholding(args),
+    taxOwed: Math.max(sumDividendTaxToPay(args) - addBack, 0),
+    addBack,
+  };
 }
 
 /** Sum gross credit-interest income (PLN). */
