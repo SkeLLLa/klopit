@@ -84,6 +84,14 @@ The parser system is plugin-based — adding a new broker **does not require cha
 
 ---
 
+## Database Schema Upgrades
+
+User input must survive every IndexedDB upgrade (`src/lib/db.ts`):
+
+- An upgrade must **never clear or drop an input table** (sessions, trades, dividends, withholding taxes, carry-in positions, transaction fees, credit interests, corporate actions, prior losses, symbol country overrides).
+- An upgrade **may clear derived tables** (trade/dividend/credit-interest results, tax summaries, NBP rate cache). When it does, it must also set the affected sessions to `'draft'` so results are recalculated.
+- `test/db-input-preservation.test.ts` enforces this. Every new table must be classified as input or derived there.
+
 ## Commit & PR Guidelines
 
 - Use **Conventional Commits**: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:` — no emojis, no co-author footers.
