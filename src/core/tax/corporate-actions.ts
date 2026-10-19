@@ -4,16 +4,16 @@ export interface FifoLot {
   costPerSharePln: number;
   commissionPerSharePln: number;
   /** The buy that created this lot had no NBP rate; its cost was counted as 0. */
-  rateUnavailable?: boolean;
+  rateUnavailable?: boolean | undefined;
   /** Lot comes from a carry-in position with no known acquisition cost. */
-  costMissing?: boolean;
+  costMissing?: boolean | undefined;
   /** Buy date, or the carry-in placement date. Kept through splits and mergers. */
-  acquiredAt?: Date;
+  acquiredAt?: Date | undefined;
   /**
    * Carry-in lot that is the holding _after_ the transfers up to this time
    * (ms): those transfers cannot draw from it. Kept through splits.
    */
-  protectedUntil?: number;
+  protectedUntil?: number | undefined;
 }
 
 /** Result of applying a merger to lots */
@@ -25,7 +25,7 @@ export interface MergerResult {
   /** At least one input lot had no NBP rate (its cost was counted as 0). */
   costRateUnavailable: boolean;
   /** Any consumed lot had no known acquisition cost. */
-  costMissing?: boolean;
+  costMissing?: boolean | undefined;
 }
 
 /**
@@ -83,7 +83,7 @@ export function applyMerger(args: {
   cashCurrency: string;
   cashExchangeRate: number;
   /** FMV of new shares received (total, in original currency) */
-  newSharesValue?: number;
+  newSharesValue?: number | undefined;
 }): MergerResult {
   if (args.lots.length === 0) {
     return {

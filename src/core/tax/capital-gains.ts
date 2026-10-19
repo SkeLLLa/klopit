@@ -38,9 +38,9 @@ export interface CalculateCapitalGainsArgs {
   corporateActions: EnrichedCorporateAction[];
   carryInPositions: EnrichedCarryInPosition[];
   taxPeriod: TaxPeriod;
-  symbolCountryMap?: Map<string, string>;
+  symbolCountryMap?: Map<string, string> | undefined;
   /** Receives non-fatal carry-in reconciliation warnings. */
-  onWarning?: (warning: CarryInWarning) => void;
+  onWarning?: ((warning: CarryInWarning) => void) | undefined;
 }
 
 /** Non-fatal carry-in reconciliation findings. */
@@ -49,11 +49,11 @@ export type CarryInWarning =
       /** Imported trades explain part of the snapshot; only the rest is seeded. */
       kind: 'carry-in-overlap';
       symbol: string;
-      isin?: string;
+      isin?: string | undefined;
       year: number;
       carryInQuantity: number;
       coveredQuantity: number;
-      account?: string;
+      account?: string | undefined;
     }
   | {
       /**
@@ -62,11 +62,11 @@ export type CarryInWarning =
        */
       kind: 'carry-in-inconsistent';
       symbol: string;
-      isin?: string;
+      isin?: string | undefined;
       year: number;
       carryInQuantity: number;
       impliedQuantity: number;
-      account?: string;
+      account?: string | undefined;
     }
   | {
       /**
@@ -75,11 +75,11 @@ export type CarryInWarning =
        */
       kind: 'carry-in-cost-prorated';
       symbol: string;
-      isin?: string;
+      isin?: string | undefined;
       year: number;
       carryInQuantity: number;
       seededQuantity: number;
-      account?: string;
+      account?: string | undefined;
     }
   | {
       /**
@@ -89,7 +89,7 @@ export type CarryInWarning =
        */
       kind: 'account-unassigned';
       symbol: string;
-      isin?: string;
+      isin?: string | undefined;
       overlap: boolean;
     }
   | {
@@ -99,7 +99,7 @@ export type CarryInWarning =
        */
       kind: 'account-assumed';
       symbol: string;
-      isin?: string;
+      isin?: string | undefined;
       account: string;
       rows: number;
     }
@@ -111,7 +111,7 @@ export type CarryInWarning =
        */
       kind: 'transfer-suggested';
       instrument: string;
-      isin?: string;
+      isin?: string | undefined;
       fromAccount: string;
       toAccount: string;
       quantity: number;
@@ -125,7 +125,7 @@ export type CarryInWarning =
        */
       kind: 'shortfall-add-carry-in';
       instrument: string;
-      isin?: string;
+      isin?: string | undefined;
       account: string;
       quantity: number;
       before: Date;
@@ -138,7 +138,7 @@ export type CarryInWarning =
        */
       kind: 'transfer-shortfall';
       instrument: string;
-      isin?: string;
+      isin?: string | undefined;
       fromAccount: string;
       toAccount: string;
       quantity: number;
@@ -172,7 +172,7 @@ type TimelineEvent =
       costMissing: boolean;
       rateUnavailable: boolean;
       /** See `FifoLot.protectedUntil`. */
-      protectedUntil?: number;
+      protectedUntil?: number | undefined;
     };
 
 /** Tie-break order on equal datetime: action, then carry-in, then trade. */
@@ -183,16 +183,18 @@ const KIND_ORDER: Record<TimelineEvent['kind'], number> = {
 };
 
 function lotKey(args: {
-  account?: string;
-  isin?: string;
+  account?: string | undefined;
+  isin?: string | undefined;
   symbol: string;
-  lotId?: string;
+  lotId?: string | undefined;
 }): string {
   return queueKey(args.account ?? '', instrumentBase(args), args.lotId);
 }
 
 /** Warning payload field; omitted for sessions without accounts. */
-function accountField(account: string | undefined): { account?: string } {
+function accountField(account: string | undefined): {
+  account?: string | undefined;
+} {
   return account ? { account } : {};
 }
 
@@ -258,7 +260,10 @@ export function calculateCapitalGains(
       corporateActions: EnrichedCorporateAction[];
     }
     const buckets = new Map<string, Bucket>();
-    const bucketOf = (row: { isin?: string; symbol: string }): Bucket => {
+    const bucketOf = (row: {
+      isin?: string | undefined;
+      symbol: string;
+    }): Bucket => {
       const id = componentOf(row);
       let bucket = buckets.get(id);
       if (!bucket) {
@@ -290,7 +295,11 @@ export function calculateCapitalGains(
         );
       }
       const remap = <
-        R extends { account?: string; isin?: string; symbol: string },
+        R extends {
+          account?: string | undefined;
+          isin?: string | undefined;
+          symbol: string;
+        },
       >(
         row: R,
       ): R => {
@@ -831,7 +840,7 @@ function buildCarryInEvents(args: {
   /** Sorted trades and corporate actions. */
   events: TimelineEvent[];
   taxPeriod: TaxPeriod;
-  onWarning?: (warning: CarryInWarning) => void;
+  onWarning?: ((warning: CarryInWarning) => void) | undefined;
 }): TimelineEvent[] {
   const { carryInPositions, events, taxPeriod, isinMapFor, accounts } = args;
   if (carryInPositions.length === 0) return [];

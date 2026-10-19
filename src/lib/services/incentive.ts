@@ -21,7 +21,7 @@ export function withIncentiveRegime(
  * incentive fields (taxed income, FMV) are kept.
  */
 export function incentiveRegimeUpdates(args: {
-  trades: (Trade & { id?: number })[];
+  trades: (Trade & { id?: number | undefined })[];
   symbol: string;
   regime: IncentiveRegime | undefined;
 }): { id: number; incentive: TradeIncentive | undefined }[] {

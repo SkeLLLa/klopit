@@ -17,7 +17,7 @@
     onselect,
   }: {
     countries: string[];
-    informationalCountries?: string[];
+    informationalCountries?: string[] | undefined;
     activeDocument: ActiveDocument;
     onselect: (doc: ActiveDocument) => void;
   } = $props();

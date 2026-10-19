@@ -2,7 +2,7 @@ export interface NavItem {
   labelKey: string;
   href: string;
   icon: string;
-  children?: NavItem[];
+  children?: NavItem[] | undefined;
 }
 
 export interface NavSection {

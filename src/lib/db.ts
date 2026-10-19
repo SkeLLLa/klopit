@@ -42,39 +42,39 @@ export interface SessionRecord {
   createdAt: Date;
   updatedAt: Date;
   files: ImportedFileRecord[];
-  residencyStartDate?: Date;
+  residencyStartDate?: Date | undefined;
   status: 'draft' | 'calculated';
-  oppKrs?: string;
-  oppDetails?: string;
-  oppConsent?: boolean;
-  importWarnings?: ImportWarning[];
-  brokerCountry?: string;
+  oppKrs?: string | undefined;
+  oppDetails?: string | undefined;
+  oppConsent?: boolean | undefined;
+  importWarnings?: ImportWarning[] | undefined;
+  brokerCountry?: string | undefined;
   /** Bumped by Dexie hooks whenever source data tables change. */
-  dataUpdatedAt?: Date;
+  dataUpdatedAt?: Date | undefined;
   /** Set by calculateSessionTaxes on successful completion. */
-  calculatedAt?: Date;
+  calculatedAt?: Date | undefined;
   /** Legacy PIT/ZG toggle retained only for database upgrades. */
-  includeAllInPitZg?: boolean;
+  includeAllInPitZg?: boolean | undefined;
   /** Show dividend compatibility rows in PIT/ZG. Disabled by default. */
-  showDividendsInPitZg?: boolean;
+  showDividendsInPitZg?: boolean | undefined;
   /**
    * Subtract parsed ADR/GDR fees from matched dividend income. Disabled by
    * default.
    */
-  reduceAdrFeesFromDividends?: boolean;
+  reduceAdrFeesFromDividends?: boolean | undefined;
   /**
    * Use estimated T+2 settlement dates for trade NBP rate lookups. Disabled by
    * default.
    */
-  useSettlementDateForTradeRates?: boolean;
+  useSettlementDateForTradeRates?: boolean | undefined;
   /** The "re-import Schwab statements for FMV data" notice was dismissed. */
-  schwabFmvNoticeDismissed?: boolean;
+  schwabFmvNoticeDismissed?: boolean | undefined;
   /**
    * Set by the v16 upgrade on sessions that mix several brokers / accounts:
    * FIFO now runs per account, so their results may have changed. Cleared when
    * the user dismisses the notice. Never set on sessions created after v16.
    */
-  perAccountFifoNoticePending?: boolean;
+  perAccountFifoNoticePending?: boolean | undefined;
 }
 
 export interface ImportedFileRecord {
@@ -85,48 +85,48 @@ export interface ImportedFileRecord {
 }
 
 export interface TradeRecord extends Trade {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface DividendRecord extends RawDividend {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
   withholdingTax: number;
 }
 
 export interface WithholdingTaxRecord extends RawWithholdingTax {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CarryInPositionRecord extends CarryInPosition {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface TransactionFeeRecord extends TransactionFee {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CreditInterestRecord extends RawCreditInterest {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CorporateActionRecord extends CorporateAction {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface PriorYearLossRecord extends PriorYearLoss {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface SymbolCountryOverrideRecord {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
   symbol: string;
   country: string;
@@ -135,17 +135,17 @@ export interface SymbolCountryOverrideRecord {
 }
 
 export interface TradeResultRecord extends TradeResult {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface DividendResultRecord extends DividendResult {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CreditInterestResultRecord extends CreditInterestResult {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
@@ -168,22 +168,22 @@ export interface TaxSummaryRecord {
    * Results with a missing NBP rate (see TaxSummary.missingRateCount). Absent
    * on summaries saved before this field existed — treat as unknown.
    */
-  missingRateCount?: number;
+  missingRateCount?: number | undefined;
   /** See TaxSummary.missingCostCount. Absent on older summaries. */
-  missingCostCount?: number;
+  missingCostCount?: number | undefined;
   /** See TaxSummary.inconsistentCarryInCount. Absent on older summaries. */
-  inconsistentCarryInCount?: number;
+  inconsistentCarryInCount?: number | undefined;
   /** See TaxSummary.unassignedOverlapCount. Absent on older summaries. */
-  unassignedOverlapCount?: number;
+  unassignedOverlapCount?: number | undefined;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**
    * Per-year loss-carry-forward breakdown (art. 9 ust. 3 updof). Only set when
    * the calculation considered prior-year losses.
    */
-  lossDeduction?: ApplyLossCarryForwardResult;
+  lossDeduction?: ApplyLossCarryForwardResult | undefined;
   /** Carry-in reconciliation findings (overlap, inconsistent snapshot, ...). */
-  carryInWarnings?: CarryInWarning[];
+  carryInWarnings?: CarryInWarning[] | undefined;
 }
 
 export interface NbpRateRecord {
@@ -197,7 +197,7 @@ export interface NbpRateRecord {
    * trusted as a weekend/holiday only when `fetchedAt > date`; legacy records
    * without it are revalidated.
    */
-  fetchedAt?: string;
+  fetchedAt?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ export interface NbpRateRecord {
 /** Row shape the v16 upgrade reads: only the owning session and account. */
 export interface LegacyAccountRow {
   sessionId: string;
-  account?: string;
+  account?: string | undefined;
 }
 
 /*

@@ -28,6 +28,7 @@ const loadHttps = () =>
 
 export default defineConfig(({ command }) => {
   const https = command === 'serve' ? loadHttps() : undefined;
+  const tls = https ? { https } : {};
   return {
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
@@ -39,15 +40,14 @@ export default defineConfig(({ command }) => {
       minify: 'oxc',
       cssMinify: 'lightningcss',
     },
-    server: { https },
-    preview: { https },
+    server: tls,
+    preview: tls,
     plugins: [
       tailwindcss(),
       sveltekit({
         adapter: adapter({
           pages: 'build',
           assets: 'build',
-          fallback: undefined,
           precompress: false,
           strict: true,
         }),

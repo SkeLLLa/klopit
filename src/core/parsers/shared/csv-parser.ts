@@ -176,11 +176,11 @@ export abstract class CsvStatementParser implements StatementParser {
     section: string;
     kind: SkippedRowKind;
     rawLine: string;
-    assetCategory?: string;
-    currency?: string;
-    symbol?: string;
-    datetime?: string;
-    description?: string;
+    assetCategory?: string | undefined;
+    currency?: string | undefined;
+    symbol?: string | undefined;
+    datetime?: string | undefined;
+    description?: string | undefined;
   }): void {
     this.skippedRows.push({
       line: this.lineNumber,

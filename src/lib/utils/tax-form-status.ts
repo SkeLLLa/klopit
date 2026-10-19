@@ -1,9 +1,9 @@
 /** Counts from the stored tax summary that make the PIT-38 a draft. */
 export interface IncompleteCounts {
-  missingRateCount?: number;
-  missingCostCount?: number;
-  inconsistentCarryInCount?: number;
-  unassignedOverlapCount?: number;
+  missingRateCount?: number | undefined;
+  missingCostCount?: number | undefined;
+  inconsistentCarryInCount?: number | undefined;
+  unassignedOverlapCount?: number | undefined;
 }
 
 /** True when the results must not be filed. Absent counts (old summaries) are 0. */

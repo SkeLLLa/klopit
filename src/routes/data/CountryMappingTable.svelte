@@ -122,7 +122,7 @@
     overrideScope: OverrideScope;
   }
 
-  function shouldUseIsin(existing: { isin?: string } | undefined, isin?: string) {
+  function shouldUseIsin(existing: { isin?: string | undefined } | undefined, isin?: string) {
     if (!isin) return false;
     if (!existing?.isin) return true;
     return (
@@ -149,7 +149,7 @@
         })),
       ],
     });
-    const symbolMap = new Map<string, { isin?: string }>();
+    const symbolMap = new Map<string, { isin?: string | undefined }>();
 
     // Seed all distinct symbols first (ensures ISIN-less symbols appear).
     for (const symbol of tradeSymbols) {

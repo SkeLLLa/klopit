@@ -7,7 +7,7 @@
     class: klass = '',
   }: {
     symbol: string;
-    class?: string;
+    class?: string | undefined;
   } = $props();
 
   const href = $derived(

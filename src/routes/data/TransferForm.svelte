@@ -14,10 +14,10 @@
     onsave,
     oncancel,
   }: {
-    initial?: TransferPrefill;
-    defaultYear?: number;
+    initial?: TransferPrefill | undefined;
+    defaultYear?: number | undefined;
     /** Distinct accounts in the session. */
-    accounts?: string[];
+    accounts?: string[] | undefined;
     onsave: (transfer: CorporateAction) => void;
     oncancel: () => void;
   } = $props();
@@ -38,10 +38,10 @@
   );
   let fromAccount: string | undefined = $state(seed?.fromAccount);
   let toAccount: string | undefined = $state(seed?.toAccount);
-  let errors: Record<string, string> = $state({});
+  let errors: Partial<Record<'symbol' | 'datetime' | 'quantity' | 'from' | 'to', string>> = $state({});
 
   function validate(): boolean {
-    const e: Record<string, string> = {};
+    const e: Partial<Record<'symbol' | 'datetime' | 'quantity' | 'from' | 'to', string>> = {};
     if (!symbol.trim()) e.symbol = m.data_validation_required();
     if (!fromDatetime()) e.datetime = m.data_validation_required();
     const qty = parseFloat(quantity);

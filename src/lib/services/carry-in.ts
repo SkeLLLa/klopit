@@ -134,7 +134,7 @@ export function parseDecimalInput(
  */
 export function normalizeCarryInPosition<T extends CarryInPosition>(
   pos: T,
-  opts: { sessionYear?: number } = {},
+  opts: { sessionYear?: number | undefined } = {},
 ): T {
   const symbol = pos.symbol.trim().toUpperCase();
   if (!symbol) throw new CarryInValidationError('symbol-required');

@@ -18,7 +18,7 @@
     counts,
     children,
   }: {
-    activeTab?: TabId;
+    activeTab?: TabId | undefined;
     counts: Record<TabId, number>;
     children: Snippet<[TabId]>;
   } = $props();

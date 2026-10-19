@@ -3,7 +3,7 @@ import { Dexie } from 'dexie';
 import type { KlopitDB } from './db.js';
 
 interface HasSessionId {
-  sessionId?: string;
+  sessionId?: string | undefined;
 }
 
 /**

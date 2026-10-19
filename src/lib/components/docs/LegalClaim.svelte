@@ -8,8 +8,8 @@
     body: string;
     sources: GroundingSource[];
     keys: string[];
-    title?: string;
-    class?: string;
+    title?: string | undefined;
+    class?: string | undefined;
   }
 
   let {

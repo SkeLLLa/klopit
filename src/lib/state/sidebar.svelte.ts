@@ -1,6 +1,6 @@
 function init() {
   // Remove the pre-hydration CSS hint now that Svelte controls the inline styles
-  delete document.documentElement.dataset.sidebarCollapsed;
+  delete document.documentElement.dataset['sidebarCollapsed'];
 }
 
 function createSidebarState() {

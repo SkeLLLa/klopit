@@ -88,7 +88,7 @@ function reviveDates(_key: string, v: unknown): unknown {
 /** Serialize every input table (derived tables are recomputed on import). */
 export async function exportBackup(args: {
   appVersion: string;
-  database?: KlopitDB;
+  database?: KlopitDB | undefined;
 }): Promise<string> {
   const database = args.database ?? db;
   const tables: BackupTables = {};
@@ -116,8 +116,8 @@ export async function exportBackup(args: {
 
 /** Required (`req`) and optional (`opt`) Date / number fields per table. */
 interface RowSpec {
-  dates?: { req?: string[]; opt?: string[] };
-  numbers?: { req?: string[]; opt?: string[] };
+  dates?: { req?: string[] | undefined; opt?: string[] | undefined };
+  numbers?: { req?: string[] | undefined; opt?: string[] | undefined };
 }
 
 const ROW_SPECS: Record<(typeof INPUT_TABLES)[number], RowSpec> = {
@@ -162,7 +162,9 @@ const isDate = (v: unknown): boolean =>
 function checkFields(
   table: string,
   row: Record<string, unknown>,
-  fields: { req?: string[]; opt?: string[] } | undefined,
+  fields:
+    | { req?: string[] | undefined; opt?: string[] | undefined }
+    | undefined,
   ok: (v: unknown) => boolean,
   kind: string,
 ): void {
@@ -342,7 +344,7 @@ function markStale(row: unknown, now: number): unknown {
  */
 export async function importBackup(args: {
   backup: BackupFile;
-  database?: KlopitDB;
+  database?: KlopitDB | undefined;
 }): Promise<void> {
   const database = args.database ?? db;
   const file = args.backup;

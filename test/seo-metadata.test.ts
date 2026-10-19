@@ -99,20 +99,20 @@ for (const locale of LOCALES) {
   });
 
   void test(`${locale}: meta_title includes all four pillar signals`, () => {
-    const title = messages.meta_title.toLowerCase();
+    const title = messages['meta_title'].toLowerCase();
     for (const word of PILLAR_WORDS[locale]) {
       assert.ok(
         title.includes(word),
-        `${locale}.json meta_title missing "${word}": ${messages.meta_title}`,
+        `${locale}.json meta_title missing "${word}": ${messages['meta_title']}`,
       );
     }
   });
 
   void test(`${locale}: meta_description fits 158 chars`, () => {
-    const len = messages.meta_description.length;
+    const len = messages['meta_description'].length;
     assert.ok(
       len <= 158,
-      `${locale}.json meta_description too long (${String(len)}): ${messages.meta_description}`,
+      `${locale}.json meta_description too long (${String(len)}): ${messages['meta_description']}`,
     );
   });
 }

@@ -14,7 +14,7 @@ export interface BuildPitZgArgs {
    * Polish capital-gains tax actually due after section D offsets and loss
    * carry-forward (poz. 35 base). Caps the credit overall; omitted = no cap.
    */
-  polishTaxDuePln?: number;
+  polishTaxDuePln?: number | undefined;
 }
 
 export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {

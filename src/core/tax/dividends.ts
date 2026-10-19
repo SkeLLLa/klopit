@@ -14,17 +14,17 @@ import { getDividendCreditCapRate } from './treaty-rates.js';
 export interface CalculateDividendsArgs {
   dividends: EnrichedRawDividend[];
   withholdingTaxes: EnrichedWithholdingTax[];
-  transactionFees?: TransactionFee[];
-  reduceAdrFeesFromDividends?: boolean;
+  transactionFees?: TransactionFee[] | undefined;
+  reduceAdrFeesFromDividends?: boolean | undefined;
   taxPeriod: TaxPeriod;
-  symbolCountryMap?: Map<string, string>;
+  symbolCountryMap?: Map<string, string> | undefined;
   /** ADR symbols whose rows disagree on the issuer country (no user override). */
-  adrCountryConflicts?: ReadonlySet<string>;
+  adrCountryConflicts?: ReadonlySet<string> | undefined;
   /**
    * Symbol → country by ISIN prefix (no ADR issuer country). Fallback for a
    * payment-in-lieu event that has no withholding row to name its country.
    */
-  isinCountryMap?: Map<string, string>;
+  isinCountryMap?: Map<string, string> | undefined;
 }
 
 function toDateString(args: { date: Date }): string {
@@ -35,11 +35,11 @@ function toDateString(args: { date: Date }): string {
 }
 
 function matchKey(args: {
-  isin?: string;
+  isin?: string | undefined;
   symbol: string;
   currency: string;
   date: Date;
-  kind?: PaymentKind;
+  kind?: PaymentKind | undefined;
 }): string {
   const id = (args.isin ?? args.symbol).toUpperCase();
   // An ordinary dividend and a payment in lieu on the same day are separate events.
@@ -47,7 +47,7 @@ function matchKey(args: {
 }
 
 function feeMatchKey(args: {
-  isin?: string;
+  isin?: string | undefined;
   symbol: string;
   currency: string;
   datetime: Date;

@@ -27,8 +27,8 @@
     onsave,
     oncancel,
   }: {
-    initial?: Partial<RawDividend>;
-    defaultYear?: number;
+    initial?: Partial<RawDividend> | undefined;
+    defaultYear?: number | undefined;
     onsave: (dividend: RawDividend) => void;
     oncancel: () => void;
   } = $props();
@@ -43,7 +43,7 @@
   let pickerValue = $state(seed?.date ? dateToPickerValue(seed.date) : '');
   let amount = $state(seed?.amount?.toString() ?? '');
   let currency = $state(seed?.currency ?? 'USD');
-  let errors: Record<string, string> = $state({});
+  let errors: Partial<Record<'symbol' | 'date' | 'amount' | 'currency', string>> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.
   $effect(() => {
@@ -67,7 +67,7 @@
   }
 
   function validate(): boolean {
-    const e: Record<string, string> = {};
+    const e: Partial<Record<'symbol' | 'date' | 'amount' | 'currency', string>> = {};
     if (!symbol.trim()) e.symbol = m.data_validation_required();
     if (!dateText.trim()) {
       e.date = m.data_validation_required();

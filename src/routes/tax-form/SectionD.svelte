@@ -12,7 +12,7 @@
     lossDeduction,
   }: {
     pit38: Pit38Fields;
-    lossDeduction?: ApplyLossCarryForwardResult;
+    lossDeduction?: ApplyLossCarryForwardResult | undefined;
   } = $props();
 
   const perYear = $derived(lossDeduction?.perYear ?? []);

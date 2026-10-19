@@ -542,7 +542,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
     rowLabel: string;
     fields: string[];
     rawLine: string;
-    push: (record: RawDividend & { taxCountry?: string }) => void;
+    push: (record: RawDividend & { taxCountry?: string | undefined }) => void;
   }): void {
     const { section, rowLabel, fields, rawLine, push } = args;
     if (
@@ -986,11 +986,11 @@ class InteractiveBrokersParser extends CsvStatementParser {
     section: string;
     rawLine: string;
     message: string;
-    assetCategory?: string;
-    currency?: string;
-    symbol?: string;
-    datetime?: string;
-    description?: string;
+    assetCategory?: string | undefined;
+    currency?: string | undefined;
+    symbol?: string | undefined;
+    datetime?: string | undefined;
+    description?: string | undefined;
   }): void {
     this.addWarning({ section: args.section, message: args.message });
     this.addSkippedRow({
@@ -1016,11 +1016,11 @@ class InteractiveBrokersParser extends CsvStatementParser {
     section: string;
     fields: string[];
   }): {
-    assetCategory?: string;
-    currency?: string;
-    symbol?: string;
-    datetime?: string;
-    description?: string;
+    assetCategory?: string | undefined;
+    currency?: string | undefined;
+    symbol?: string | undefined;
+    datetime?: string | undefined;
+    description?: string | undefined;
   } {
     const { section, fields } = args;
     const header = this.headerFor(section);

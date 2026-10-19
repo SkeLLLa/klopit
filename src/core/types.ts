@@ -41,20 +41,20 @@ export type IncentiveRegime = 'qualifying' | 'taxed-at-acquisition';
 /** Employee-incentive data of a buy lot; see {@link IncentiveRegime}. */
 export interface TradeIncentive {
   /** Absent until the user chooses; the lot's cost is then flagged missing. */
-  regime?: IncentiveRegime;
+  regime?: IncentiveRegime | undefined;
   /**
    * Income already taxed at acquisition, total for the lot in PLN. When absent
    * it is derived from `fmvPerShare`.
    */
-  taxedIncomePln?: number;
+  taxedIncomePln?: number | undefined;
   /** Fair market value per share at vest / purchase, in the trade currency. */
-  fmvPerShare?: number;
+  fmvPerShare?: number | undefined;
 }
 
 /** Raw trade from broker statement */
 export interface Trade {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   datetime: Date;
   quantity: number;
@@ -64,7 +64,7 @@ export interface Trade {
   commissionCurrency: string;
   type: 'buy' | 'sell';
   /** Origin of this trade; absent means regular trade. */
-  source?: TradeSource;
+  source?: TradeSource | undefined;
   /**
    * Optional lot partition key. When set, FIFO treats this trade as living in a
    * separate queue keyed by (symbol|isin, lotId), bypassing the global
@@ -75,25 +75,25 @@ export interface Trade {
    * Parsers that don't populate this field leave `lotKey` at its default
    * symbol/ISIN value.
    */
-  lotId?: string;
+  lotId?: string | undefined;
   /** Employee-incentive regime of an RSU / ESPP buy lot. Not indexed. */
-  incentive?: TradeIncentive;
+  incentive?: TradeIncentive | undefined;
   /**
    * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no effect on
    * tax computation. Currently set only by the IBI parsers.
    */
-  plan?: string;
+  plan?: string | undefined;
   /**
    * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
    * ust. 10 updof requires FIFO per account). Absent on legacy rows.
    */
-  account?: string;
+  account?: string | undefined;
 }
 
 /** Raw dividend income */
 export interface RawDividend {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   date: Date;
   /** Signed amount: positive = dividend paid, negative = reversal/correction. */
@@ -102,17 +102,17 @@ export interface RawDividend {
    * Instrument is an ADR (broker `Type` column); its source state is the
    * issuer's.
    */
-  isAdr?: boolean;
+  isAdr?: boolean | undefined;
   /**
    * Issuer country (ISO alpha-2) read from the broker's WHT description, ADRs
    * only.
    */
-  adrCountry?: string;
+  adrCountry?: string | undefined;
   /**
    * 'payment-in-lieu' for substitute payments on lent shares; absent =
    * ordinary.
    */
-  kind?: PaymentKind;
+  kind?: PaymentKind | undefined;
 }
 
 export type PaymentKind = 'dividend' | 'payment-in-lieu';
@@ -120,14 +120,14 @@ export type PaymentKind = 'dividend' | 'payment-in-lieu';
 /** Raw withholding tax on dividends */
 export interface RawWithholdingTax {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   date: Date;
   /** Signed amount: negative = tax withheld, positive = refund/reversal. */
   amount: number;
-  kind?: PaymentKind;
+  kind?: PaymentKind | undefined;
   /** Source state (ISO alpha-2) from the broker's "- XX Tax" description suffix. */
-  taxCountry?: string;
+  taxCountry?: string | undefined;
 }
 
 /** Corporate action */
@@ -138,9 +138,9 @@ export interface CorporateAction {
    * ust. 10 updof requires FIFO per account). Absent on legacy rows. A
    * `transfer` has no single account: see `fromAccount` / `toAccount`.
    */
-  account?: string;
+  account?: string | undefined;
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   datetime: Date;
   // Stock split fields (a transfer stores 1 / 1)
   numerator: number;
@@ -148,22 +148,22 @@ export interface CorporateAction {
   // Transfer fields (only when type === 'transfer'): `quantity` shares of the
   // instrument move from `fromAccount` to `toAccount` at `datetime`. Not a
   // disposal: lots keep their cost and acquisition date.
-  fromAccount?: string;
-  toAccount?: string;
-  quantity?: number;
+  fromAccount?: string | undefined;
+  toAccount?: string | undefined;
+  quantity?: number | undefined;
   // Merger fields (only when type === 'merger')
-  targetSymbol?: string;
-  targetIsin?: string;
-  conversionRatio?: number;
-  cashPerShare?: number;
-  cashCurrency?: string;
+  targetSymbol?: string | undefined;
+  targetIsin?: string | undefined;
+  conversionRatio?: number | undefined;
+  cashPerShare?: number | undefined;
+  cashCurrency?: string | undefined;
   /**
    * Total cash received from merger (in original currency, from CSV Proceeds
    * column)
    */
-  cashTotalProceeds?: number;
+  cashTotalProceeds?: number | undefined;
   /** FMV of new shares received (in original currency, from CSV Value column) */
-  newSharesValue?: number;
+  newSharesValue?: number | undefined;
 }
 
 /**
@@ -187,23 +187,23 @@ export type CarryInCostBasisSource = 'user' | 'zero-confirmed' | 'missing';
  */
 export interface CarryInPosition {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   quantity: number;
   year: number;
   /** Real acquisition date: drives FIFO ordering and the NBP rate date. */
-  acquisitionDate?: Date;
+  acquisitionDate?: Date | undefined;
   /** Total cost for `quantity` in `currency`, including commission. */
-  costBasis?: number;
+  costBasis?: number | undefined;
   /** ISO currency code of `costBasis` ('PLN' allowed). */
-  currency?: string;
+  currency?: string | undefined;
   /** Optional manual PLN total cost override (skips the FX lookup). */
-  costBasisPln?: number;
-  costBasisSource?: CarryInCostBasisSource;
+  costBasisPln?: number | undefined;
+  costBasisSource?: CarryInCostBasisSource | undefined;
   /**
    * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
    * ust. 10 updof requires FIFO per account). Absent on legacy rows.
    */
-  account?: string;
+  account?: string | undefined;
 }
 
 /** Carry-in position with its acquisition cost resolved to PLN. */
@@ -237,7 +237,7 @@ export interface PriorYearLoss {
 /** Transaction fee from broker (e.g. French transaction tax) */
 export interface TransactionFee {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   datetime: Date;
   amount: number;
@@ -258,9 +258,9 @@ export interface ParseWarning {
   section: string;
   message: string;
   /** Set for warnings the import UI reports in its own words. */
-  kind?: 'sell-to-cover';
+  kind?: 'sell-to-cover' | undefined;
   /** Vest details of a `sell-to-cover` warning. */
-  sellToCover?: SellToCoverDetail;
+  sellToCover?: SellToCoverDetail | undefined;
 }
 
 /** A vest where the broker sold or withheld shares for taxes. */
@@ -283,12 +283,12 @@ export interface SkippedRow {
   kind: SkippedRowKind;
   /** 1-based line number in the CSV as fed to the parser. */
   line: number;
-  assetCategory?: string;
-  currency?: string;
-  symbol?: string;
+  assetCategory?: string | undefined;
+  currency?: string | undefined;
+  symbol?: string | undefined;
   /** Raw datetime string as it appeared in the CSV. */
-  datetime?: string;
-  description?: string;
+  datetime?: string | undefined;
+  description?: string | undefined;
   /** Exact raw CSV line, verbatim. */
   rawLine: string;
 }
@@ -304,7 +304,7 @@ export interface ImportWarning {
 /** Result of parsing a single broker CSV file */
 export interface ParsedStatement {
   broker: string;
-  brokerCountry?: string;
+  brokerCountry?: string | undefined;
   year: number;
   trades: Trade[];
   dividends: RawDividend[];
@@ -337,11 +337,11 @@ export interface TradeResult {
   proceedsPln: number;
   costPln: number;
   /** Sell commission in PLN, already included in costPln (unset for non-sells). */
-  sellCommissionPln?: number;
+  sellCommissionPln?: number | undefined;
   gainLossPln: number;
   rateUnavailable: boolean;
   /** A FIFO lot consumed by this sell had no NBP rate; its cost was counted as 0. */
-  costRateUnavailable?: boolean;
+  costRateUnavailable?: boolean | undefined;
   country: string;
   /** Pre-LCF per-trade tax: max(gainLossPln, 0) * 0.19. Display-only. */
   taxPln: number;
@@ -350,7 +350,7 @@ export interface TradeResult {
   /** Foreign tax paid in original currency (default 0). */
   foreignTaxOriginal: number;
   /** Sell consumed a carry-in lot with no known acquisition cost. */
-  costBasisMissing?: boolean;
+  costBasisMissing?: boolean | undefined;
 }
 
 /** Warning on a dividend result */
@@ -394,8 +394,8 @@ export interface DividendResult {
    * ADR/GDR fees subtracted from the dividend base when the compatibility
    * setting is enabled.
    */
-  adrFeeOriginal?: number;
-  adrFeePln?: number;
+  adrFeeOriginal?: number | undefined;
+  adrFeePln?: number | undefined;
   amountPln: number;
   withholdingTaxPln: number;
   exchangeRate: number;
@@ -412,7 +412,7 @@ export interface DividendResult {
   taxPlnGross: number;
   /** Net tax to pay: max(taxPlnGross - deductibleWithholdingPln, 0). */
   taxToPayPln: number;
-  warnings?: DividendWarning[];
+  warnings?: DividendWarning[] | undefined;
 }
 
 /** Credit interest result after tax calculation (art. 30a ust. 1 pkt 3) */
@@ -453,19 +453,19 @@ export interface PitZgFields {
    * Foreign tax on gains that can be credited (art. 30b ust. 5a cap); 0 = not
    * required.
    */
-  creditableForeignTaxPln?: number;
+  creditableForeignTaxPln?: number | undefined;
 
   // Capital gains / share income (PIT/ZG C.3, present for sell trades)
-  proceedsPln?: number;
-  costPln?: number;
-  gainPln?: number;
-  lossPln?: number;
-  tradeForeignTaxPln?: number;
+  proceedsPln?: number | undefined;
+  costPln?: number | undefined;
+  gainPln?: number | undefined;
+  lossPln?: number | undefined;
+  tradeForeignTaxPln?: number | undefined;
 
   // Optional dividend compatibility section
-  dividendIncomePln?: number;
-  dividendForeignTaxPln?: number;
-  deductibleDividendTaxPln?: number;
+  dividendIncomePln?: number | undefined;
+  dividendForeignTaxPln?: number | undefined;
+  deductibleDividendTaxPln?: number | undefined;
 }
 
 /** Aggregated tax summary for a year */
@@ -594,12 +594,12 @@ export interface EnrichedTrade extends Trade {
    * acquisition. Set when `exchangeRate` is a settlement-date rate; falls back
    * to `exchangeRate` (which is then the vest-date rate itself).
    */
-  incomeExchangeRate?: number;
+  incomeExchangeRate?: number | undefined;
   /**
    * The vest-date rate was required (settlement-date rates on) but could not be
    * fetched; `incomeExchangeRate` is unset and must not fall back.
    */
-  incomeRateUnavailable?: boolean;
+  incomeRateUnavailable?: boolean | undefined;
   commissionExchangeRate: number;
   rateUnavailable: boolean;
 }

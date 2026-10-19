@@ -59,7 +59,7 @@
   $effect(syncTabFromHash);
 
   type SessionWithImportWarnings = SessionRecord & {
-    importWarnings?: ImportWarning[];
+    importWarnings?: ImportWarning[] | undefined;
   };
 
   // --- Session state (drive liveQuery here, sync into shared state) ---

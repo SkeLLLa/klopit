@@ -2,12 +2,12 @@ import type { CarryInWarning } from '../../core/tax/capital-gains.js';
 
 /** What the "Add transfer" form starts with. */
 export interface TransferPrefill {
-  fromAccount?: string;
-  toAccount?: string;
-  quantity?: number;
-  symbol?: string;
-  isin?: string;
-  datetime?: Date;
+  fromAccount?: string | undefined;
+  toAccount?: string | undefined;
+  quantity?: number | undefined;
+  symbol?: string | undefined;
+  isin?: string | undefined;
+  datetime?: Date | undefined;
 }
 
 /** Hash of the Data page that opens the "Add transfer" form. */

@@ -18,7 +18,7 @@ export interface ShortfallRequest {
    * Other donors still count (the shares may have come from there), but their
    * warnings stay hidden up to the explained quantity.
    */
-  explained?: { account: string; quantity: number }[];
+  explained?: { account: string; quantity: number }[] | undefined;
 }
 
 const EPS = 1e-9;

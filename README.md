@@ -45,7 +45,7 @@ kloPIT automates the most tedious parts of filing **PIT-38** (capital gains & di
 | Layer           | Technology                                                         |
 | --------------- | ------------------------------------------------------------------ |
 | Framework       | SvelteKit + Svelte 5 (runes)                                       |
-| Language        | TypeScript (strict)                                                |
+| Language        | TypeScript (`strict` + `exactOptionalPropertyTypes`)               |
 | Build           | Vite 8 + Rolldown (oxc transform and minify), adapter-static (SSG) |
 | Storage         | IndexedDB via Dexie                                                |
 | i18n            | Paraglide JS                                                       |

@@ -42,7 +42,7 @@ async function tryGetFixingRate(args: {
   currency: string;
   date: string;
   scope: string;
-  useTradeSettlementDate?: boolean;
+  useTradeSettlementDate?: boolean | undefined;
 }): Promise<{ rate: number; date: string } | undefined> {
   try {
     const getRate = args.useTradeSettlementDate

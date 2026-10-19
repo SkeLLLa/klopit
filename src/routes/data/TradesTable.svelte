@@ -17,7 +17,7 @@
   import EmptyState from './EmptyState.svelte';
   import IncentiveRegimeBar from './IncentiveRegimeBar.svelte';
 
-  let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();
+  let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number | undefined } = $props();
 
   const trades = useLiveQuery(() =>
     db.trades.where('sessionId').equals(sessionId).sortBy('datetime'),

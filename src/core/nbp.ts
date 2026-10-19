@@ -4,12 +4,12 @@ const MAX_RANGE_DAYS = 93;
 export class NbpFetchError extends Error {
   readonly url: string;
   /** HTTP status code, when the request reached the API. */
-  readonly status?: number;
+  readonly status?: number | undefined;
 
   constructor(args: {
     url: string;
     message: string;
-    status?: number;
+    status?: number | undefined;
     cause?: unknown;
   }) {
     super(args.message, { cause: args.cause });

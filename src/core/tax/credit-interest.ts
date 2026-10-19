@@ -14,7 +14,7 @@ import { isInTaxPeriod } from './period.js';
  * broker/entity-specific withholding support.
  */
 export function calculateCreditInterest(args: {
-  creditInterests: (EnrichedCreditInterest & { fxDate?: string })[];
+  creditInterests: (EnrichedCreditInterest & { fxDate?: string | undefined })[];
   taxPeriod: TaxPeriod;
 }): CreditInterestResult[] {
   const results: CreditInterestResult[] = [];

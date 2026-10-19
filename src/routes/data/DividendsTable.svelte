@@ -12,7 +12,7 @@
   import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
-  let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number } = $props();
+  let { sessionId, sessionYear }: { sessionId: string; sessionYear?: number | undefined } = $props();
 
   const dividends = useLiveQuery(() =>
     db.dividends.where('sessionId').equals(sessionId).sortBy('date'),

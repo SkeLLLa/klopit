@@ -40,12 +40,12 @@
     help,
   }: {
     label: string;
-    poz?: number;
+    poz?: number | undefined;
     value: number | string;
     variant?: 'computed' | 'placeholder';
-    suffix?: string;
-    highlighted?: boolean;
-    help?: string;
+    suffix?: string | undefined;
+    highlighted?: boolean | undefined;
+    help?: string | undefined;
   } = $props();
 
   const rawDecimalFormatter = new Intl.NumberFormat('en-US', {

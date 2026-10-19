@@ -18,9 +18,9 @@
   }: {
     sessionId: string;
     taxDueBase: number;
-    krs?: string;
-    details?: string;
-    consent?: boolean;
+    krs?: string | undefined;
+    details?: string | undefined;
+    consent?: boolean | undefined;
   } = $props();
 
   let krsValue = $state('');

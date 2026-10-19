@@ -28,7 +28,7 @@ import { roundToGrosz } from './rounding.js';
 export interface BuildPit38Args {
   trades: TradeResult[];
   dividends: DividendResult[];
-  creditInterests?: CreditInterestResult[];
+  creditInterests?: CreditInterestResult[] | undefined;
   summary: TaxSummary;
   /**
    * Prior-year capital losses available for carry-forward (art. 9 ust. 3
@@ -36,13 +36,13 @@ export interface BuildPit38Args {
    * 5-year window and 50%-per-year cap are enforced by
    * `applyLossCarryForward`.
    */
-  priorLosses?: PriorYearLoss[];
+  priorLosses?: PriorYearLoss[] | undefined;
   /**
    * Precomputed loss deduction (from `computeLossDeduction`). When given, it is
    * used for poz. 30 as-is so callers share a single source of truth; otherwise
    * it is computed from `priorLosses`.
    */
-  lossDeduction?: ApplyLossCarryForwardResult;
+  lossDeduction?: ApplyLossCarryForwardResult | undefined;
 }
 
 type SectionCFields = Pick<

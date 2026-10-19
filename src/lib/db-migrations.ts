@@ -12,7 +12,7 @@
  */
 export interface LegacySessionRecord {
   id: string;
-  priorYearLoss?: number;
+  priorYearLoss?: number | undefined;
 }
 
 /**
@@ -46,7 +46,7 @@ export interface LegacyImportedFileRecord {
 }
 
 export interface SessionWithFiles {
-  files?: LegacyImportedFileRecord[];
+  files?: LegacyImportedFileRecord[] | undefined;
 }
 
 export function renameInteractiveBrokersToIbkr(
@@ -67,23 +67,23 @@ export function renameInteractiveBrokersToIbkr(
 export interface LegacyTradeIsinRow {
   sessionId: string;
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
 }
 
 export interface LegacyCorporateActionIsinRow {
   sessionId: string;
   symbol: string;
-  isin?: string;
-  targetSymbol?: string;
-  targetIsin?: string;
+  isin?: string | undefined;
+  targetSymbol?: string | undefined;
+  targetIsin?: string | undefined;
 }
 
 export interface LegacyCarryInRow {
   sessionId: string;
   symbol: string;
-  isin?: string;
-  costBasis?: number;
-  costBasisPln?: number;
+  isin?: string | undefined;
+  costBasis?: number | undefined;
+  costBasisPln?: number | undefined;
   costBasisSource?: 'user' | 'zero-confirmed' | 'missing';
 }
 

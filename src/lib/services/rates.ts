@@ -278,7 +278,7 @@ export async function getCachedRates(args: {
 export async function getFixingRate(args: {
   currency: string;
   date: string;
-  settlementBusinessDays?: number;
+  settlementBusinessDays?: number | undefined;
 }): Promise<NbpRate> {
   const upperCurrency = args.currency.toUpperCase();
 

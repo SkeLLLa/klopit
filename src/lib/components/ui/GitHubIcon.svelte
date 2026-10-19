@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { size = 24, class: klass = '' }: { size?: number; class?: string } = $props();
+  let { size = 24, class: klass = '' }: { size?: number | undefined; class?: string | undefined } = $props();
 </script>
 
 <svg

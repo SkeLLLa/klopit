@@ -8,9 +8,9 @@
     seeTransactionsLabel,
   }: {
     title: string;
-    placeholder?: boolean;
-    seeTransactionsHref?: string;
-    seeTransactionsLabel?: string;
+    placeholder?: boolean | undefined;
+    seeTransactionsHref?: string | undefined;
+    seeTransactionsLabel?: string | undefined;
   } = $props();
 </script>
 

@@ -47,6 +47,7 @@ pnpm build    # production build → build/
 
 - **All tests must pass** — run `pnpm test` before opening a PR. PRs with failing tests will not be merged.
 - **Type-check** — `pnpm svelte-check` must report 0 errors.
+- **TypeScript strictness** — `tsconfig.json` enables `strict`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch` and `noPropertyAccessFromIndexSignature`. With `exactOptionalPropertyTypes`, write optional properties that may receive `undefined` as `foo?: T | undefined`. `noUncheckedIndexedAccess` is deliberately **off**: enabling it produced 649 errors (mostly array/record indexing that is safe by construction), well beyond what is worth annotating. Prefer `.at()`/`Map` and explicit checks in new code, and don't add the flag without a plan to fix those.
 - **Formatting & lint** — run `pnpm format` (oxfmt) before committing; `pnpm lint` (oxlint + `oxfmt --check`) must pass. There are no git hooks, so CI enforces this.
 - **Framework-agnostic core** — `src/core/` must remain pure TypeScript with no Svelte imports. Tax logic and parsers live there.
 - **Svelte 5 only** — use runes (`$state`, `$derived`, `$effect`). Do not use legacy `$:` reactive statements or Svelte stores.

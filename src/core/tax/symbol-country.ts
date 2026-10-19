@@ -2,13 +2,13 @@ import { isinToCountry } from './country.js';
 
 export interface SymbolCountrySource {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
 }
 
 export interface AdrCountrySource {
   symbol: string;
   /** Issuer country of an ADR, from the broker's withholding description. */
-  adrCountry?: string;
+  adrCountry?: string | undefined;
 }
 
 /**
@@ -35,7 +35,7 @@ export function resolveAdrCountries(args: { dividends: AdrCountrySource[] }): {
 function setDetectedCountry(args: {
   map: Map<string, string>;
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
 }) {
   const country = isinToCountry({ isin: args.isin });
   const existing = args.map.get(args.symbol);
@@ -51,7 +51,7 @@ export interface SymbolCountryOverrideInput {
   symbol: string;
   country: string;
   /** Missing = 'both' (overrides saved before scopes existed). */
-  scope?: OverrideScope;
+  scope?: OverrideScope | undefined;
 }
 
 /**
@@ -65,9 +65,9 @@ export interface SymbolCountryOverrideInput {
 export function buildSymbolCountryMap(args: {
   trades: SymbolCountrySource[];
   dividends: SymbolCountrySource[];
-  overrides?: SymbolCountryOverrideInput[];
+  overrides?: SymbolCountryOverrideInput[] | undefined;
   /** From `resolveAdrCountries`; used for `scope: 'dividends'` only. */
-  adrCountries?: ReadonlyMap<string, string>;
+  adrCountries?: ReadonlyMap<string, string> | undefined;
   scope?: 'dividends' | 'gains';
 }): Map<string, string> {
   const scope = args.scope ?? 'gains';
@@ -109,7 +109,7 @@ export function buildSymbolCountryMap(args: {
 export function buildSymbolCountryMaps(args: {
   trades: SymbolCountrySource[];
   dividends: (SymbolCountrySource & AdrCountrySource)[];
-  overrides?: SymbolCountryOverrideInput[];
+  overrides?: SymbolCountryOverrideInput[] | undefined;
 }): {
   gains: Map<string, string>;
   dividends: Map<string, string>;

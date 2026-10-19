@@ -33,10 +33,10 @@
     onsave,
     oncancel,
   }: {
-    initial?: Partial<Trade>;
-    defaultYear?: number;
+    initial?: Partial<Trade> | undefined;
+    defaultYear?: number | undefined;
     /** Distinct accounts in the session; the field shows when there are several. */
-    accounts?: string[];
+    accounts?: string[] | undefined;
     onsave: (trade: Trade) => void;
     oncancel: () => void;
   } = $props();
@@ -65,7 +65,7 @@
   const account = $derived(
     accountChoice ?? (accounts.length === 1 ? accounts[0] : undefined),
   );
-  let errors: Record<string, string> = $state({});
+  let errors: Partial<Record<'symbol' | 'datetime' | 'quantity' | 'price' | 'currency', string>> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.
   // This only seeds svelty-picker's internal value; the text input stays
@@ -130,7 +130,7 @@
   }
 
   function validate(): boolean {
-    const e: Record<string, string> = {};
+    const e: Partial<Record<'symbol' | 'datetime' | 'quantity' | 'price' | 'currency', string>> = {};
     if (!symbol.trim()) e.symbol = m.data_validation_required();
     if (!datetimeText.trim()) {
       e.datetime = m.data_validation_required();

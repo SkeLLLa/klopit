@@ -14,7 +14,7 @@
     accounts: string[];
     value: string | undefined;
     onchange: (value: string | undefined) => void;
-    compact?: boolean;
+    compact?: boolean | undefined;
   } = $props();
 
   const NEW = '__new__';

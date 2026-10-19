@@ -38,11 +38,11 @@
     href: string;
     label: string;
     iconName: string;
-    active?: boolean;
-    collapsed?: boolean;
-    hasChildren?: boolean;
-    expanded?: boolean;
-    onclick?: (e: MouseEvent) => void;
+    active?: boolean | undefined;
+    collapsed?: boolean | undefined;
+    hasChildren?: boolean | undefined;
+    expanded?: boolean | undefined;
+    onclick?: ((e: MouseEvent) => void) | undefined;
   } = $props();
 
   const IconComponent = $derived(iconMap[iconName]);

@@ -29,10 +29,10 @@
     onprefillused,
   }: {
     sessionId: string;
-    sessionYear?: number;
+    sessionYear?: number | undefined;
     /** Opens the "Add transfer" form with these values (from a warning link). */
-    prefill?: TransferPrefill;
-    onprefillused?: () => void;
+    prefill?: TransferPrefill | undefined;
+    onprefillused?: (() => void) | undefined;
   } = $props();
 
   const records = useLiveQuery(() =>

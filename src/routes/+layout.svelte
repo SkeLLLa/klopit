@@ -16,16 +16,16 @@
   type Locale = (typeof locales)[number];
   type JsonLd = Record<string, unknown> | Record<string, unknown>[];
   interface SeoMeta {
-    title?: string;
-    description?: string;
-    robots?: string;
+    title?: string | undefined;
+    description?: string | undefined;
+    robots?: string | undefined;
     ogType?: 'website' | 'article';
-    datePublished?: string;
-    dateModified?: string;
-    language?: string;
-    alternateLocales?: Locale[];
-    xDefaultLocale?: Locale;
-    jsonLd?: JsonLd;
+    datePublished?: string | undefined;
+    dateModified?: string | undefined;
+    language?: string | undefined;
+    alternateLocales?: Locale[] | undefined;
+    xDefaultLocale?: Locale | undefined;
+    jsonLd?: JsonLd | undefined;
   }
 
   const SITE_URL = 'https://klopit.co.pl';
@@ -58,7 +58,7 @@
   const currentPath = $derived(page.url.pathname);
   const normalizedPath = $derived(stripLocalePrefix(currentPath));
   const canonicalUrl = $derived(`${SITE_URL}${currentPath}`);
-  const pageMetaData = $derived((page.data as { meta?: SeoMeta }).meta);
+  const pageMetaData = $derived((page.data as { meta?: SeoMeta | undefined }).meta);
   const metaTitle = $derived(pageMetaData?.title ?? m.meta_title());
   const metaDescription = $derived(pageMetaData?.description ?? m.meta_description());
   const robots = $derived(pageMetaData?.robots ?? 'index, follow');
@@ -276,9 +276,9 @@
         <Breadcrumb />
         {#if isDocsArticle}
           <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">
-            {docsUpdatedLabels[locale] ?? docsUpdatedLabels.en}: {dateModified ?? '2026-04-27'}
+            {docsUpdatedLabels[locale] ?? docsUpdatedLabels['en']}: {dateModified ?? '2026-04-27'}
             <span aria-hidden="true"> · </span>
-            {docsMaintainerLabels[locale] ?? docsMaintainerLabels.en}
+            {docsMaintainerLabels[locale] ?? docsMaintainerLabels['en']}
             <a
               href="https://github.com/SkeLLLa/klopit/graphs/contributors"
               target="_blank"

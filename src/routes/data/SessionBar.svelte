@@ -14,7 +14,7 @@
     activeSessionId: string | undefined;
     onselect: (id: string) => void;
     oncreate: (year: number) => void;
-    ondelete?: () => void;
+    ondelete?: (() => void) | undefined;
   } = $props();
 
   let showYearInput = $state(false);

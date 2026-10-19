@@ -10,12 +10,12 @@
   let { sessionId }: { sessionId: string } = $props();
 
   type SessionWithImportWarnings = SessionRecord & {
-    importWarnings?: ImportWarning[];
+    importWarnings?: ImportWarning[] | undefined;
   };
 
   type SkippedTableRow = SkippedRow & {
-    rowCount?: number;
-    message?: string;
+    rowCount?: number | undefined;
+    message?: string | undefined;
   };
 
   const sessionQuery = useLiveQuery(() => db.sessions.get(sessionId));

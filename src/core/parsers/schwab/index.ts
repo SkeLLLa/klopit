@@ -325,9 +325,9 @@ class SchwabParser implements StatementParser {
     price: number;
     commission: number;
     type: 'buy' | 'sell';
-    proceeds?: number;
-    source?: TradeSource;
-    incentive?: TradeIncentive;
+    proceeds?: number | undefined;
+    source?: TradeSource | undefined;
+    incentive?: TradeIncentive | undefined;
   }): void {
     this.trades.push({
       symbol: args.symbol,
@@ -351,8 +351,8 @@ class SchwabParser implements StatementParser {
     section: string;
     line: number;
     message: string;
-    kind?: ParseWarning['kind'];
-    sellToCover?: ParseWarning['sellToCover'];
+    kind?: ParseWarning['kind'] | undefined;
+    sellToCover?: ParseWarning['sellToCover'] | undefined;
   }): void {
     this.warnings.push({
       line: args.line,

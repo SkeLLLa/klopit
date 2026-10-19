@@ -35,8 +35,8 @@ import { buildPit38, computeLossDeduction } from './pit38.js';
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
   dividends: EnrichedRawDividend[];
-  transactionFees?: TransactionFee[];
-  creditInterests?: EnrichedCreditInterest[];
+  transactionFees?: TransactionFee[] | undefined;
+  creditInterests?: EnrichedCreditInterest[] | undefined;
   withholdingTaxes: EnrichedWithholdingTax[];
   corporateActions: EnrichedCorporateAction[];
   carryInPositions: EnrichedCarryInPosition[];
@@ -45,17 +45,17 @@ export interface CalculateTaxesArgs {
    * single-number `priorYearLoss` field — each year carries its own residual
    * and 50%-per-year cap.
    */
-  priorLosses?: PriorYearLoss[];
+  priorLosses?: PriorYearLoss[] | undefined;
   taxPeriod: TaxPeriod;
-  symbolCountryMap?: Map<string, string>;
+  symbolCountryMap?: Map<string, string> | undefined;
   /**
    * Country map for dividends: `symbolCountryMap` plus the ADR issuer country.
    * Defaults to `symbolCountryMap`.
    */
-  dividendSymbolCountryMap?: Map<string, string>;
-  adrCountryConflicts?: ReadonlySet<string>;
-  showDividendsInPitZg?: boolean;
-  reduceAdrFeesFromDividends?: boolean;
+  dividendSymbolCountryMap?: Map<string, string> | undefined;
+  adrCountryConflicts?: ReadonlySet<string> | undefined;
+  showDividendsInPitZg?: boolean | undefined;
+  reduceAdrFeesFromDividends?: boolean | undefined;
 }
 
 export interface TaxCalculationResult {

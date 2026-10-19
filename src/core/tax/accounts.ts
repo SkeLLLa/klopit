@@ -13,7 +13,7 @@ import type { CarryInWarning } from './capital-gains.js';
 export const UNASSIGNED_ACCOUNT = '__unassigned__';
 
 export function instrumentBase(args: {
-  isin?: string;
+  isin?: string | undefined;
   symbol: string;
 }): string {
   return (args.isin ?? args.symbol).toUpperCase();
@@ -34,7 +34,7 @@ export function queueKey(
  * instrument differently (IBKR by ISIN, Schwab by symbol).
  */
 export function instrumentNames(
-  row: { isin?: string; symbol: string },
+  row: { isin?: string | undefined; symbol: string },
   symbolToIsin: Map<string, string>,
 ): Set<string> {
   const names = new Set<string>([row.symbol.toUpperCase()]);
@@ -55,7 +55,7 @@ export function instrumentNames(
  * symbol.
  */
 export function instrumentGroup(
-  row: { isin?: string; symbol: string },
+  row: { isin?: string | undefined; symbol: string },
   symbolToIsin: Map<string, string>,
 ): string {
   return (
@@ -105,7 +105,7 @@ export function transferAccounts(
 /** Unstamped rows of one instrument in a session with several accounts. */
 export interface UnstampedGroup {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   /** Connected component of the instrument (see `createComponents`). */
   component: string;
   /** Accounts holding something in the component. */
@@ -115,7 +115,7 @@ export interface UnstampedGroup {
 
 /** Where a group's unstamped rows go: `account`, or stay `unassigned`. */
 export interface JoinDecision {
-  account?: string;
+  account?: string | undefined;
   overlap: boolean;
 }
 
@@ -126,16 +126,16 @@ export interface JoinDecision {
  * Returns the component id of a row.
  */
 export function createComponents(args: {
-  trades: readonly { isin?: string; symbol: string }[];
-  carryInPositions: readonly { isin?: string; symbol: string }[];
+  trades: readonly { isin?: string | undefined; symbol: string }[];
+  carryInPositions: readonly { isin?: string | undefined; symbol: string }[];
   corporateActions: readonly {
-    isin?: string;
+    isin?: string | undefined;
     symbol: string;
-    targetIsin?: string;
-    targetSymbol?: string;
+    targetIsin?: string | undefined;
+    targetSymbol?: string | undefined;
   }[];
   symbolToIsin: Map<string, string>;
-}): (row: { isin?: string; symbol: string }) => string {
+}): (row: { isin?: string | undefined; symbol: string }) => string {
   const parent = new Map<string, string>();
   const find = (name: string): string => {
     let root = name;
@@ -153,7 +153,7 @@ export function createComponents(args: {
     for (const name of upper) if (!parent.has(name)) parent.set(name, name);
     for (const name of upper.slice(1)) parent.set(find(name), find(upper[0]));
   };
-  const withIsin = (row: { isin?: string; symbol: string }) =>
+  const withIsin = (row: { isin?: string | undefined; symbol: string }) =>
     row.isin ?? args.symbolToIsin.get(row.symbol.toUpperCase());
   for (const row of [...args.trades, ...args.carryInPositions]) {
     union([row.symbol, withIsin(row)]);
@@ -278,9 +278,11 @@ export function assignAccounts(args: {
   corporateActions: EnrichedCorporateAction[];
   carryInPositions: EnrichedCarryInPosition[];
   symbolToIsin: Map<string, string>;
-  decisions?: Map<string, JoinDecision>;
+  decisions?: Map<string, JoinDecision> | undefined;
   /** Components of the rows; built from the arguments when omitted. */
-  componentOf?: (row: { isin?: string; symbol: string }) => string;
+  componentOf?:
+    | ((row: { isin?: string | undefined; symbol: string }) => string)
+    | undefined;
 }): {
   trades: EnrichedTrade[];
   carryInPositions: EnrichedCarryInPosition[];
@@ -306,7 +308,10 @@ export function assignAccounts(args: {
   const componentOf = args.componentOf ?? createComponents(args);
   const holders = new Map<string, Set<string>>();
   if (distinct.size > 1) {
-    const hold = (account: string, row: { isin?: string; symbol: string }) => {
+    const hold = (
+      account: string,
+      row: { isin?: string | undefined; symbol: string },
+    ) => {
       const held = holders.get(account) ?? new Set<string>();
       held.add(componentOf(row));
       holders.set(account, held);
@@ -324,8 +329,8 @@ export function assignAccounts(args: {
   const single = [...distinct][0] ?? '';
   const unstamped = new Map<string, UnstampedGroup>();
   const resolve = (row: {
-    account?: string;
-    isin?: string;
+    account?: string | undefined;
+    isin?: string | undefined;
     symbol: string;
   }): string => {
     if (row.account) return row.account;
