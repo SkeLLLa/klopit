@@ -12,6 +12,7 @@
   } from '#lib/services/data.js';
   import { formatDate, toDateInput } from '#lib/utils/format-date.js';
   import { fromDateInput } from '#lib/utils/date-input.js';
+  import { sharedIsin } from '#lib/utils/dividend-input.js';
   import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -23,6 +24,12 @@
   const records = useLiveQuery(() =>
     db.withholdingTaxes.where('sessionId').equals(sessionId).sortBy('date'),
   );
+
+  const dividends = useLiveQuery(() =>
+    db.dividends.where('sessionId').equals(sessionId).toArray(),
+  );
+
+  const isinForSymbol = (symbol: string) => sharedIsin(dividends.current ?? [], symbol);
 
   let showAddForm = $state(false);
   let editingId: number | null = $state(null);
@@ -110,7 +117,7 @@
     </div>
   {:else}
     <div class="mb-3">
-      <WithholdingForm onsave={handleAdd} oncancel={() => (showAddForm = false)} />
+      <WithholdingForm {isinForSymbol} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
     </div>
   {/if}
 

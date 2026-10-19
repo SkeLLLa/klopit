@@ -4,9 +4,12 @@
   import type { RawWithholdingTax } from '../../core/types.js';
 
   let {
+    isinForSymbol,
     onsave,
     oncancel,
   }: {
+    /** ISIN of the session's dividends of a symbol, when they share one. */
+    isinForSymbol?: ((symbol: string) => string | undefined) | undefined;
     onsave: (withholding: RawWithholdingTax) => void;
     oncancel: () => void;
   } = $props();
@@ -20,6 +23,13 @@
   let amount = $state('');
   let currency = $state('USD');
   let errors: Partial<Record<Field, string>> = $state({});
+
+  // The calculator keys a dividend by ISIN when it has one, so a row without
+  // the dividend's ISIN would not match it: prefill it.
+  function handleSymbolChange() {
+    if (isin.trim() || !isinForSymbol) return;
+    isin = isinForSymbol(symbol.trim().toUpperCase()) ?? '';
+  }
 
   function validate(): boolean {
     const e: Partial<Record<Field, string>> = {};
@@ -50,7 +60,7 @@
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
     <div>
       <label for="withholding-symbol" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_symbol()}</label>
-      <input id="withholding-symbol" type="text" bind:value={symbol} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+      <input id="withholding-symbol" type="text" bind:value={symbol} onchange={handleSymbolChange} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
       {#if errors.symbol}<span class="text-xs text-red-500">{errors.symbol}</span>{/if}
     </div>
     <div>

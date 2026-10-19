@@ -17,6 +17,21 @@ export type DividendInputField =
 
 export const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
 
+/**
+ * The ISIN shared by all `dividends` of `symbol`, or `undefined` when they have
+ * none or several (a withholding row must carry it to match them).
+ */
+export function sharedIsin(
+  dividends: readonly { symbol: string; isin?: string | undefined }[],
+  symbol: string,
+): string | undefined {
+  const isins = new Set(
+    dividends.filter((d) => d.symbol === symbol).map((d) => d.isin),
+  );
+  const [only] = isins;
+  return isins.size === 1 ? only : undefined;
+}
+
 /** Parsed tax withheld; `undefined` when empty, `NaN` when not a number. */
 export function parseWithholding(text: string): number | undefined {
   const t = text.trim();
@@ -62,7 +77,8 @@ export function validateDividendInput(args: {
   if (
     args.countryInputShown &&
     country !== '' &&
-    !COUNTRY_CODE_RE.test(country)
+    // XX is the calculator's "unknown", which would credit at 19%.
+    (!COUNTRY_CODE_RE.test(country) || country.toUpperCase() === 'XX')
   ) {
     e.country = 'country-code';
   } else if (

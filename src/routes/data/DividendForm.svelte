@@ -75,20 +75,38 @@
   let countryInfo = $state<DividendCountryInfo | null>(null);
   let errors: Partial<Record<DividendInputField, string>> = $state({});
 
-  const locked = $derived(
+  // Imported withholding on the row's original key stays attached by the
+  // calculator's fallback after a date/ISIN edit, so it locks the field too.
+  const seedLocked = $derived(
     withholdingLocked !== undefined &&
-      parsedDate !== null &&
-      symbol.trim() !== '' &&
-      currency.trim() !== '' &&
+      seed?.symbol !== undefined &&
+      seed.currency !== undefined &&
+      seed.date !== undefined &&
       withholdingLocked(
         dividendMatchKey({
-          symbol: symbol.trim().toUpperCase(),
-          isin: isin.trim() || undefined,
-          currency: currency.trim(),
-          date: parsedDate,
-          kind: seed?.kind,
+          symbol: seed.symbol,
+          isin: seed.isin,
+          currency: seed.currency,
+          date: seed.date,
+          kind: seed.kind,
         }),
       ),
+  );
+  const locked = $derived(
+    seedLocked ||
+      (withholdingLocked !== undefined &&
+        parsedDate !== null &&
+        symbol.trim() !== '' &&
+        currency.trim() !== '' &&
+        withholdingLocked(
+          dividendMatchKey({
+            symbol: symbol.trim().toUpperCase(),
+            isin: isin.trim() || undefined,
+            currency: currency.trim(),
+            date: parsedDate,
+            kind: seed?.kind,
+          }),
+        )),
   );
   // Without a resolver the country is not asked for.
   const countryKnown = $derived(

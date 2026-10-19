@@ -10,7 +10,7 @@ const [
   data,
   { resolveDividendCountry, setSymbolCountryOverride },
   { createSession },
-  { validateDividendInput },
+  { validateDividendInput, sharedIsin },
 ] = await Promise.all([
   import('../src/lib/db.js'),
   import('../src/lib/services/data.js'),
@@ -30,6 +30,7 @@ const {
 } = data;
 
 const day = new Date(2024, 2, 15);
+const AAPL_ISIN = 'US0378331005';
 
 async function newSession(): Promise<string> {
   return (await createSession({ year: 2024 })).id;
@@ -88,7 +89,13 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     const id = await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
     });
     assert.equal((await linkedRows(sessionId)).length, 0);
     await saveDividend({ sessionId, id, dividend: {}, withholding: 15 });
@@ -109,6 +116,12 @@ void describe('manual withholding service (plan 14)', () => {
       kind: 'payment-in-lieu',
     });
     assert.ok(id !== undefined);
+    await setSymbolCountryOverride({
+      sessionId,
+      symbol: 'TSM',
+      country: 'TW',
+      scope: 'dividends',
+    });
     await saveDividend({ sessionId, id, dividend: {}, withholding: 10 });
     const date = new Date(2024, 3, 2);
     await updateDividend({
@@ -127,7 +140,13 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     const id = await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
       withholding: 15,
     });
     await db.withholdingTaxes.add({
@@ -148,7 +167,13 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     const id = await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
       withholding: 15,
     });
     await addWithholdingTax({
@@ -166,6 +191,7 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     const dividend = {
       symbol: 'AAPL',
+      isin: AAPL_ISIN,
       currency: 'USD',
       date: day,
       amount: 100,
@@ -191,7 +217,13 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     const id = await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
       withholding: 15,
     });
     await rejects(
@@ -205,7 +237,13 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
       withholding: 15,
     });
     const [row] = await linkedRows(sessionId);
@@ -304,11 +342,69 @@ void describe('manual withholding service (plan 14)', () => {
     assert.equal(o.scope, 'gains');
   });
 
+  void it('rejects withholding when the country stays unknown (XX)', async () => {
+    const sessionId = await newSession();
+    const dividend = { symbol: 'XYZ', currency: 'USD', date: day, amount: 100 };
+    await rejects(
+      saveDividend({ sessionId, dividend, withholding: 15 }),
+      'country-required',
+    );
+    // An explicit XX is still unknown and would credit at 19%.
+    await rejects(
+      saveDividend({ sessionId, dividend, withholding: 15, country: 'XX' }),
+      'country-required',
+    );
+    assert.equal(await db.dividends.count(), 0);
+    assert.equal(await db.withholdingTaxes.count(), 0);
+    assert.equal(await db.symbolCountryOverrides.count(), 0);
+    // Without withholding the dividend saves as before.
+    await saveDividend({ sessionId, dividend });
+    assert.equal(await db.dividends.count(), 1);
+  });
+
+  void it('rejects withholding after the only ISIN of the symbol is removed', async () => {
+    const sessionId = await newSession();
+    const id = await saveDividend({
+      sessionId,
+      dividend: {
+        symbol: 'XYZ',
+        isin: 'DE0007164600',
+        currency: 'EUR',
+        date: day,
+        amount: 100,
+      },
+      withholding: 10,
+    });
+    await rejects(
+      saveDividend({
+        sessionId,
+        id,
+        dividend: { isin: undefined },
+        withholding: 10,
+      }),
+      'country-required',
+    );
+    assert.equal((await db.dividends.get(id))?.isin, 'DE0007164600');
+    // The form's resolver must not count the edited row's stored ISIN.
+    const info = await resolveDividendCountry({
+      sessionId,
+      symbol: 'XYZ',
+      excludeDividendId: id,
+    });
+    assert.equal(info.source, 'unknown');
+  });
+
   void it('is transactional: a failing save leaves no partial rows', async () => {
     const sessionId = await newSession();
     const id = await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
       withholding: 15,
     });
     // Change the date and force the link check to fail afterwards.
@@ -347,7 +443,13 @@ void describe('manual withholding service (plan 14)', () => {
     const sessionId = await newSession();
     const id = await saveDividend({
       sessionId,
-      dividend: { symbol: 'AAPL', currency: 'USD', date: day, amount: 100 },
+      dividend: {
+        symbol: 'AAPL',
+        isin: AAPL_ISIN,
+        currency: 'USD',
+        date: day,
+        amount: 100,
+      },
       withholding: 15,
     });
     await addWithholdingTax({
@@ -501,6 +603,14 @@ void describe('validateDividendInput', () => {
     );
   });
 
+  void it('rejects XX as a source country', () => {
+    const unknown = { ...ok, countryKnown: false, countryInputShown: true };
+    assert.equal(
+      validateDividendInput({ ...unknown, country: 'xx' }).country,
+      'country-code',
+    );
+  });
+
   void it('ignores withholding when locked by imported rows', () => {
     assert.deepEqual(
       validateDividendInput({
@@ -511,5 +621,19 @@ void describe('validateDividendInput', () => {
       }),
       {},
     );
+  });
+});
+
+void describe('sharedIsin', () => {
+  void it('returns the ISIN only when all dividends of the symbol share it', () => {
+    const a = { symbol: 'AAPL', isin: 'US0378331005' };
+    assert.equal(sharedIsin([a, a, { symbol: 'KO' }], 'AAPL'), a.isin);
+    assert.equal(sharedIsin([a, { symbol: 'AAPL' }], 'AAPL'), undefined);
+    assert.equal(
+      sharedIsin([a, { symbol: 'AAPL', isin: 'US0000000000' }], 'AAPL'),
+      undefined,
+    );
+    assert.equal(sharedIsin([{ symbol: 'AAPL' }], 'AAPL'), undefined);
+    assert.equal(sharedIsin([a], 'MSFT'), undefined);
   });
 });

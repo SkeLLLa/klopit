@@ -39,18 +39,24 @@ export interface DividendCountryInfo {
 /**
  * The country the calculator would use for an ordinary dividend of `symbol`
  * (same maps as `calculateSessionTaxes`). `isin` is the one being entered,
- * which may not be saved yet.
+ * which may not be saved yet. `excludeDividendId` is the dividend being edited:
+ * its stored ISIN may be about to change, so it must not count.
  */
 export async function resolveDividendCountry(args: {
   sessionId: string;
   symbol: string;
   isin?: string | undefined;
+  excludeDividendId?: number | undefined;
 }): Promise<DividendCountryInfo> {
   const symbol = args.symbol.trim().toUpperCase();
   const isin = args.isin?.trim() || undefined;
   const [trades, dividends, overrides] = await Promise.all([
     db.trades.where('sessionId').equals(args.sessionId).toArray(),
-    db.dividends.where('sessionId').equals(args.sessionId).toArray(),
+    db.dividends
+      .where('sessionId')
+      .equals(args.sessionId)
+      .filter((d) => d.id !== args.excludeDividendId)
+      .toArray(),
     db.symbolCountryOverrides
       .where('sessionId')
       .equals(args.sessionId)

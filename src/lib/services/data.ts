@@ -45,6 +45,7 @@ export type ManualEntryValidationCode =
   | 'withholding-not-finite'
   | 'linked-key-change'
   | 'linked-amount-sign'
+  | 'country-required'
   | 'amount-invalid'
   | 'symbol-required'
   | 'currency-required'
@@ -113,7 +114,9 @@ async function linkedWithholdingRows(
  * one transaction. `withholding` is the positive tax withheld: `undefined`
  * leaves linked rows alone (key fields are still synced), `0` deletes them.
  * `country` is written as a dividend-scope override only when the symbol's
- * country cannot be derived and the symbol has no override.
+ * country cannot be derived and the symbol has no override. Withholding > 0
+ * needs a known country: the `XX` fallback would credit it at 19% instead of
+ * the treaty rate (art. 30a ust. 9 ustawy o PIT).
  */
 export async function saveDividend(args: {
   sessionId: string;
@@ -203,20 +206,28 @@ export async function saveDividend(args: {
       }
 
       const country = args.country?.trim().toUpperCase();
-      if (country) {
-        const info = await resolveDividendCountry({
+      const resolve = () =>
+        resolveDividendCountry({
           sessionId,
           symbol: stored.symbol,
           isin: stored.isin,
         });
-        if (info.source === 'unknown' && info.overrideScope === undefined) {
-          await setSymbolCountryOverride({
-            sessionId,
-            symbol: stored.symbol,
-            country,
-            scope: 'dividends',
-          });
-        }
+      let info = country || withholding ? await resolve() : undefined;
+      if (
+        country &&
+        info?.source === 'unknown' &&
+        info.overrideScope === undefined
+      ) {
+        await setSymbolCountryOverride({
+          sessionId,
+          symbol: stored.symbol,
+          country,
+          scope: 'dividends',
+        });
+        info = await resolve();
+      }
+      if (withholding && info?.country === 'XX') {
+        throw new ManualEntryValidationError('country-required');
       }
       return id;
     },

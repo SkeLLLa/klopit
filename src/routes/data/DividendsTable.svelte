@@ -26,8 +26,8 @@
   const isImported = (row: DividendRecord) =>
     withholding.current?.unlinkedKeys.has(dividendMatchKey(row)) ?? false;
   const isLocked = (key: string) => withholding.current?.unlinkedKeys.has(key) ?? false;
-  const countryOf = (symbol: string, isin: string) =>
-    resolveDividendCountry({ sessionId, symbol, isin });
+  const countryOf = (excludeDividendId?: number) => (symbol: string, isin: string) =>
+    resolveDividendCountry({ sessionId, symbol, isin, excludeDividendId });
 
   let showAddForm = $state(false);
   let editingId: number | null = $state(null);
@@ -66,7 +66,7 @@
     </div>
   {:else}
     <div class="mb-3">
-      <DividendForm defaultYear={sessionYear} withholdingLocked={isLocked} resolveCountry={countryOf} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
+      <DividendForm defaultYear={sessionYear} withholdingLocked={isLocked} resolveCountry={countryOf()} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
     </div>
   {/if}
 
@@ -96,7 +96,7 @@
                       initial={row}
                       initialWithholding={linked(row.id) ? -(linked(row.id)?.amount ?? 0) : undefined}
                       withholdingLocked={isLocked}
-                      resolveCountry={countryOf}
+                      resolveCountry={countryOf(row.id)}
                       onsave={(result) => handleUpdate(row.id as number, result)}
                       oncancel={() => (editingId = null)}
                     />
