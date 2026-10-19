@@ -271,6 +271,11 @@
                   quantity: String(warning.quantity),
                   date: formatDate(warning.before),
                 })}
+              {:else if warning.kind === 'transfer-invalid'}
+                {m.import_warning_transfer_invalid({
+                  symbol: warning.instrument,
+                  date: formatDate(warning.date),
+                })}
               {:else if warning.kind === 'shortfall-add-carry-in'}
                 {m.import_warning_shortfall_add_carry_in({
                   symbol: warning.instrument,

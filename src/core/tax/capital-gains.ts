@@ -143,6 +143,15 @@ export type CarryInWarning =
       toAccount: string;
       quantity: number;
       before: Date;
+    }
+  | {
+      /**
+       * A transfer row is ignored: both accounts must be set and differ, and
+       * the quantity must be positive.
+       */
+      kind: 'transfer-invalid';
+      instrument: string;
+      date: Date;
     };
 
 /** A transfer asked for more shares than its source account held. */
@@ -162,6 +171,8 @@ type TimelineEvent =
       costPerSharePln: number;
       costMissing: boolean;
       rateUnavailable: boolean;
+      /** See `FifoLot.protectedUntil`. */
+      protectedUntil?: number;
     };
 
 /** Tie-break order on equal datetime: action, then carry-in, then trade. */
@@ -319,6 +330,15 @@ export function calculateCapitalGains(
   }
   for (const warning of assigned.warnings) args.onWarning?.(warning);
 
+  for (const action of args.corporateActions) {
+    if (action.type === 'transfer' && !isTransfer(action)) {
+      args.onWarning?.({
+        kind: 'transfer-invalid',
+        instrument: action.symbol,
+        date: action.datetime,
+      });
+    }
+  }
   const pass = runPass({ ...args, assigned, onWarning: args.onWarning });
   for (const { action, missing } of pass.transferShortfalls) {
     args.onWarning?.({
@@ -470,6 +490,8 @@ function runPass(
 
   const isNewSplit = createSplitDeduper();
   const taintedQueues = new Set<string>();
+  // Queues a transfer left short: their sells are already explained.
+  const transferShort = new Set<string>();
   const shortfalls: ShortfallRequest[] = [];
   const transferShortfalls: TransferShortfall[] = [];
 
@@ -482,12 +504,17 @@ function runPass(
         rateUnavailable: event.rateUnavailable,
         ...(event.costMissing ? { costMissing: true } : {}),
         acquiredAt: event.datetime,
+        ...(event.protectedUntil === undefined
+          ? {}
+          : { protectedUntil: event.protectedUntil }),
       });
     } else if (event.kind === 'action' && event.action.type === 'transfer') {
       processTransfer({
         action: event.action,
+        at: event.datetime.getTime(),
         isinMapFor,
         taintedQueues,
+        transferShort,
         lotQueues,
         transferShortfalls,
       });
@@ -512,6 +539,7 @@ function runPass(
         taxPeriod,
         symbolCountryMap,
         taintedQueues,
+        transferShort,
         shortfalls,
       });
       if (results.length > before && event.trade.type === 'sell') {
@@ -603,6 +631,13 @@ function simulateHoldings(
   const shortfalls = new Map<string, Shortfall>();
   const snapshots = new Map<number, Map<string, number>>();
   const isNewSplit = createSplitDeduper();
+  // Carry-in shares that transfers up to `until` cannot draw from.
+  const shielded = new Map<string, { quantity: number; until: number }[]>();
+  const shieldedAt = (key: string, time: number) =>
+    (shielded.get(key) ?? []).reduce(
+      (sum, s) => (s.until >= time ? sum + s.quantity : sum),
+      0,
+    );
   let next = 0;
   const snapshotBefore = (time: number) => {
     while (next < checkpoints.length && checkpoints[next] < time) {
@@ -615,9 +650,21 @@ function simulateHoldings(
     if (event.datetime.getTime() > until) break;
     if (event.kind === 'carry-in') {
       net.set(event.key, (net.get(event.key) ?? 0) + event.quantity);
+      if (event.protectedUntil !== undefined) {
+        const list = shielded.get(event.key) ?? [];
+        list.push({ quantity: event.quantity, until: event.protectedUntil });
+        shielded.set(event.key, list);
+      }
     } else if (event.kind === 'trade') {
       const key = lotKey(event.trade);
       const sign = event.trade.type === 'buy' ? 1 : -1;
+      // FIFO: sells reach the (oldest) shielded carry-in shares first.
+      let sold = event.trade.type === 'sell' ? event.trade.quantity : 0;
+      for (const s of shielded.get(key) ?? []) {
+        const used = Math.min(s.quantity, sold);
+        s.quantity -= used;
+        sold -= used;
+      }
       const qty = (net.get(key) ?? 0) + sign * event.trade.quantity;
       net.set(key, qty);
       if (qty < -1e-9 && !shortfalls.has(key)) {
@@ -631,11 +678,12 @@ function simulateHoldings(
         symbolToIsin: isinMapFor(action.fromAccount ?? ''),
       });
       let remaining = action.quantity ?? 0;
+      const time = event.datetime.getTime();
       for (const key of sources) {
-        const held = net.get(key) ?? 0;
+        const held = (net.get(key) ?? 0) - shieldedAt(key, time);
         if (held <= 0 || remaining <= 0) continue;
         const used = Math.min(held, remaining);
-        net.set(key, held - used);
+        net.set(key, (net.get(key) ?? 0) - used);
         remaining -= used;
       }
       const moved = (action.quantity ?? 0) - remaining;
@@ -656,9 +704,13 @@ function simulateHoldings(
         if (action.type === 'stock-split') {
           if (action.denominator !== 0 && isNewSplit(key, action)) {
             net.set(key, (qty * action.numerator) / action.denominator);
+            for (const s of shielded.get(key) ?? []) {
+              s.quantity = (s.quantity * action.numerator) / action.denominator;
+            }
           }
         } else {
           net.delete(key);
+          shielded.delete(key);
           const targetKey = mergerTargetKey(
             action,
             account,
@@ -831,6 +883,9 @@ function buildCarryInEvents(args: {
     // Place every snapshot row of this year.
     const placedByKey = new Map<string, SnapshotRow[]>();
     const historyStart = new Map<string, number>();
+    // Keys a transfer leaves between their previous snapshot and this one:
+    // the snapshot is the holding after it, so it keeps its shares.
+    const transferredOut = new Map<string, number>();
     for (const [key, byYear] of snapshots) {
       const rows = byYear.get(year);
       if (!rows) continue;
@@ -841,6 +896,13 @@ function buildCarryInEvents(args: {
         ? endOfYear(previousYear.get(key) ?? year).getTime()
         : Number.NEGATIVE_INFINITY;
       previousYear.set(key, year);
+      if (
+        events.some((e) =>
+          isTransferOutOf(e, key, prevEnd, yearEnd, isinMapFor),
+        )
+      ) {
+        transferredOut.set(key, prevEnd);
+      }
       const nextTrade = (tradeTimesByKey.get(key) ?? []).find(
         (t) => t > prevEnd,
       );
@@ -865,9 +927,26 @@ function buildCarryInEvents(args: {
 
     const { holdings } = simulate(yearEnd);
     for (const [key, placed] of placedByKey) {
+      const spanStart = transferredOut.get(key);
+      const shielded = spanStart !== undefined;
+      // The transfers out of the span are not part of the history that
+      // explains the snapshot.
+      const keyEvents = shielded
+        ? events.filter(
+            (e) => !isTransferOutOf(e, key, spanStart, yearEnd, isinMapFor),
+          )
+        : events;
+      const protectedUntil = shielded ? { protectedUntil: yearEnd } : {};
       const first = placed[0].pos;
       const snapshotQty = placed.reduce((sum, row) => sum + row.seedQty, 0);
-      const implied = holdings.get(key) ?? 0;
+      const implied = shielded
+        ? (simulateHoldings(
+            [...keyEvents, ...seeded].toSorted(compareEvents),
+            yearEnd,
+            isinMapFor,
+            accounts,
+          ).holdings.get(key) ?? 0)
+        : (holdings.get(key) ?? 0);
       const eps = Math.max(snapshotQty, 1) * 1e-9;
       const start = historyStart.get(key) ?? yearEnd;
       const startFactor = splitFactor(events, key, start, yearEnd, accounts);
@@ -883,14 +962,17 @@ function buildCarryInEvents(args: {
         costPerSharePln: (first.costPln / first.quantity) * startFactor,
         costMissing: first.costMissing,
         rateUnavailable: first.rateUnavailable,
+        ...protectedUntil,
       });
 
       const inconsistent =
         unexplained < -eps ||
         simulateHoldings(
-          [...events, ...seeded, historyLot(Math.max(unexplained, 0))].toSorted(
-            compareEvents,
-          ),
+          [
+            ...keyEvents,
+            ...seeded,
+            historyLot(Math.max(unexplained, 0)),
+          ].toSorted(compareEvents),
           yearEnd,
           isinMapFor,
           accounts,
@@ -912,7 +994,7 @@ function buildCarryInEvents(args: {
       // what survives of it at the end of `year` is the part of the snapshot
       // the imported buys do not explain. The rest of it was sold by imported
       // sells and is seeded at `start`.
-      const withoutLaterBuys = [...events, ...seeded].filter(
+      const withoutLaterBuys = [...keyEvents, ...seeded].filter(
         (e) =>
           !(
             e.kind === 'trade' &&
@@ -991,11 +1073,32 @@ function buildCarryInEvents(args: {
           costPerSharePln: costPln / quantity,
           costMissing: row.pos.costMissing,
           rateUnavailable: row.pos.rateUnavailable,
+          ...protectedUntil,
         });
       }
     }
   }
   return seeded;
+}
+
+/** A transfer dated in (`after`, `until`] that draws from the queue `key`. */
+function isTransferOutOf(
+  event: TimelineEvent,
+  key: string,
+  after: number,
+  until: number,
+  isinMapFor: IsinMapFor,
+): boolean {
+  if (event.kind !== 'action' || !isTransfer(event.action)) return false;
+  const time = event.datetime.getTime();
+  if (time <= after || time > until) return false;
+  return (
+    transferSourceKeys({
+      keys: [key],
+      action: event.action,
+      symbolToIsin: isinMapFor(event.action.fromAccount ?? ''),
+    }).length > 0
+  );
 }
 
 /**
@@ -1005,8 +1108,10 @@ function buildCarryInEvents(args: {
  */
 function processTransfer(args: {
   action: EnrichedCorporateAction;
+  at: number;
   isinMapFor: IsinMapFor;
   taintedQueues: Set<string>;
+  transferShort: Set<string>;
   lotQueues: Map<string, FifoLot[]>;
   transferShortfalls: TransferShortfall[];
 }): void {
@@ -1027,10 +1132,12 @@ function processTransfer(args: {
     sourceKeys,
     destKey,
     quantity,
+    at: args.at,
     epsilon: Math.min(Math.max(quantity, 1) * 1e-9, 1e-8),
   });
   if (missing > 0) {
     args.transferShortfalls.push({ action, missing });
+    args.transferShort.add(destKey);
   }
   if (missing > 0 || sourceKeys.some((key) => taintedQueues.has(key))) {
     taintedQueues.add(destKey);
@@ -1152,6 +1259,7 @@ function processTrade(args: {
   symbolCountryMap: Map<string, string>;
   /** Queues that sold shares they did not hold: every later sell is a draft. */
   taintedQueues: Set<string>;
+  transferShort: Set<string>;
   shortfalls: ShortfallRequest[];
 }): void {
   const { trade, lotQueues, results, taxPeriod } = args;
@@ -1245,7 +1353,9 @@ function processTrade(args: {
       // the result is a draft. Nothing is moved between accounts.
       costMissing = true;
       args.taintedQueues.add(key);
-      args.shortfalls.push({ trade, missing: remainingQty });
+      if (!args.transferShort.has(key)) {
+        args.shortfalls.push({ trade, missing: remainingQty });
+      }
     }
     if (args.taintedQueues.has(key)) costMissing = true;
 

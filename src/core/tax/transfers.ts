@@ -41,17 +41,15 @@ export function transferDestKey(args: {
   );
 }
 
+/** Acquisition time for ordering: a lot with no date counts as the oldest. */
+function acquiredTime(lot: FifoLot): number {
+  return lot.acquiredAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+}
+
 /** Insert `lot` after the lots acquired no later than it (FIFO by buy date). */
 function insertByAcquiredAt(lots: FifoLot[], lot: FifoLot): void {
-  const acquired = lot.acquiredAt?.getTime();
-  const at =
-    acquired === undefined
-      ? -1
-      : lots.findIndex(
-          (other) =>
-            other.acquiredAt !== undefined &&
-            other.acquiredAt.getTime() > acquired,
-        );
+  const acquired = acquiredTime(lot);
+  const at = lots.findIndex((other) => acquiredTime(other) > acquired);
   if (at < 0) lots.push(lot);
   else lots.splice(at, 0, lot);
 }
@@ -68,10 +66,14 @@ export function moveLots(args: {
   sourceKeys: readonly string[];
   destKey: string;
   quantity: number;
+  /** Transfer time (ms): lots protected up to then stay where they are. */
+  at: number;
   /** Quantity below which a remainder counts as float residue. */
   epsilon: number;
 }): { moved: number; missing: number } {
   const { lotQueues, epsilon } = args;
+  const movable = (lot: FifoLot) =>
+    lot.protectedUntil === undefined || lot.protectedUntil < args.at;
   const sources = args.sourceKeys
     .map((key) => lotQueues.get(key))
     .filter((lots): lots is FifoLot[] => !!lots && lots.length > 0);
@@ -80,19 +82,22 @@ export function moveLots(args: {
 
   while (remaining > epsilon) {
     let oldest: FifoLot[] | undefined;
+    let oldestAt = 0;
     for (const lots of sources) {
-      if (lots.length === 0) continue;
-      const at = lots[0].acquiredAt?.getTime() ?? Number.NEGATIVE_INFINITY;
-      const best =
-        oldest?.[0].acquiredAt?.getTime() ?? Number.NEGATIVE_INFINITY;
-      if (!oldest || at < best) oldest = lots;
+      const first = lots.find(movable);
+      if (!first) continue;
+      if (!oldest || acquiredTime(first) < oldestAt) {
+        oldest = lots;
+        oldestAt = acquiredTime(first);
+      }
     }
     if (!oldest) break;
-    const lot = oldest[0];
+    const index = oldest.findIndex(movable);
+    const lot = oldest[index];
     const used = Math.min(remaining, lot.quantity);
     taken.push({ ...lot, quantity: used });
     remaining -= used;
-    if (lot.quantity - used <= epsilon) oldest.shift();
+    if (lot.quantity - used <= epsilon) oldest.splice(index, 1);
     else lot.quantity -= used;
   }
 

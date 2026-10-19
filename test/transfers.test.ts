@@ -11,6 +11,7 @@ import type {
   EnrichedTrade,
   TaxPeriod,
 } from '../src/core/types.js';
+import { isCarryInIgnored } from '../src/lib/services/carry-in.js';
 
 const taxPeriod: TaxPeriod = {
   year: 2024,
@@ -131,6 +132,23 @@ const sells = (results: ReturnType<typeof run>['results']) =>
   results.filter((r) => r.type === 'sell');
 
 const D = (month: number, day = 1) => new Date(2024, month, day);
+
+const snapshot = (
+  account: string,
+  quantity: number,
+  costPln: number,
+  costMissing = false,
+): EnrichedCarryInPosition => ({
+  symbol: 'AAPL',
+  isin: ISIN,
+  quantity,
+  year: 2023,
+  costPln,
+  rateUnavailable: false,
+  costMissing,
+  account,
+  acquisitionDate: new Date(2020, 0, 1),
+});
 
 void describe('transfers between accounts', () => {
   void it('moves lots with their cost and is not a disposal', () => {
@@ -416,7 +434,9 @@ void describe('transfers between accounts', () => {
     ]) {
       const withBad = run({ trades, corporateActions: [bad] });
       assert.deepEqual(withBad.results, plain.results);
-      assert.deepEqual(withBad.warnings, plain.warnings);
+      assert.deepEqual(withBad.warnings, [
+        { kind: 'transfer-invalid', instrument: 'AAPL', date: D(2) },
+      ]);
     }
   });
 
@@ -436,5 +456,63 @@ void describe('transfers between accounts', () => {
       withTransfer.results.filter((r) => r.symbol === 'MSFT'),
       plain.results.filter((r) => r.symbol === 'MSFT'),
     );
+  });
+
+  void describe('carry-in snapshots and transfers in the same year', () => {
+    const T23 = new Date(2023, 2, 1);
+
+    void it('K7: the source snapshot is the holding after the transfer', () => {
+      const { results, warnings } = run({
+        trades: [sell(B, 5, D(5))],
+        carryInPositions: [snapshot(A, 5, 200)],
+        corporateActions: [transfer(5, T23)],
+      });
+      // The 5 moved shares had unknown cost: the destination sale is a draft.
+      assert.equal(sells(results)[0].costBasisMissing, true);
+      assert.ok(warnings.some((w) => w.kind === 'transfer-shortfall'));
+      assert.ok(!warnings.some((w) => w.kind === 'carry-in-overlap'));
+      assert.ok(!warnings.some((w) => w.kind === 'carry-in-inconsistent'));
+    });
+
+    void it('K7b: the source still holds the snapshot and sells it at cost', () => {
+      const { results } = run({
+        trades: [sell(B, 5, D(5)), sell(A, 5, D(6))],
+        carryInPositions: [snapshot(A, 5, 200)],
+        corporateActions: [transfer(5, T23)],
+      });
+      const source = sells(results)[1];
+      assert.equal(source.costPln, 200);
+      assert.equal(source.costBasisMissing, undefined);
+    });
+
+    void it('K8: a snapshot without cost is still asked for', () => {
+      const row = snapshot(A, 5, 0, true);
+      const { results, warnings } = run({
+        trades: [sell(B, 5, D(5))],
+        carryInPositions: [row],
+        corporateActions: [transfer(5, T23)],
+      });
+      assert.equal(sells(results)[0].costBasisMissing, true);
+      assert.equal(isCarryInIgnored(row, warnings), false);
+    });
+
+    void it('K1: snapshots at both ends never give a final cost', () => {
+      const { results } = run({
+        trades: [buy(B, 5, 20, new Date(2023, 4, 1)), sell(B, 10, D(5))],
+        carryInPositions: [snapshot(A, 5, 200), snapshot(B, 10, 300)],
+        corporateActions: [transfer(5, T23)],
+      });
+      assert.equal(sells(results)[0].costBasisMissing, true);
+    });
+
+    void it('a transfer after the snapshot year moves the snapshot lot', () => {
+      const { results, warnings } = run({
+        trades: [sell(B, 5, D(5))],
+        carryInPositions: [snapshot(A, 5, 200)],
+        corporateActions: [transfer(5, D(2))],
+      });
+      assert.equal(sells(results)[0].costPln, 200);
+      assert.deepEqual(warnings, []);
+    });
   });
 });

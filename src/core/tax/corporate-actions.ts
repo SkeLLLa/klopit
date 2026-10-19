@@ -9,6 +9,11 @@ export interface FifoLot {
   costMissing?: boolean;
   /** Buy date, or the carry-in placement date. Kept through splits and mergers. */
   acquiredAt?: Date;
+  /**
+   * Carry-in lot that is the holding _after_ the transfers up to this time
+   * (ms): those transfers cannot draw from it. Kept through splits.
+   */
+  protectedUntil?: number;
 }
 
 /** Result of applying a merger to lots */
@@ -56,6 +61,9 @@ export function applyStockSplit(args: {
     rateUnavailable: lot.rateUnavailable,
     ...(lot.costMissing ? { costMissing: true } : {}),
     ...(lot.acquiredAt ? { acquiredAt: lot.acquiredAt } : {}),
+    ...(lot.protectedUntil === undefined
+      ? {}
+      : { protectedUntil: lot.protectedUntil }),
   }));
 }
 

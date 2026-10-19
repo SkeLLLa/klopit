@@ -13,6 +13,8 @@ export async function listSessionAccounts(args: {
   const accounts = new Set<string>();
   for (const row of [...trades, ...carryIns, ...actions]) {
     if (row.account) accounts.add(row.account);
+    if ('fromAccount' in row && row.fromAccount) accounts.add(row.fromAccount);
+    if ('toAccount' in row && row.toAccount) accounts.add(row.toAccount);
   }
   return [...accounts].toSorted();
 }
