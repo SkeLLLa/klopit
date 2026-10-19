@@ -46,12 +46,14 @@
     selectedFundId === CUSTOM || selectedFundId === '',
   );
 
-  // Art. 45c updof / PIT-38(18) poz. 67: 1.5% of poz. 35 + poz. 45,
-  // rounded down to full 10 groszy.
+  // Art. 45c updof / PIT-38(18) poz. 67: 1.5% of the OPP base
+  // (`taxDueBase` = poz. 35 + poz. 45, see `oppTaxDueBase`), rounded down to
+  // full 10 groszy (so at most one decimal, e.g. 2.7).
   const oppAmount = $derived(oppAmountPln({ taxDuePln: taxDueBase }));
 
   const oppAmountRaw = $derived(oppAmount.toFixed(2));
-  // The amount derives from poz. 35, so it is incomplete while rates are missing.
+  // The base derives from poz. 35 and poz. 45, so copying is blocked like the
+  // other fields while the result is stale or incomplete (missing rates/costs).
   const amountCopyBlock = useCopyBlock();
   const amountBlockReason = $derived(amountCopyBlock());
   const consentRaw = $derived(consentValue ? 'X' : '');
