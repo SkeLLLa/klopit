@@ -33,6 +33,7 @@ export default defineConfig(({ command }) => {
     },
     build: {
       minify: 'oxc',
+      cssMinify: 'lightningcss',
     },
     server: { https },
     preview: { https },
