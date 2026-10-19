@@ -1,14 +1,11 @@
 <script lang="ts">
   import { VisDonut, VisSingleContainer, VisTooltip } from '@unovis/svelte';
   import { Donut } from '@unovis/ts';
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln } from '$lib/utils/format-pln.js';
-  import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln } from '#lib/utils/format-pln.js';
+  import type { TaxSummaryRecord, DividendResultRecord } from '#lib/db.js';
   import { TAX_RATE } from '../../core/types.js';
-  import {
-    sumDeductibleWithholding,
-    sumDividendTaxToPay,
-  } from '../../core/tax/aggregates.js';
+  import { dividendBreakdown } from '../../core/tax/aggregates.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
@@ -28,11 +25,10 @@
   );
 
   const segments: DonutSegment[] = $derived.by(() => {
-    if (totalIncome <= 0) return [];
+    const div = dividendBreakdown({ rows: dividendResults });
+    if (totalIncome <= 0 && div.addBack <= 0) return [];
 
-    const divDeductible = sumDeductibleWithholding({ rows: dividendResults });
     const divPlTax = taxSummary.totalDividendsPln * TAX_RATE;
-    const divTaxToPay = sumDividendTaxToPay({ rows: dividendResults });
 
     const ciTax = taxSummary.totalCreditInterestPln * TAX_RATE;
 
@@ -52,12 +48,12 @@
       },
       {
         label: m.dash_dividend_tax_owed(),
-        value: divTaxToPay,
+        value: div.taxOwed,
         color: '#f97316',
       },
       {
         label: m.dash_withholding_tax(),
-        value: divDeductible,
+        value: div.withholding,
         color: '#f59e0b',
       },
       {
@@ -65,8 +61,16 @@
         value: ciTax,
         color: '#06b6d4',
       },
+      {
+        label: m.dividend_warning_wht_refund_add_back_badge(),
+        value: div.addBack,
+        color: '#8b5cf6',
+      },
     ].filter((s) => s.value > 0);
   });
+
+  // Percentages are shares of the ring, which includes the add-back part.
+  const segmentTotal = $derived(segments.reduce((sum, s) => sum + s.value, 0));
 
   const value = (d: DonutSegment) => d.value;
   const color = (d: DonutSegment) => d.color;
@@ -74,11 +78,10 @@
   const tooltipTriggers = $derived({
     // Unovis prefixes selector keys with '.' internally — pass raw class name
     // D3 datum on donut segments is an arc object { data, value, startAngle, ... }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [(Donut as any).selectors.segment]: (arcDatum: any): string => {
-      const d: DonutSegment = arcDatum.data;
+    [Donut.selectors.segment]: (arcDatum: { data: DonutSegment }): string => {
+      const d = arcDatum.data;
       const pct =
-        totalIncome > 0 ? ((d.value / totalIncome) * 100).toFixed(1) : '0';
+        segmentTotal > 0 ? ((d.value / segmentTotal) * 100).toFixed(1) : '0';
       return `<div class="text-sm"><strong>${d.label}</strong><br/>${formatPln(d.value)} (${pct}%)</div>`;
     },
   });

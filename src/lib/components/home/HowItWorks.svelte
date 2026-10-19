@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { Upload, CheckCircle2, FileText } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { Upload, CheckCircle2, FileText } from '@lucide/svelte';
 
   const steps = [
     { n: 1, icon: Upload, title: m.home_how_step1_title(), desc: m.home_how_step1_desc() },
@@ -22,7 +22,6 @@
 </script>
 
 <svelte:head>
-  <!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data -->
   {@html jsonLd}
 </svelte:head>
 

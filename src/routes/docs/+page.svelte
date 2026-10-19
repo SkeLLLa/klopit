@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { navigation, type NavItem } from '$lib/nav.js';
-  import { ArrowRight, BookOpen, FileText, HelpCircle } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { navLabels } from '#lib/nav-labels.js';
+  import { navigation, type NavItem } from '#lib/nav.js';
+  import { ArrowRight, BookOpen, FileText, HelpCircle } from '@lucide/svelte';
 
   pageTitle.set(m.page_docs());
 
@@ -24,11 +25,14 @@
     nav_docs_ibkr_w8ben: m.page_docs_desc_ibkr_w8ben,
     nav_docs_ibi_espp: m.page_docs_desc_ibi_espp,
     nav_docs_ibi_rsu: m.page_docs_desc_ibi_rsu,
+    nav_docs_schwab: m.page_docs_desc_schwab,
+    nav_docs_revolut: m.page_docs_desc_revolut,
+    nav_docs_alternatives: m.page_docs_desc_alternatives,
     nav_faq: m.page_docs_desc_faq,
   };
 
   function t(key: string): string {
-    return (m as Record<string, (...args: unknown[]) => string>)[key]?.() ?? key;
+    return navLabels[key]?.() ?? key;
   }
 
   function getDescription(item: NavItem): string | undefined {

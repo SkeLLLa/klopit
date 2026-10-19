@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { Heart } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPlnValue } from '$lib/utils/format-pln.js';
-  import { updateSession } from '$lib/services/session.js';
-  import { taxSupportFunds } from '$lib/constants/support-funds.js';
-  import { debounce } from '$lib/utils/debounce.js';
+  import { Heart } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPlnValue } from '#lib/utils/format-pln.js';
+  import { updateSession } from '#lib/services/session.js';
+  import { taxSupportFunds } from '#lib/constants/support-funds.js';
+  import { debounce } from '#lib/utils/debounce.js';
+  import { oppAmountPln } from '../../core/tax/opp.js';
+  import { copyBlockMessage, useCopyBlock } from './FormField.svelte';
 
   let {
     sessionId,
@@ -16,9 +18,9 @@
   }: {
     sessionId: string;
     taxDueBase: number;
-    krs?: string;
-    details?: string;
-    consent?: boolean;
+    krs?: string | undefined;
+    details?: string | undefined;
+    consent?: boolean | undefined;
   } = $props();
 
   let krsValue = $state('');
@@ -44,10 +46,16 @@
     selectedFundId === CUSTOM || selectedFundId === '',
   );
 
-  // Twój e-PIT PIT-38 bases this value on poz. 35, rounded down to full 10 groszy.
-  const oppAmount = $derived(Math.floor(taxDueBase * 0.015 * 10) / 10);
+  // Art. 45c updof / PIT-38(18) poz. 67: 1.5% of the OPP base
+  // (`taxDueBase` = poz. 35 + poz. 45, see `oppTaxDueBase`), rounded down to
+  // full 10 groszy (so at most one decimal, e.g. 2.7).
+  const oppAmount = $derived(oppAmountPln({ taxDuePln: taxDueBase }));
 
   const oppAmountRaw = $derived(oppAmount.toFixed(2));
+  // The base derives from poz. 35 and poz. 45, so copying is blocked like the
+  // other fields while the result is stale or incomplete (missing rates/costs).
+  const amountCopyBlock = useCopyBlock();
+  const amountBlockReason = $derived(amountCopyBlock());
   const consentRaw = $derived(consentValue ? 'X' : '');
   let copiedField = $state<string | undefined>();
   let copiedResetTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -226,9 +234,18 @@
       <button
         id="opp-amount"
         type="button"
-        class={valueButtonClass('amount', 'text-right font-semibold text-pink-700 dark:text-pink-300')}
-        title={copiedField === 'amount' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
-        aria-label={copiedField === 'amount' ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+        class={valueButtonClass('amount', 'text-right font-semibold text-pink-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-pink-300')}
+        disabled={amountBlockReason !== null}
+        title={amountBlockReason
+          ? copyBlockMessage(amountBlockReason)
+          : copiedField === 'amount'
+            ? m.tax_copy_value_done()
+            : m.tax_copy_value_title()}
+        aria-label={amountBlockReason
+          ? copyBlockMessage(amountBlockReason)
+          : copiedField === 'amount'
+            ? m.tax_copy_value_done()
+            : m.tax_copy_value_title()}
         onclick={() => void copyValue(oppAmountRaw, 'amount')}
       >
         {formatPlnValue(oppAmount)} zl

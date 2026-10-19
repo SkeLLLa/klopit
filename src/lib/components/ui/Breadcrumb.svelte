@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref, getLocale } from '$lib/paraglide/runtime';
-  import { ChevronRight } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref, getLocale } from '#lib/paraglide/runtime.js';
+  import { ChevronRight } from '@lucide/svelte';
 
   const BASE_URL = 'https://klopit.co.pl';
 
@@ -30,6 +30,12 @@
     '/docs/ibi': { label: () => m.nav_docs_ibi(), linkable: true },
     '/docs/ibi/espp': { label: () => m.nav_docs_ibi_espp(), linkable: true },
     '/docs/ibi/rsu': { label: () => m.nav_docs_ibi_rsu(), linkable: true },
+    '/docs/schwab': { label: () => m.nav_docs_schwab(), linkable: true },
+    '/docs/revolut': { label: () => m.nav_docs_revolut(), linkable: true },
+    '/docs/alternatives': {
+      label: () => m.nav_docs_alternatives(),
+      linkable: true,
+    },
   };
 
   interface Crumb {
@@ -82,7 +88,6 @@
   });
 </script>
 
-<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON-LD structured data, no user input -->
 <svelte:head>{@html jsonLd}</svelte:head>
 
 {#if crumbs.length > 0}

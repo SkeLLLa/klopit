@@ -1,4 +1,6 @@
-import Dexie, { type EntityTable } from 'dexie';
+import { Dexie, type EntityTable } from 'dexie';
+
+import type { CarryInWarning } from '../core/tax/capital-gains.js';
 import type { ApplyLossCarryForwardResult } from '../core/tax/loss-carry-forward.js';
 import type {
   CarryInPosition,
@@ -18,9 +20,15 @@ import type {
 } from '../core/types.js';
 import { installStaleHooks } from './db-hooks.js';
 import {
+  buildSessionSymbolIsinMap,
+  migrateCarryInPositionV14,
+  needsPerAccountFifoNotice,
   renameInteractiveBrokersToIbkr,
   stripLegacyPriorYearLoss,
+  type LegacyCarryInRow,
   type LegacySessionRecord,
+  type LegacyCorporateActionIsinRow,
+  type LegacyTradeIsinRow,
   type SessionWithFiles,
 } from './db-migrations.js';
 
@@ -34,25 +42,39 @@ export interface SessionRecord {
   createdAt: Date;
   updatedAt: Date;
   files: ImportedFileRecord[];
-  residencyStartDate?: Date;
+  residencyStartDate?: Date | undefined;
   status: 'draft' | 'calculated';
-  oppKrs?: string;
-  oppDetails?: string;
-  oppConsent?: boolean;
-  importWarnings?: ImportWarning[];
-  brokerCountry?: string;
+  oppKrs?: string | undefined;
+  oppDetails?: string | undefined;
+  oppConsent?: boolean | undefined;
+  importWarnings?: ImportWarning[] | undefined;
+  brokerCountry?: string | undefined;
   /** Bumped by Dexie hooks whenever source data tables change. */
-  dataUpdatedAt?: Date;
+  dataUpdatedAt?: Date | undefined;
   /** Set by calculateSessionTaxes on successful completion. */
-  calculatedAt?: Date;
+  calculatedAt?: Date | undefined;
   /** Legacy PIT/ZG toggle retained only for database upgrades. */
-  includeAllInPitZg?: boolean;
+  includeAllInPitZg?: boolean | undefined;
   /** Show dividend compatibility rows in PIT/ZG. Disabled by default. */
-  showDividendsInPitZg?: boolean;
-  /** Subtract parsed ADR/GDR fees from matched dividend income. Disabled by default. */
-  reduceAdrFeesFromDividends?: boolean;
-  /** Use estimated T+2 settlement dates for trade NBP rate lookups. Disabled by default. */
-  useSettlementDateForTradeRates?: boolean;
+  showDividendsInPitZg?: boolean | undefined;
+  /**
+   * Subtract parsed ADR/GDR fees from matched dividend income. Disabled by
+   * default.
+   */
+  reduceAdrFeesFromDividends?: boolean | undefined;
+  /**
+   * Use estimated T+2 settlement dates for trade NBP rate lookups. Disabled by
+   * default.
+   */
+  useSettlementDateForTradeRates?: boolean | undefined;
+  /** The "re-import Schwab statements for FMV data" notice was dismissed. */
+  schwabFmvNoticeDismissed?: boolean | undefined;
+  /**
+   * Set by the v16 upgrade on sessions that mix several brokers / accounts:
+   * FIFO now runs per account, so their results may have changed. Cleared when
+   * the user dismisses the notice. Never set on sessions created after v16.
+   */
+  perAccountFifoNoticePending?: boolean | undefined;
 }
 
 export interface ImportedFileRecord {
@@ -63,65 +85,72 @@ export interface ImportedFileRecord {
 }
 
 export interface TradeRecord extends Trade {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface DividendRecord extends RawDividend {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
   withholdingTax: number;
 }
 
 export interface WithholdingTaxRecord extends RawWithholdingTax {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
+  /**
+   * Set on the one withholding row entered with a manual dividend; the service
+   * keeps its key fields equal to the dividend's (plan 14). Not indexed.
+   */
+  dividendId?: number | undefined;
 }
 
 export interface CarryInPositionRecord extends CarryInPosition {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface TransactionFeeRecord extends TransactionFee {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CreditInterestRecord extends RawCreditInterest {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CorporateActionRecord extends CorporateAction {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface PriorYearLossRecord extends PriorYearLoss {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface SymbolCountryOverrideRecord {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
   symbol: string;
   country: string;
+  /** Which attribution the override applies to. Missing = 'both'. */
+  scope?: 'dividends' | 'gains' | 'both';
 }
 
 export interface TradeResultRecord extends TradeResult {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface DividendResultRecord extends DividendResult {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
 export interface CreditInterestResultRecord extends CreditInterestResult {
-  id?: number;
+  id?: number | undefined;
   sessionId: string;
 }
 
@@ -136,17 +165,32 @@ export interface TaxSummaryRecord {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  /** See TaxSummary.totalDividendAddBackPln. Absent on older summaries. */
+  totalDividendAddBackPln?: number | undefined;
   totalCreditInterestPln: number;
   totalCreditInterestForeignTaxPln: number;
   capitalGainAfterLcfPln: number;
   capitalGainTaxPostLcfPln: number;
+  /**
+   * Results with a missing NBP rate (see TaxSummary.missingRateCount). Absent
+   * on summaries saved before this field existed — treat as unknown.
+   */
+  missingRateCount?: number | undefined;
+  /** See TaxSummary.missingCostCount. Absent on older summaries. */
+  missingCostCount?: number | undefined;
+  /** See TaxSummary.inconsistentCarryInCount. Absent on older summaries. */
+  inconsistentCarryInCount?: number | undefined;
+  /** See TaxSummary.unassignedOverlapCount. Absent on older summaries. */
+  unassignedOverlapCount?: number | undefined;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**
-   * Per-year loss-carry-forward breakdown (art. 9 ust. 3 updof). Only set
-   * when the calculation considered prior-year losses.
+   * Per-year loss-carry-forward breakdown (art. 9 ust. 3 updof). Only set when
+   * the calculation considered prior-year losses.
    */
-  lossDeduction?: ApplyLossCarryForwardResult;
+  lossDeduction?: ApplyLossCarryForwardResult | undefined;
+  /** Carry-in reconciliation findings (overlap, inconsistent snapshot, ...). */
+  carryInWarnings?: CarryInWarning[] | undefined;
 }
 
 export interface NbpRateRecord {
@@ -155,12 +199,32 @@ export interface NbpRateRecord {
   date: string;
   rate: number | null;
   table: string;
+  /**
+   * Warsaw calendar day (YYYY-MM-DD) the record was fetched. A `null` rate is
+   * trusted as a weekend/holiday only when `fetchedAt > date`; legacy records
+   * without it are revalidated.
+   */
+  fetchedAt?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
 
+/** Row shape the v16 upgrade reads: only the owning session and account. */
+export interface LegacyAccountRow {
+  sessionId: string;
+  account?: string | undefined;
+}
+
+/*
+ * Schema upgrade policy (CONTRIBUTING.md, "Database Schema Upgrades"):
+ * - Input tables (INPUT_TABLES) are never cleared or dropped by an upgrade.
+ * - Derived data (DERIVED_TABLES) may be invalidated; affected sessions must
+ *   then be marked stale or reset to 'draft' so results are recomputed.
+ * - Every version bump must update the lists in `db-tables.ts` and extend
+ *   `test/db-input-preservation.test.ts` with the new N-1 -> N step.
+ */
 export class KlopitDB extends Dexie {
   sessions!: EntityTable<SessionRecord, 'id'>;
   trades!: EntityTable<TradeRecord, 'id'>;
@@ -254,9 +318,9 @@ export class KlopitDB extends Dexie {
         'symbolCountryOverrides',
         'priorLosses',
       ];
-      for (const name of tablesAtV7) {
-        await tx.table(name).clear();
-      }
+      await Promise.all(
+        tablesAtV7.map((tableName) => tx.table(tableName).clear()),
+      );
     });
     this.version(8).stores({
       creditInterests: '++id, sessionId, date',
@@ -323,6 +387,115 @@ export class KlopitDB extends Dexie {
           session.status = 'draft';
           session.calculatedAt = undefined;
           session.dataUpdatedAt = new Date();
+        });
+    });
+    // v14: carry-in positions gained cost basis / acquisition date and are
+    // matched to sells by ISIN. Non-destructive: backfill ISINs from
+    // same-session trades, mark rows without cost as `missing`, and
+    // invalidate results that were computed with a silent cost of 0.
+    this.version(14).upgrade(async (tx) => {
+      const trades = await tx.table<LegacyTradeIsinRow>('trades').toArray();
+      const actions = await tx
+        .table<LegacyCorporateActionIsinRow>('corporateActions')
+        .toArray();
+      const isinMap = buildSessionSymbolIsinMap(trades, actions);
+      await tx
+        .table<LegacyCarryInRow>('carryInPositions')
+        .toCollection()
+        .modify((row) => {
+          migrateCarryInPositionV14(row, isinMap);
+        });
+      await Promise.all([
+        tx.table('tradeResults').clear(),
+        tx.table('dividendResults').clear(),
+        tx.table('creditInterestResults').clear(),
+        tx.table('taxSummaries').clear(),
+      ]);
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          session.status = 'draft';
+          session.calculatedAt = undefined;
+          session.dataUpdatedAt = new Date();
+        });
+    });
+    // v15: cached `rate: null` NBP entries
+    // could be "not yet published" days stored as holidays, which made later
+    // lookups walk back to an older rate. Drop all cached nulls (cheap to
+    // refetch; real rates are kept) and flag calculated sessions as stale so
+    // the recalculation prompt appears. Source and result tables are kept.
+    this.version(15).upgrade(async (tx) => {
+      await tx
+        .table<NbpRateRecord>('nbpRates')
+        .filter((r) => r.rate === null)
+        .delete();
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          if (session.status === 'calculated') {
+            session.dataUpdatedAt = new Date();
+          }
+        });
+    });
+    // v16: plan-10 data and calculation changes shipped together: poz. 49
+    // rounding, gross proceeds with commission moved into cost, per-lot
+    // incentive regime, ADR / PIL dividend country and override scopes, the
+    // optional `account` field with per-account FIFO (art. 24 ust. 10 updof),
+    // transfers stored as `corporateActions` rows of type 'transfer', and
+    // dated carry-in placement. All new fields are optional and unindexed
+    // (`account` is not queried by index), so no schema change and no row is
+    // rewritten. Calculated sessions are marked stale (`calculatedAt` is kept,
+    // `dataUpdatedAt` bumped, as in v15) so the stale banner and recalculate
+    // button appear; sessions that mix several brokers / accounts also get a
+    // one-time notice, as their results can change.
+    this.version(16).upgrade(async (tx) => {
+      const accounts = new Map<string, Set<string>>();
+      await Promise.all(
+        ['trades', 'carryInPositions', 'dividends'].map((table) =>
+          tx
+            .table<LegacyAccountRow>(table)
+            .toCollection()
+            .each((row) => {
+              if (!row.account) return;
+              const set = accounts.get(row.sessionId) ?? new Set<string>();
+              set.add(row.account);
+              accounts.set(row.sessionId, set);
+            }),
+        ),
+      );
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          if (session.status === 'calculated') {
+            session.dataUpdatedAt = new Date();
+          }
+          if (
+            needsPerAccountFifoNotice({
+              files: session.files,
+              accounts: [...(accounts.get(session.id) ?? [])],
+            })
+          ) {
+            session.perAccountFifoNoticePending = true;
+          }
+        });
+    });
+    // v17: plan-13 calculation changes (cross-date dividend matching,
+    // unmatched withholding, art. 45 ust. 3a add-back, foreign tax on gains in
+    // PIT-38 poz. 34 and the art. 30b ust. 5a cap). `Trade.foreignTax` and
+    // `foreignTaxDate` are optional and unindexed, so no schema change and no
+    // row is rewritten. Calculated sessions are marked stale the v15 way
+    // (`calculatedAt` kept, `dataUpdatedAt` bumped).
+    this.version(17).upgrade(async (tx) => {
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          if (session.status === 'calculated') {
+            session.dataUpdatedAt = new Date();
+          }
         });
     });
   }

@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
+
+import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
+import { buildSymbolCountryMaps } from '../src/core/tax/symbol-country.js';
 import type {
   EnrichedCorporateAction,
   EnrichedCreditInterest,
@@ -638,5 +643,340 @@ void describe('calculateTaxes', () => {
     assert.equal(result.pit38[48], 0);
     assert.equal(result.pit38[49], 7.98);
     assert.equal(result.pit38[51], 7.98);
+  });
+});
+
+// D-1 rate per posting date: 4.00 on 02-15, 4.10 on 03-20.
+const rateOn = (date: Date) => (date.getMonth() === 1 ? 4.0 : 4.1);
+
+void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
+  void it('nets reversed dividends and refunded WHT end to end', () => {
+    const text = readFileSync(
+      join(import.meta.dirname, 'fixtures', 'ib', 'dividend-reversal.csv'),
+      'utf-8',
+    );
+    const parser = ibkrDefinition.createParser();
+    for (const line of text.split('\n')) {
+      parser.feed({ line });
+    }
+    const parsed = parser.finish();
+
+    const result = calculateTaxes({
+      trades: [],
+      dividends: parsed.dividends.map((d) => ({
+        ...d,
+        exchangeRate: 4.0,
+        rateUnavailable: false,
+      })),
+      withholdingTaxes: parsed.withholdingTaxes.map((w) => ({
+        ...w,
+        exchangeRate: 4.0,
+        rateUnavailable: false,
+      })),
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+    });
+
+    assert.equal(result.dividends.length, 1);
+    assert.equal(result.pit38[47], 76); // 400 * 0.19
+    // Net WHT is 15 USD x 4.0 = 60 PLN (not 45 x 4.0 per row).
+    assert.equal(result.pit38[48], 60);
+  });
+
+  void it('pairs a cross-date reversal and re-post (plan 13, D2)', () => {
+    const text = readFileSync(
+      join(
+        import.meta.dirname,
+        'fixtures',
+        'ib',
+        'dividend-cross-date-reversal.csv',
+      ),
+      'utf-8',
+    );
+    const parser = ibkrDefinition.createParser();
+    for (const line of text.split('\n')) {
+      parser.feed({ line });
+    }
+    const parsed = parser.finish();
+    assert.deepEqual(
+      parsed.dividends.map((x) => x.amount),
+      [100, -100, 90],
+    );
+    assert.deepEqual(
+      parsed.withholdingTaxes.map((w) => w.amount),
+      [-15, 15, -13.5],
+    );
+    const result = calculateTaxes({
+      trades: [],
+      dividends: parsed.dividends.map((x) => ({
+        ...x,
+        exchangeRate: rateOn(x.date),
+        rateUnavailable: false,
+      })),
+      withholdingTaxes: parsed.withholdingTaxes.map((w) => ({
+        ...w,
+        exchangeRate: rateOn(w.date),
+        rateUnavailable: false,
+      })),
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+    });
+
+    assert.equal(result.pit38[47], 70.11);
+    assert.equal(result.pit38[48], 55.35);
+    assert.equal(result.pit38[49], 15);
+  });
+
+  void it('loss deduction breakdown equals PIT-38 poz. 30 (grosz rounding)', () => {
+    const r = calculateTaxes({
+      trades: [
+        makeTrade({
+          datetime: new Date(2024, 0, 10),
+          type: 'buy',
+          quantity: 1,
+          price: 99.996,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+        makeTrade({
+          datetime: new Date(2024, 5, 10),
+          type: 'sell',
+          quantity: 1,
+          price: 200.004,
+          proceeds: 200.004,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+      ],
+      dividends: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      priorLosses: [{ year: 2023, totalLossPln: 1000, alreadyDeductedPln: 0 }],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(r.pit38[28], 100);
+    assert.equal(r.pit38[30], 100);
+    assert.equal(r.lossDeduction.deductedPln, r.pit38[30]);
+    const perYearSum = r.lossDeduction.perYear.reduce(
+      (s, e) => s + e.deductedPln,
+      0,
+    );
+    assert.equal(perYearSum, r.pit38[30]);
+  });
+
+  void it('poz. 30 is grosz-exact and never exceeds 50% of the loss', () => {
+    const r = calculateTaxes({
+      trades: [
+        makeTrade({
+          datetime: new Date(2024, 0, 10),
+          type: 'buy',
+          quantity: 1,
+          price: 100,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+        makeTrade({
+          datetime: new Date(2024, 5, 10),
+          type: 'sell',
+          quantity: 1,
+          price: 1100,
+          proceeds: 1100,
+          exchangeRate: 1,
+          commissionExchangeRate: 1,
+        }),
+      ],
+      dividends: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      priorLosses: [
+        { year: 2023, totalLossPln: 100.01, alreadyDeductedPln: 0 },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(r.pit38[30], 50);
+    assert.ok(r.pit38[30] <= 100.01 * 0.5);
+    assert.equal(r.pit38[31], 950);
+  });
+});
+
+void describe('calculateTaxes — missingRateCount', () => {
+  void it('summary.missingRateCount counts cost-side gaps', () => {
+    const buy = makeTrade({
+      datetime: new Date(2023, 5, 1),
+      quantity: 10,
+      price: 100,
+      exchangeRate: 0,
+      commissionExchangeRate: 0,
+      rateUnavailable: true,
+    });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+    });
+    const result = calculateTaxes({
+      trades: [buy, sell],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.summary.missingRateCount, 1);
+  });
+
+  void it('missingRateCount is 0 for fully-rated data', () => {
+    const buy = makeTrade({ datetime: new Date(2023, 5, 1), quantity: 10 });
+    const sell = makeTrade({
+      datetime: new Date(2024, 5, 1),
+      type: 'sell',
+      quantity: 10,
+      price: 120,
+      proceeds: 1200,
+    });
+    const result = calculateTaxes({
+      trades: [buy, sell],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.summary.missingRateCount, 0);
+  });
+});
+
+void describe('calculateTaxes — inconsistentCarryInCount', () => {
+  void it('counts carry-in snapshots that contradict the imported history', () => {
+    const base = {
+      symbol: 'AAPL',
+      costPln: 0,
+      rateUnavailable: false,
+      costMissing: true,
+    };
+    const result = calculateTaxes({
+      trades: [
+        makeTrade({
+          datetime: new Date(2024, 2, 1),
+          type: 'sell',
+          quantity: 10,
+          price: 120,
+          proceeds: 1200,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      withholdingTaxes: [],
+      corporateActions: [],
+      carryInPositions: [
+        { ...base, quantity: 10, year: 2022 },
+        { ...base, quantity: 5, year: 2023 },
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.summary.inconsistentCarryInCount, 1);
+    assert.equal(result.summary.missingCostCount, 1);
+  });
+});
+
+void describe('ADR country scope', () => {
+  void it('attributes the TSM dividend to TW but its gains to US', () => {
+    const maps = buildSymbolCountryMaps({
+      trades: [{ symbol: 'TSM', isin: 'US8740391003' }],
+      dividends: [{ symbol: 'TSM', isin: 'US8740391003', adrCountry: 'TW' }],
+    });
+    const result = calculateTaxes({
+      trades: [
+        makeTrade({
+          symbol: 'TSM',
+          datetime: new Date(2024, 0, 15),
+          quantity: 10,
+          price: 100,
+          type: 'buy',
+        }),
+        makeTrade({
+          symbol: 'TSM',
+          datetime: new Date(2024, 6, 15),
+          quantity: 10,
+          price: 120,
+          proceeds: 1200,
+          type: 'sell',
+        }),
+      ],
+      dividends: [makeDiv({ symbol: 'TSM', isAdr: true, amount: 10 })],
+      creditInterests: [],
+      withholdingTaxes: [makeTax({ symbol: 'TSM', amount: -1 })],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      showDividendsInPitZg: true,
+      symbolCountryMap: maps.gains,
+      dividendSymbolCountryMap: maps.dividends,
+    });
+
+    assert.equal(result.dividends[0].country, 'TW');
+    assert.equal(result.dividends[0].creditCapRate, 0.1);
+    assert.equal(
+      result.dividends[0].warnings?.some((w) => w.kind === 'wht-lapse') ??
+        false,
+      false,
+    );
+    for (const trade of result.trades) assert.equal(trade.country, 'US');
+    const zg = result.pitZg.find((row) => row.country === 'US');
+    assert.ok((zg?.proceedsPln ?? 0) > 0);
+    assert.equal(zg?.dividendIncomePln, undefined);
+    assert.ok(
+      (result.pitZg.find((row) => row.country === 'TW')?.dividendIncomePln ??
+        0) > 0,
+    );
+  });
+});
+
+const tradeFor = (account: string | undefined, type: 'buy' | 'sell') =>
+  makeTrade({
+    account,
+    type,
+    symbol: type === 'buy' ? 'AAPL' : 'AAPL',
+    ...(type === 'sell'
+      ? { datetime: new Date(2024, 5, 1), proceeds: 100 }
+      : {}),
+  });
+const calc = (trades: EnrichedTrade[]) =>
+  calculateTaxes({
+    trades,
+    dividends: [],
+    creditInterests: [],
+    withholdingTaxes: [],
+    corporateActions: [],
+    carryInPositions: [],
+    taxPeriod: taxPeriod2024,
+  });
+
+void describe('calculateTaxes — unassignedOverlapCount', () => {
+  void it('counts unassigned instruments held by several accounts only', () => {
+    const overlap = calc([
+      tradeFor('ibkr:U1', 'buy'),
+      tradeFor('schwab:default', 'buy'),
+      tradeFor(undefined, 'sell'),
+    ]);
+    assert.equal(overlap.summary.unassignedOverlapCount, 1);
+
+    const disjoint = calc([
+      tradeFor('ibkr:U1', 'buy'),
+      makeTrade({ account: 'schwab:default', symbol: 'MSFT' }),
+      makeTrade({ symbol: 'NVDA' }),
+    ]);
+    assert.equal(disjoint.summary.unassignedOverlapCount, 0);
+    assert.equal(disjoint.carryInWarnings.length, 1);
   });
 });

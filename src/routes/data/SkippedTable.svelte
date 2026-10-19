@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type SessionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { kindLabel } from '$lib/utils/skipped-row.js';
-  import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type SessionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { kindLabel } from '#lib/utils/skipped-row.js';
+  import { skippedRowsStore } from '#lib/state/skipped-rows.svelte.js';
   import type { ImportWarning, SkippedRow } from '../../core/types.js';
   import RawRowModal from './RawRowModal.svelte';
 
   let { sessionId }: { sessionId: string } = $props();
 
   type SessionWithImportWarnings = SessionRecord & {
-    importWarnings?: ImportWarning[];
+    importWarnings?: ImportWarning[] | undefined;
   };
 
   type SkippedTableRow = SkippedRow & {
-    rowCount?: number;
-    message?: string;
+    rowCount?: number | undefined;
+    message?: string | undefined;
   };
 
   const sessionQuery = useLiveQuery(() => db.sessions.get(sessionId));

@@ -1,5 +1,6 @@
-import { getLocale, type Locale } from '$lib/paraglide/runtime';
 import { supportedBrokers } from '../../../core/parsers/registry.js';
+
+import { getLocale, type Locale } from '#lib/paraglide/runtime.js';
 
 interface BrokerPageContent {
   metaTitle: string;
@@ -24,6 +25,8 @@ interface BrokerPageContent {
   manualTitle: string;
   manualBody: string;
   manualCta: string;
+  revolutLabel: string;
+  alternativesLabel: string;
   notYetTitle: string;
   notYet: string[];
   sourcesTitle: string;
@@ -58,8 +61,9 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       schwab: {
         importType: 'CSV',
-        supportedData: 'trades and dividends from Charles Schwab reports',
-        docsHref: '/docs/faq',
+        supportedData:
+          'ESPP deposits, RSU vests and sales; dividends and withholding are not imported yet (add both by hand: withholding goes into the dividend form)',
+        docsHref: '/docs/schwab',
         status: 'partial',
       },
     },
@@ -67,7 +71,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     featureHeaders: ['Area', 'Scope in kloPIT'],
     features: [
       ['Broker file import', 'IBKR CSV, IBI PDF, Schwab CSV'],
-      ['Manual entries', 'trades, dividends, withholding, carry-in positions'],
+      ['Manual entries', 'trades, dividends, carry-in positions'],
       [
         'FIFO',
         'matching sales to the oldest lots, including per-grant lots for IBI',
@@ -78,13 +82,18 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       ],
       ['Foreign dividends', 'Polish 19% tax, treaty credit limit, excess WHT'],
       ['PIT-38', 'sections C, D, G and payment summary'],
-      ['PIT/ZG', 'one attachment per country for foreign income'],
+      [
+        'PIT/ZG',
+        'required only for countries with foreign tax credited on gains',
+      ],
       ['Prior-year losses', '5-year carry-forward with a 50% annual cap'],
     ],
     manualTitle: 'When a broker has no parser',
     manualBody:
-      'You can still use kloPIT by adding transactions, dividends and withholding manually on the Data page. This is a practical path for smaller accounts or brokers waiting for a dedicated importer.',
+      'You can still use kloPIT by adding transactions and dividends manually on the Data page. This is a practical path for smaller accounts or brokers waiting for a dedicated importer.',
     manualCta: 'Add data manually',
+    revolutLabel: 'Revolut guide: manual entry',
+    alternativesLabel: 'Comparison with alternatives',
     notYetTitle: 'Not supported yet',
     notYet: [
       'automatic PIT-8C import from Polish brokers',
@@ -102,7 +111,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       {
         q: 'Which tax features does kloPIT support?',
-        a: 'kloPIT calculates FIFO, converts NBP exchange rates, handles foreign dividends with treaty credit limits, PIT-38 sections C/D/G, PIT/ZG per country and prior-year losses.',
+        a: 'kloPIT calculates FIFO, converts NBP exchange rates, handles foreign dividends with treaty credit limits, PIT-38 sections C/D/G, PIT/ZG where foreign tax on gains is credited, and prior-year losses.',
       },
     ],
   },
@@ -131,8 +140,9 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       schwab: {
         importType: 'CSV',
-        supportedData: 'transakcje i dywidendy z raportów Charles Schwab',
-        docsHref: '/docs/faq',
+        supportedData:
+          'wpłaty ESPP, vesting RSU i sprzedaże; dywidendy i podatek u źródła nie są jeszcze importowane (dodaj oba ręcznie: podatek u źródła wpisuje się w formularzu dywidendy)',
+        docsHref: '/docs/schwab',
         status: 'partial',
       },
     },
@@ -140,7 +150,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     featureHeaders: ['Obszar', 'Zakres w kloPIT'],
     features: [
       ['Import plików brokera', 'IBKR CSV, IBI PDF, Schwab CSV'],
-      ['Ręczne wpisy', 'transakcje, dywidendy, withholding, pozycje carry-in'],
+      ['Ręczne wpisy', 'transakcje, dywidendy, pozycje carry-in'],
       [
         'FIFO',
         'dopasowanie sprzedaży do najstarszych partii, także per grant dla IBI',
@@ -162,8 +172,10 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     ],
     manualTitle: 'Gdy broker nie ma parsera',
     manualBody:
-      'Nadal możesz użyć kloPIT, dodając transakcje, dywidendy i withholding ręcznie na stronie Dane. To dobry wariant dla mniejszych rachunków albo brokerów oczekujących na dedykowany import.',
+      'Nadal możesz użyć kloPIT, dodając transakcje i dywidendy ręcznie na stronie Dane. To dobry wariant dla mniejszych rachunków albo brokerów oczekujących na dedykowany import.',
     manualCta: 'Dodaj dane ręcznie',
+    revolutLabel: 'Revolut: ręczne wpisy',
+    alternativesLabel: 'Porównanie z alternatywami',
     notYetTitle: 'Jeszcze nieobsługiwane',
     notYet: [
       'automatyczny import PIT-8C z polskich brokerów',
@@ -211,8 +223,9 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       schwab: {
         importType: 'CSV',
-        supportedData: 'транзакції і дивіденди зі звітів Charles Schwab',
-        docsHref: '/docs/faq',
+        supportedData:
+          'надходження ESPP, vesting RSU і продажі; дивіденди та податок у джерела поки не імпортуються (додайте обидва вручну: податок у джерела вказується у формі дивіденду)',
+        docsHref: '/docs/schwab',
         status: 'partial',
       },
     },
@@ -220,7 +233,7 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     featureHeaders: ['Область', 'Покриття в kloPIT'],
     features: [
       ['Імпорт файлів брокера', 'IBKR CSV, IBI PDF, Schwab CSV'],
-      ['Ручні записи', 'транзакції, дивіденди, withholding, початкові позиції'],
+      ['Ручні записи', 'транзакції, дивіденди, початкові позиції'],
       [
         'FIFO',
         'зіставлення продажів із найстарішими лотами, також за grant для IBI',
@@ -242,8 +255,10 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
     ],
     manualTitle: 'Коли для брокера немає парсера',
     manualBody:
-      'Ви все одно можете користуватися kloPIT, додаючи транзакції, дивіденди і withholding вручну на сторінці Дані. Це практичний варіант для менших рахунків або брокерів, які ще чекають на окремий імпортер.',
+      'Ви все одно можете користуватися kloPIT, додаючи транзакції і дивіденди вручну на сторінці Дані. Це практичний варіант для менших рахунків або брокерів, які ще чекають на окремий імпортер.',
     manualCta: 'Додати дані вручну',
+    revolutLabel: 'Revolut: ручне введення',
+    alternativesLabel: 'Порівняння з альтернативами',
     notYetTitle: 'Ще не підтримується',
     notYet: [
       'автоматичний імпорт PIT-8C від польських брокерів',
@@ -279,7 +294,7 @@ export const load = () => {
       description: content.metaDescription,
       ogType: 'article',
       datePublished: '2026-04-27',
-      dateModified: '2026-04-27',
+      dateModified: '2026-10-19',
       jsonLd: [
         {
           '@type': 'ItemList',

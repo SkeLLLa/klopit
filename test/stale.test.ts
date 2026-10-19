@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { isSessionStale } from '../src/lib/utils/stale.js';
 
 void describe('isSessionStale', () => {

@@ -1,20 +1,31 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import {
     deriveImportWarnings,
     mergeImportWarnings,
-  } from '$lib/services/import.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
-  import { db, type SessionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  } from '#lib/services/import.js';
+  import { isCarryInCostMissing, isCarryInIgnored } from '#lib/services/carry-in.js';
+  import {
+    needsSchwabFmvNotice,
+    symbolsMissingIncentiveRegime,
+  } from '#lib/services/incentive.js';
+  import { updateSession } from '#lib/services/session.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { skippedRowsStore } from '#lib/state/skipped-rows.svelte.js';
+  import { db, type SessionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import {
+    parseTransferPrefill,
+    TRANSFER_HASH,
+    type TransferPrefill,
+  } from '#lib/utils/transfer-link.js';
+  import { sessionState } from '#lib/state/session.svelte.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
   import type { ImportWarning } from '../../core/types.js';
   import SessionBar from './SessionBar.svelte';
   import SessionInfo from './SessionInfo.svelte';
   import ActionBar from './ActionBar.svelte';
-  import DataTabs from './DataTabs.svelte';
+  import DataTabs, { type TabId } from './DataTabs.svelte';
   import SkippedTable from './SkippedTable.svelte';
   import TradesTable from './TradesTable.svelte';
   import DividendsTable from './DividendsTable.svelte';
@@ -23,13 +34,32 @@
   import CarryInTable from './CarryInTable.svelte';
   import CreditInterestTable from './CreditInterestTable.svelte';
   import CountryMappingTable from './CountryMappingTable.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   pageTitle.set(m.page_data());
 
+  // `/data#carry-in` (linked from the dashboard and tax form) opens that tab.
+  let dataTab: TabId = $state('trades');
+  // `/data?…#transfer` (from a transfer warning) opens "Add transfer" prefilled.
+  let transferPrefill: TransferPrefill | undefined = $state(undefined);
+  function syncTabFromHash() {
+    if (window.location.hash === '#carry-in') dataTab = 'carryIn';
+    if (window.location.hash === TRANSFER_HASH) {
+      dataTab = 'corporateActions';
+      transferPrefill = parseTransferPrefill(window.location.search);
+    }
+  }
+  function clearTransferLink() {
+    transferPrefill = undefined;
+    if (window.location.hash === TRANSFER_HASH) {
+      history.replaceState(history.state, '', window.location.pathname);
+    }
+  }
+  $effect(syncTabFromHash);
+
   type SessionWithImportWarnings = SessionRecord & {
-    importWarnings?: ImportWarning[];
+    importWarnings?: ImportWarning[] | undefined;
   };
 
   // --- Session state (drive liveQuery here, sync into shared state) ---
@@ -71,6 +101,39 @@
         db.carryInPositions.where('sessionId').equals(activeSessionId).count(),
       ]);
     return { trades, dividends, withholding, corporateActions, creditInterest, carryIn };
+  });
+  // Carry-ins without an acquisition cost (imported from MTM or legacy rows),
+  // except rows the last calculation did not use.
+  const carryInsMissingCost = useLiveQuery<string[]>(async () => {
+    if (!activeSessionId) return [];
+    const [rows, summary] = await Promise.all([
+      db.carryInPositions.where('sessionId').equals(activeSessionId).toArray(),
+      db.taxSummaries.get(activeSessionId),
+    ]);
+    const warnings = summary?.carryInWarnings ?? [];
+    return [
+      ...new Set(
+        rows
+          .filter((row) => isCarryInCostMissing(row) && !isCarryInIgnored(row, warnings))
+          .map((row) => row.symbol),
+      ),
+    ];
+  });
+  // RSU / ESPP lots without a chosen regime make the result a draft.
+  const incentiveMissingRegime = useLiveQuery<string[]>(async () => {
+    if (!activeSessionId) return [];
+    return symbolsMissingIncentiveRegime(
+      await db.trades.where('sessionId').equals(activeSessionId).toArray(),
+    );
+  });
+  const schwabFmvNotice = useLiveQuery<boolean>(async () => {
+    if (!activeSessionId) return false;
+    const session = await db.sessions.get(activeSessionId);
+    if (!session || session.schwabFmvNoticeDismissed) return false;
+    return needsSchwabFmvNotice({
+      files: session.files,
+      trades: await db.trades.where('sessionId').equals(activeSessionId).toArray(),
+    });
   });
   const inMemorySkippedRows = $derived(
     activeSessionId ? skippedRowsStore.getSkippedRows({ sessionId: activeSessionId }) : [],
@@ -119,6 +182,8 @@
     showDeleteSessionConfirm = false;
   }
 </script>
+
+<svelte:window onhashchange={syncTabFromHash} />
 
 <h1 class="sr-only">{m.page_data()}</h1>
 
@@ -171,7 +236,65 @@
         </details>
       {/if}
 
-      <DataTabs activeTab="trades" {counts}>
+      {#if (carryInsMissingCost.current ?? []).length > 0}
+        <div
+          class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          {m.import_warning_carry_in_cost_missing({
+            symbols: (carryInsMissingCost.current ?? []).join(', '),
+          })}
+        </div>
+      {/if}
+
+      {#if (incentiveMissingRegime.current ?? []).length > 0}
+        <div
+          class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+        >
+          {m.import_warning_incentive_regime_missing({
+            symbols: (incentiveMissingRegime.current ?? []).join(', '),
+          })}
+        </div>
+      {/if}
+
+      {#if activeSession.perAccountFifoNoticePending}
+        <div
+          role="status"
+          class="flex items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
+        >
+          <span>{m.data_per_account_fifo_notice()}</span>
+          <button
+            aria-label={m.data_per_account_fifo_dismiss_label()}
+            onclick={() =>
+              updateSession({
+                id: activeSession.id,
+                changes: { perAccountFifoNoticePending: false },
+              })}
+            class="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-800/40"
+          >
+            {m.data_per_account_fifo_dismiss()}
+          </button>
+        </div>
+      {/if}
+
+      {#if schwabFmvNotice.current}
+        <div
+          class="flex items-start justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
+        >
+          <span>{m.data_schwab_fmv_notice()}</span>
+          <button
+            onclick={() =>
+              updateSession({
+                id: activeSession.id,
+                changes: { schwabFmvNoticeDismissed: true },
+              })}
+            class="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-800/40"
+          >
+            {m.data_incentive_dismiss()}
+          </button>
+        </div>
+      {/if}
+
+      <DataTabs bind:activeTab={dataTab} {counts}>
         {#snippet children(tab)}
           {#if tab === 'trades'}
             <TradesTable sessionId={activeSession.id} sessionYear={activeSession.year} />
@@ -182,9 +305,14 @@
           {:else if tab === 'withholding'}
             <WithholdingTable sessionId={activeSession.id} />
           {:else if tab === 'corporateActions'}
-            <CorporateActionsTable sessionId={activeSession.id} />
+            <CorporateActionsTable
+              sessionId={activeSession.id}
+              sessionYear={activeSession.year}
+              prefill={transferPrefill}
+              onprefillused={clearTransferLink}
+            />
           {:else if tab === 'carryIn'}
-            <CarryInTable sessionId={activeSession.id} />
+            <CarryInTable sessionId={activeSession.id} sessionYear={activeSession.year} />
           {:else if tab === 'skipped'}
             <SkippedTable sessionId={activeSession.id} />
           {/if}

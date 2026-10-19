@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+
 import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
+import { calculateCapitalGains } from '../src/core/tax/capital-gains.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures', 'ib');
 
@@ -13,6 +15,30 @@ function parseFixture(filename: string) {
     parser.feed({ line });
   }
   return parser.finish();
+}
+
+function parseLines(lines: string[]) {
+  const parser = ibkrDefinition.createParser();
+  for (const line of lines) parser.feed({ line });
+  return parser.finish();
+}
+
+function enrich(statement: ReturnType<typeof parseLines>) {
+  return statement.trades.map((t) => ({
+    ...t,
+    exchangeRate: 4,
+    commissionExchangeRate: 4,
+    rateUnavailable: false,
+  }));
+}
+
+function enrichCarryIns(statement: ReturnType<typeof parseLines>) {
+  return statement.carryInPositions.map((p) => ({
+    ...p,
+    costPln: 0,
+    rateUnavailable: false,
+    costMissing: true,
+  }));
 }
 
 void describe('InteractiveBrokersParser', () => {
@@ -146,6 +172,18 @@ void describe('InteractiveBrokersParser', () => {
       assert.ok(msftTax);
       assert.equal(msftTax.isin, 'US5949181045');
     });
+
+    void it('keeps signs of dividend reversals and WHT refunds unchanged', () => {
+      const result = parseFixture('dividend-reversal.csv');
+      assert.deepEqual(
+        result.dividends.map((d) => d.amount),
+        [100, -100, 100],
+      );
+      assert.deepEqual(
+        result.withholdingTaxes.map((w) => w.amount),
+        [-15, 15, -15],
+      );
+    });
   });
 
   void describe('Interest', () => {
@@ -265,10 +303,10 @@ void describe('InteractiveBrokersParser', () => {
 
     void it('includes AAPL and MSFT but not TSLA (prior qty 0)', () => {
       const result = parseFixture('carry-in.csv');
-      const symbols = result.carryInPositions.map((p) => p.symbol);
-      assert.ok(symbols.includes('AAPL'));
-      assert.ok(symbols.includes('MSFT'));
-      assert.ok(!symbols.includes('TSLA'));
+      const symbols = new Set(result.carryInPositions.map((p) => p.symbol));
+      assert.ok(symbols.has('AAPL'));
+      assert.ok(symbols.has('MSFT'));
+      assert.ok(!symbols.has('TSLA'));
     });
 
     void it('parses prior quantity correctly', () => {
@@ -456,5 +494,435 @@ void describe('InteractiveBrokersParser', () => {
       const result = parser.finish();
       assert.equal(result.dividends[0].isin, 'US0378331005');
     });
+
+    void it('backfills ISIN on carry-in positions from FII', () => {
+      const parser = ibkrDefinition.createParser();
+      parser.feed({
+        line: 'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
+      });
+      parser.feed({
+        line: 'Mark-to-Market Performance Summary,Data,Stocks,AAPL,25,30,175.50,195.20,492.50,0,-1.00,0,491.50,',
+      });
+      parser.feed({
+        line: 'Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,',
+      });
+      const result = parser.finish();
+      assert.equal(result.carryInPositions[0].isin, 'US0378331005');
+    });
+  });
+
+  void describe('Header-based column resolution', () => {
+    const stmt = [
+      'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
+      'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code',
+      'Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,',
+    ];
+    const standard = [
+      ...stmt,
+      'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis',
+      'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00,0',
+    ];
+
+    void it('produces identical results for shuffled columns', () => {
+      const shuffled = [
+        ...stmt,
+        'Trades,Header,Comm/Fee,Proceeds,Symbol,Asset Category,Quantity,DataDiscriminator,T. Price,Date/Time,Currency',
+        'Trades,Data,-1.00,1561.60,AAPL,Stocks,-8,Order,195.20,"2024-06-20, 14:15:00",USD',
+      ];
+      const a = parseLines(standard);
+      const b = parseLines(shuffled);
+      assert.equal(b.trades.length, 1);
+      assert.deepEqual(b.trades, a.trades);
+      assert.equal(b.warnings.length, 0);
+    });
+
+    void it('handles an extra Account column', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Account,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee',
+        'Trades,Data,Order,Stocks,USD,U123,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00',
+      ]);
+      assert.equal(result.trades.length, 1);
+      assert.equal(result.trades[0].symbol, 'AAPL');
+      assert.equal(result.trades[0].proceeds, 1561.6);
+      assert.equal(result.trades[0].commission, 1);
+    });
+
+    void it('accepts the Comm in USD alias', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm in USD',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-2.50',
+      ]);
+      assert.equal(result.trades.length, 1);
+      assert.equal(result.trades[0].commission, 2.5);
+    });
+
+    void it('fails loudly when a required column is missing', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Comm/Fee',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,-1.00',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-21, 14:15:00",-2,195.20,195.20,-1.00',
+      ]);
+      assert.equal(result.trades.length, 0);
+      assert.equal(result.warnings.length, 1);
+      assert.match(result.warnings[0].message, /Proceeds/);
+      const failures = result.skippedRows.filter(
+        (r) => r.kind === 'parse-failure' && r.section === 'Trades',
+      );
+      assert.equal(failures.length, 2);
+    });
+
+    void it('rejects trades when Comm/Fee is missing', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60',
+      ]);
+      assert.equal(result.trades.length, 0);
+      assert.equal(result.warnings.length, 1);
+      assert.match(result.warnings[0].message, /Comm\/Fee\/Comm in USD/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('rejects trades when DataDiscriminator is missing', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee',
+        'Trades,Data,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00',
+      ]);
+      assert.equal(result.trades.length, 0);
+      assert.match(result.warnings[0].message, /DataDiscriminator/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('attributes Comm in USD to USD for non-USD trades', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm in USD',
+        'Trades,Data,Order,Stocks,EUR,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-2.50',
+      ]);
+      assert.equal(result.trades.length, 1);
+      assert.equal(result.trades[0].currency, 'EUR');
+      assert.equal(result.trades[0].commissionCurrency, 'USD');
+    });
+
+    void it('rejects Financial Instrument Information without Asset Category', () => {
+      const result = parseLines([
+        'Financial Instrument Information,Header,Symbol,Description,Conid,Security ID',
+        'Financial Instrument Information,Data,AAPL,APPLE INC,265598,US0378331005',
+      ]);
+      assert.equal(result.symbolToIsin.size, 0);
+      assert.match(result.warnings[0].message, /Asset Category/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('does not reject Options headers lacking Security ID', () => {
+      const result = parseLines([
+        'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid',
+        'Financial Instrument Information,Data,Equity and Index Options,AAPL 240621C00200000,APPLE,1234',
+      ]);
+      assert.equal(result.warnings.length, 0);
+      assert.equal(result.skippedRows.length, 0);
+    });
+
+    void it('rejects carry-in rows when Prior Quantity is missing', () => {
+      const result = parseLines([
+        'Mark-to-Market Performance Summary,Header,Asset Category,Symbol,Current Quantity',
+        'Mark-to-Market Performance Summary,Data,Stocks,AAPL,30',
+      ]);
+      assert.equal(result.carryInPositions.length, 0);
+      assert.match(result.warnings[0].message, /Prior Quantity/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('rejects corporate actions when Quantity is missing', () => {
+      const result = parseLines([
+        'Corporate Actions,Header,Asset Category,Currency,Report Date,Date/Time,Description,Proceeds,Value',
+        'Corporate Actions,Data,Stocks,USD,2024-06-10,"2024-06-09, 20:25:00","NVDA(US67066G1040) Split 10 for 1 (NVDA, NVIDIA CORP, US67066G1040)",0,0',
+      ]);
+      assert.equal(result.corporateActions.length, 0);
+      assert.match(result.warnings[0].message, /Quantity/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('rejects dividend accruals when Code is missing', () => {
+      const result = parseLines([
+        'Change in Dividend Accruals,Header,Asset Category,Currency,Symbol,Date,Ex Date,Pay Date,Quantity,Tax,Fee',
+        'Change in Dividend Accruals,Data,Stocks,USD,MHPC,2025-12-25,2025-12-26,2026-01-22,200,0,4',
+      ]);
+      assert.equal(result.transactionFees.length, 0);
+      assert.match(result.warnings[0].message, /Code/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+  });
+
+  void describe('carry-in end-to-end', () => {
+    const MTM_LINE =
+      'Mark-to-Market Performance Summary,Data,Stocks,AAPL,25,30,175.50,195.20,492.50,0,-1.00,0,491.50,';
+    const FII_LINE =
+      'Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,';
+    const SELL_LINE =
+      'Trades,Data,Order,Stocks,USD,AAPL,"2024-03-15, 10:30:00",-10,200,200,2000,-1.00,0,0,0,C';
+    const PERIOD_LINE =
+      'Statement,Data,Period,"January 1, 2024 - December 31, 2024"';
+
+    const taxPeriod = {
+      year: 2024,
+      from: new Date(2024, 0, 1),
+      to: new Date(2024, 11, 31),
+    };
+
+    void it('never emits a carry-in with year 0', () => {
+      // No Statement period: the year is inferred from the trade dates.
+      const inferred = parseLines([MTM_LINE, SELL_LINE]);
+      assert.equal(inferred.year, 2024);
+      assert.equal(inferred.carryInPositions[0].year, 2023);
+      assert.ok(
+        inferred.warnings.some((w) => w.section === 'Carry-in positions'),
+      );
+
+      // No year at all: the position is skipped with a warning.
+      const unknown = parseLines([MTM_LINE]);
+      assert.equal(unknown.carryInPositions.length, 0);
+      assert.ok(
+        unknown.warnings.some((w) => w.section === 'Carry-in positions'),
+      );
+    });
+
+    void it('calculates an MTM carry-in sold in-year without "No buy lots available"', () => {
+      const statement = parseLines([
+        PERIOD_LINE,
+        MTM_LINE,
+        SELL_LINE,
+        FII_LINE,
+      ]);
+      const result = calculateCapitalGains({
+        trades: enrich(statement),
+        corporateActions: [],
+        carryInPositions: enrichCarryIns(statement),
+        taxPeriod,
+      });
+      assert.equal(result.length, 1);
+      assert.equal(result[0].type, 'sell');
+      assert.equal(result[0].costBasisMissing, true);
+    });
+
+    void it('matches a carry-in from a file without FII to a sell from another file', () => {
+      const carryInFile = parseLines([PERIOD_LINE, MTM_LINE]);
+      const tradesFile = parseLines([PERIOD_LINE, SELL_LINE, FII_LINE]);
+      assert.equal(carryInFile.carryInPositions[0].isin, undefined);
+      const result = calculateCapitalGains({
+        trades: enrich(tradesFile),
+        corporateActions: [],
+        carryInPositions: enrichCarryIns(carryInFile),
+        taxPeriod,
+      });
+      assert.equal(result.length, 1);
+    });
+  });
+});
+
+const tsmWht = (date: string, suffix: string) =>
+  `Withholding Tax,Data,USD,${date},TSM(US8740391003) Cash Dividend USD 0.5 per Share - ${suffix},-1.05,`;
+
+void describe('IBKR ADR detection', () => {
+  const header =
+    'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Listing Exch,Multiplier,Type,Code';
+  const legacyHeader =
+    'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Listing Exch,Multiplier,Code';
+  const period = 'Statement,Data,Period,"January 1, 2024 - December 31, 2024"';
+  const divHeader = 'Dividends,Header,Currency,Date,Description,Amount';
+  const whtHeader =
+    'Withholding Tax,Header,Currency,Date,Description,Amount,Code';
+  const tsmFii =
+    'Financial Instrument Information,Data,Stocks,TSM,TSMC ADR,1,US8740391003,NYSE,1,ADR,';
+  const tsmDiv =
+    'Dividends,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share (Ordinary Dividend),5';
+
+  void it('uses the WHT suffix country for an ADR', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share - TW Tax,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.dividends[0].adrCountry, 'TW');
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('warns and keeps the ISIN country when the ADR has no suffix', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.equal(r.warnings.length, 1);
+    assert.match(
+      r.warnings[0].message,
+      /ADR detected for TSM, country assumed US from ISIN/,
+    );
+  });
+
+  void it('rejects a malformed suffix', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share - tw Tax,-1.05,',
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Cash Dividend USD 0.5 per Share - TWN Tax,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+  });
+
+  void it('does not stamp a country when suffixes conflict, and warns', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      tsmWht('2024-06-15', 'TW Tax'),
+      tsmWht('2024-09-15', 'US Tax'),
+    ]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.equal(r.warnings.length, 1);
+    assert.match(
+      r.warnings[0].message,
+      /conflicting withholding countries \(TW, US\)/,
+    );
+  });
+
+  void it('ignores payment-in-lieu withholding rows', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      tsmWht('2024-06-15', 'TW Tax'),
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend) - US Tax,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, 'TW');
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('does not warn about the ISIN country when the ADR has no withholding', () => {
+    const r = parseLines([period, header, tsmFii, divHeader, tsmDiv]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('warns when withholding exists but has no usable suffix', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.match(r.warnings[0].message, /country assumed US from ISIN/);
+  });
+
+  void it('records kind and taxCountry on dividend and withholding rows', () => {
+    const r = parseLines([
+      period,
+      divHeader,
+      tsmDiv,
+      'Dividends,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend),5',
+      whtHeader,
+      tsmWht('2024-06-15', 'TW Tax'),
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend) - US Tax,-0.75,',
+      'Withholding Tax,Data,USD,2024-06-17,TSM(US8740391003) Cash Dividend USD 0.5 per Share,-1,',
+    ]);
+    assert.deepEqual(
+      r.dividends.map((d) => d.kind),
+      ['dividend', 'payment-in-lieu'],
+    );
+    assert.deepEqual(
+      r.withholdingTaxes.map((w) => [w.kind, w.taxCountry]),
+      [
+        ['dividend', 'TW'],
+        ['payment-in-lieu', 'US'],
+        ['dividend', undefined],
+      ],
+    );
+  });
+
+  void it('warns in a PIL-only ADR year and stamps no issuer country', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      'Dividends,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend),5',
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend) - US Tax,-0.75,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.equal(r.warnings.length, 1);
+    assert.match(r.warnings[0].message, /country assumed US from ISIN/);
+  });
+
+  void it('does not mark non-ADR stocks', () => {
+    const r = parseLines([
+      period,
+      header,
+      'Financial Instrument Information,Data,Stocks,AAPL,APPLE,2,US0378331005,NASDAQ,1,COMMON,',
+      divHeader,
+      'Dividends,Data,USD,2024-06-15,AAPL(US0378331005) Cash Dividend USD 0.25 per Share (Ordinary Dividend),2.5',
+    ]);
+    assert.equal(r.dividends[0].isAdr, undefined);
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('treats statements without a Type column as non-ADR', () => {
+    const r = parseLines([
+      period,
+      legacyHeader,
+      'Financial Instrument Information,Data,Stocks,TSM,TSMC ADR,1,US8740391003,NYSE,1,ADR',
+      divHeader,
+      tsmDiv,
+    ]);
+    assert.equal(r.dividends[0].isAdr, undefined);
+    assert.equal(r.warnings.length, 0);
   });
 });

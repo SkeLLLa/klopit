@@ -1,3 +1,4 @@
+/// <reference types="node" />
 module.exports = {
   branches: [
     { name: 'master', prerelease: false },

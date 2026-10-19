@@ -1,19 +1,39 @@
 <!-- src/routes/data/CorporateActionsTable.svelte -->
 <script lang="ts">
-  import { Pencil, Trash2 } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type CorporateActionRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { untrack } from 'svelte';
+  import { Pencil, Plus, Trash2 } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type CorporateActionRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
   import {
+    addTransfer,
     updateCorporateAction,
     deleteCorporateAction,
-  } from '$lib/services/data.js';
-  import { formatDatetime, toDatetimeLocal } from '$lib/utils/format-date.js';
-  import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  } from '#lib/services/data.js';
+  import { formatDatetime, toDatetimeLocal } from '#lib/utils/format-date.js';
+  import { fromDatetimeLocal } from '#lib/utils/date-input.js';
+  import MissingIsinLookup from '#lib/components/ui/MissingIsinLookup.svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
+  import { listSessionAccounts } from '#lib/services/accounts.js';
+  import { formatAccount } from '#lib/utils/account.js';
+  import type { TransferPrefill } from '#lib/utils/transfer-link.js';
+  import type { CorporateAction } from '../../core/types.js';
+  import AccountField from './AccountField.svelte';
   import EmptyState from './EmptyState.svelte';
+  import TransferForm from './TransferForm.svelte';
 
-  let { sessionId }: { sessionId: string } = $props();
+  let {
+    sessionId,
+    sessionYear,
+    prefill,
+    onprefillused,
+  }: {
+    sessionId: string;
+    sessionYear?: number | undefined;
+    /** Opens the "Add transfer" form with these values (from a warning link). */
+    prefill?: TransferPrefill | undefined;
+    onprefillused?: (() => void) | undefined;
+  } = $props();
 
   const records = useLiveQuery(() =>
     db.corporateActions
@@ -22,11 +42,56 @@
       .sortBy('datetime'),
   );
 
+  const accounts = useLiveQuery(() => listSessionAccounts({ sessionId }));
+
+  const showAccount = $derived((accounts.current?.length ?? 0) > 1);
+
   function formatCashProceeds(row: CorporateActionRecord): string {
     if (row.cashTotalProceeds !== undefined && row.cashTotalProceeds > 0) {
       return `${row.cashCurrency ?? ''} ${row.cashTotalProceeds.toFixed(2)}`;
     }
     return '';
+  }
+
+  // Each opening gets a fresh form: `formKey` re-creates it for a new prefill.
+  let showAddForm = $state(false);
+  let addSeed: TransferPrefill | undefined = $state(undefined);
+  let formKey = $state(0);
+  let editingTransferId: number | null = $state(null);
+
+  $effect(() => {
+    const seed = prefill;
+    if (!seed) return;
+    untrack(() => {
+      addSeed = seed;
+      showAddForm = true;
+      editingTransferId = null;
+      editingId = null;
+      formKey += 1;
+      onprefillused?.();
+    });
+  });
+
+  async function handleAddTransfer(transfer: CorporateAction) {
+    await addTransfer({ sessionId, transfer });
+    showAddForm = false;
+    addSeed = undefined;
+  }
+
+  async function handleUpdateTransfer(id: number, transfer: CorporateAction) {
+    await updateCorporateAction({ id, changes: transfer });
+    editingTransferId = null;
+  }
+
+  function transferSeed(row: CorporateActionRecord): TransferPrefill {
+    return {
+      fromAccount: row.fromAccount,
+      toAccount: row.toAccount,
+      quantity: row.quantity,
+      symbol: row.symbol,
+      isin: row.isin,
+      datetime: row.datetime,
+    };
   }
 
   let editingId: number | null = $state(null);
@@ -41,9 +106,17 @@
   let editConversionRatio = $state('');
   let editCashPerShare = $state('');
   let editCashCurrency = $state('');
+  let editAccount: string | undefined = $state(undefined);
   let deleteTarget: CorporateActionRecord | null = $state(null);
 
   function startEdit(row: CorporateActionRecord) {
+    if (row.type === 'transfer') {
+      showAddForm = false;
+      editingId = null;
+      editingTransferId = row.id as number;
+      return;
+    }
+    editingTransferId = null;
     editingId = row.id as number;
     editType = row.type;
     editSymbol = row.symbol;
@@ -56,17 +129,20 @@
     editConversionRatio = String(row.conversionRatio ?? '');
     editCashPerShare = String(row.cashPerShare ?? '');
     editCashCurrency = row.cashCurrency ?? '';
+    editAccount = row.account;
   }
 
   async function saveEdit() {
     if (editingId === null) return;
+    const datetime = fromDatetimeLocal(editDatetime);
+    if (!datetime) return;
     await updateCorporateAction({
       id: editingId,
       changes: {
         type: editType,
         symbol: editSymbol.trim().toUpperCase(),
         isin: editIsin.trim() || undefined,
-        datetime: new Date(editDatetime),
+        datetime,
         numerator: parseFloat(editNumerator) || 0,
         denominator: parseFloat(editDenominator) || 0,
         targetSymbol: editTargetSymbol.trim().toUpperCase() || undefined,
@@ -74,6 +150,7 @@
         conversionRatio: parseFloat(editConversionRatio) || undefined,
         cashPerShare: parseFloat(editCashPerShare) || undefined,
         cashCurrency: editCashCurrency.trim().toUpperCase() || undefined,
+        account: editAccount,
       },
     });
     editingId = null;
@@ -92,6 +169,36 @@
 </script>
 
 <div>
+  {#if !showAddForm}
+    <div class="mb-3">
+      <button
+        onclick={() => {
+          addSeed = undefined;
+          showAddForm = true;
+          editingId = null;
+          editingTransferId = null;
+          formKey += 1;
+        }}
+        class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+      >
+        <Plus size={14} />
+        {m.data_add_transfer()}
+      </button>
+    </div>
+  {:else}
+    <div class="mb-3">
+      {#key formKey}
+        <TransferForm
+          initial={addSeed}
+          defaultYear={sessionYear}
+          accounts={accounts.current ?? []}
+          onsave={handleAddTransfer}
+          oncancel={() => (showAddForm = false)}
+        />
+      {/key}
+    </div>
+  {/if}
+
   {#if !records.current || records.current.length === 0}
     <EmptyState message={m.data_empty_corporate_actions()} />
   {:else}
@@ -103,6 +210,7 @@
             <th class="px-3 py-2">{m.data_symbol()}</th>
             <th class="px-3 py-2">{m.data_isin()}</th>
             <th class="px-3 py-2">{m.data_datetime()}</th>
+            {#if showAccount}<th class="px-3 py-2">{m.data_account()}</th>{/if}
             <th class="px-3 py-2">{m.data_details()}</th>
             <th class="px-3 py-2 text-right">{m.data_cash_proceeds()}</th>
             <th class="px-3 py-2">{m.data_actions()}</th>
@@ -110,7 +218,18 @@
         </thead>
         <tbody>
           {#each records.current as row (row.id)}
-            {#if editingId === row.id}
+            {#if editingTransferId === row.id}
+              <tr class="border-b border-slate-100 dark:border-slate-800">
+                <td colspan={showAccount ? 8 : 7} class="px-3 py-2">
+                  <TransferForm
+                    initial={transferSeed(row)}
+                    accounts={accounts.current ?? []}
+                    onsave={(transfer) => handleUpdateTransfer(row.id as number, transfer)}
+                    oncancel={() => (editingTransferId = null)}
+                  />
+                </td>
+              </tr>
+            {:else if editingId === row.id}
               <tr class="border-b border-slate-100 dark:border-slate-800">
                 <td class="px-3 py-2">
                   <select aria-label={m.data_type()} bind:value={editType} class="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
@@ -121,6 +240,9 @@
                 <td class="px-3 py-2"><input type="text" aria-label={m.data_symbol()} bind:value={editSymbol} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 <td class="px-3 py-2"><input type="text" aria-label={m.data_isin()} bind:value={editIsin} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 <td class="px-3 py-2"><input type="datetime-local" aria-label={m.data_datetime()} bind:value={editDatetime} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
+                {#if showAccount}
+                  <td class="px-3 py-2"><AccountField id="ca-account" accounts={accounts.current ?? []} value={editAccount} onchange={(v) => (editAccount = v)} compact /></td>
+                {/if}
                 <td class="px-3 py-2">
                   {#if editType === 'stock-split'}
                     <div class="flex items-center gap-1">
@@ -157,7 +279,7 @@
             {:else}
               <tr class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50">
                 <td class="px-3 py-2">
-                  <span class="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{row.type}</span>
+                  <span class="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{row.type === 'transfer' ? m.data_type_transfer() : row.type}</span>
                 </td>
                 <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{row.symbol}</td>
                 <td class="px-3 py-2 text-slate-500 dark:text-slate-400">
@@ -168,9 +290,20 @@
                   {/if}
                 </td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{formatDatetime(row.datetime)}</td>
+                {#if showAccount}
+                  <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{row.type === 'transfer' ? '' : row.account ? formatAccount(row.account) : ''}</td>
+                {/if}
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">
                   {#if row.type === 'stock-split'}
                     <span class="tabular-nums">{row.numerator} for {row.denominator}</span>
+                  {:else if row.type === 'transfer'}
+                    <span class="tabular-nums">
+                      {m.data_transfer_details({
+                        quantity: String(row.quantity ?? ''),
+                        from: row.fromAccount ? formatAccount(row.fromAccount) : '?',
+                        to: row.toAccount ? formatAccount(row.toAccount) : '?',
+                      })}
+                    </span>
                   {:else}
                     <div class="flex flex-col gap-0.5">
                       <span>
@@ -193,7 +326,7 @@
                   {/if}
                 </td>
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">
-                  {#if row.type === 'stock-split'}
+                  {#if row.type !== 'merger'}
                     <span class="text-slate-400">&mdash;</span>
                   {:else}
                     {formatCashProceeds(row)}

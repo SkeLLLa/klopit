@@ -19,7 +19,7 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: [26.x]
     steps:
       - uses: actions/checkout@v7
       - name: Use Node.js ${{ matrix.node-version }}
@@ -47,13 +47,13 @@ jobs:
       - name: Build
         run: pnpm build
       - name: Lint
-        uses: reviewdog/action-eslint@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
-          eslint_flags: '. --ext js,jsx,ts,tsx'
+        run: pnpm i18n && pnpm exec oxlint --type-aware --deny-warnings --format github
+      - name: Format
+        run: pnpm format:check
+      - name: Type check
+        run: pnpm lint:types
       - name: Test
-        run: pnpm test
+        run: pnpm test:unit
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:

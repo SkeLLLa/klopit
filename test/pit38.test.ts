@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { buildPit38 } from '../src/core/tax/pit38.js';
+import { roundToFullPln } from '../src/core/tax/rounding.js';
 import type {
   CreditInterestResult,
   DividendResult,
@@ -24,6 +26,10 @@ function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
     totalCreditInterestForeignTaxPln: 0,
     capitalGainAfterLcfPln: 0,
     capitalGainTaxPostLcfPln: 0,
+    missingRateCount: 0,
+    missingCostCount: 0,
+    inconsistentCarryInCount: 0,
+    unassignedOverlapCount: 0,
     ...overrides,
   };
 }
@@ -610,5 +616,97 @@ void describe('buildPit38', () => {
 
     // Section I
     assert.equal(result[65], 0);
+  });
+
+  void it('uses provided lossDeduction instead of recomputing', () => {
+    const result = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 50000,
+          costPln: 30000,
+          gainLossPln: 20000,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      summary: makeSummary(),
+      priorLosses: [],
+      lossDeduction: {
+        deductedPln: 12.34,
+        perYear: [],
+        updatedLosses: [],
+        warnings: [],
+      },
+    });
+
+    assert.equal(result[30], 12.34);
+    assert.equal(result[31], roundToFullPln({ amount: 20000 - 12.34 }));
+  });
+
+  void it('poz. 51 = poz. 35 + poz. 49 with per-component rounding', () => {
+    const result = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 10000,
+          costPln: 5000,
+          gainLossPln: 5000,
+        }),
+      ],
+      dividends: [
+        makeDivResult({
+          amountPln: 1000,
+          withholdingTaxPln: 149.5,
+          deductibleWithholdingPln: 149.5,
+        }),
+      ],
+      creditInterests: [makeCreditInterestResult({ amountPln: 33.33 })],
+      summary: makeSummary(),
+      priorLosses: [],
+    });
+
+    assert.equal(result[35], 950);
+    assert.equal(result[47], 196.34);
+    assert.equal(result[48], 149.5);
+    assert.equal(result[49], 47.34);
+    assert.equal(result[51], 997.34);
+    assert.equal(result[51], result[35] + result[49]);
+  });
+
+  void it('shifts poz. 22/23 by sell commission, poz. 28 unchanged', () => {
+    const build = (commission: number) =>
+      buildPit38({
+        trades: [
+          makeSellResult({
+            proceedsPln: 50000,
+            costPln: 30000 + commission,
+            gainLossPln: 20000 - commission,
+            taxPln: 0,
+          }),
+        ],
+        dividends: [],
+        creditInterests: [],
+        summary: makeSummary({
+          totalProceedsPln: 50000,
+          totalCostPln: 30000 + commission,
+        }),
+      });
+    // Same economic trade: commission moves from netting proceeds to cost
+    const net = build(0);
+    const gross = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 50100,
+          costPln: 30100,
+          gainLossPln: 20000,
+          taxPln: 0,
+        }),
+      ],
+      dividends: [],
+      creditInterests: [],
+      summary: makeSummary({ totalProceedsPln: 50100, totalCostPln: 30100 }),
+    });
+    assert.equal(gross[22], net[22] + 100);
+    assert.equal(gross[23], net[23] + 100);
+    assert.equal(gross[28], net[28]);
   });
 });

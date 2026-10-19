@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { navigation } from '$lib/nav.js';
-  import { FileText } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { navLabels } from '#lib/nav-labels.js';
+  import { navigation } from '#lib/nav.js';
+  import { FileText } from '@lucide/svelte';
 
   pageTitle.set(m.page_docs_ibi());
 
@@ -20,7 +21,7 @@
   };
 
   function t(key: string): string {
-    return (m as Record<string, (...args: unknown[]) => string>)[key]?.() ?? key;
+    return navLabels[key]?.() ?? key;
   }
 </script>
 
@@ -60,9 +61,7 @@
     {/each}
   </div>
 
-  <!-- eslint-disable svelte/no-at-html-tags -->
   <p class="border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
     {@html m.docs_more_brokers_coming()}
   </p>
-  <!-- eslint-enable svelte/no-at-html-tags -->
 </div>

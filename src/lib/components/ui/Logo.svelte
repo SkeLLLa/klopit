@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
+  import { KLO_ACRONYMS } from '#lib/constants/acronyms.js';
 
-  let { collapsed = false }: { collapsed?: boolean } = $props();
+  let { collapsed = false }: { collapsed?: boolean | undefined } = $props();
 
   let currentIndex = $state(0);
   const DISPLAY_DURATION = 10000;

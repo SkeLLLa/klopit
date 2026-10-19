@@ -1,5 +1,5 @@
-import type { GroundingSource } from '$lib/components/docs/grounding';
-import { getLocale, type Locale } from '$lib/paraglide/runtime';
+import type { GroundingSource } from '#lib/components/docs/grounding.js';
+import { getLocale, type Locale } from '#lib/paraglide/runtime.js';
 
 interface TradeSettlementPageContent {
   metaTitle: string;
@@ -69,7 +69,7 @@ const sourceBases: GroundingSource[] = [
   {
     key: 'art7',
     label: 'Art. 7 ustawy o obrocie instrumentami finansowymi - lexlege.pl',
-    href: 'https://lexlege.pl/ustawa-o-obrocie-instrumentami-finansowymi/art-7/',
+    href: 'https://lexlege.pb.pl/ustawa-o-obrocie-instrumentami-finansowymi/art-7/',
   },
   {
     key: 'mfShares',

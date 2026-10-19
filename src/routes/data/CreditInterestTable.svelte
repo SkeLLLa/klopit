@@ -1,15 +1,16 @@
 <!-- src/routes/data/CreditInterestTable.svelte -->
 <script lang="ts">
-  import { Pencil, Trash2 } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { db, type CreditInterestRecord } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { Pencil, Trash2 } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { db, type CreditInterestRecord } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
   import {
     updateCreditInterest,
     deleteCreditInterest,
-  } from '$lib/services/data.js';
-  import { formatDate, toDateInput } from '$lib/utils/format-date.js';
-  import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  } from '#lib/services/data.js';
+  import { formatDate, toDateInput } from '#lib/utils/format-date.js';
+  import { fromDateInput } from '#lib/utils/date-input.js';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
   let { sessionId }: { sessionId: string } = $props();
@@ -35,10 +36,12 @@
 
   async function saveEdit() {
     if (editingId === null) return;
+    const date = fromDateInput(editDate);
+    if (!date) return;
     await updateCreditInterest({
       id: editingId,
       changes: {
-        date: new Date(editDate),
+        date,
         amount: parseFloat(editAmount),
         currency: editCurrency.trim().toUpperCase(),
         description: editDescription.trim(),

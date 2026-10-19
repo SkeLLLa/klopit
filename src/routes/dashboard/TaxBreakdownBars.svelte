@@ -1,12 +1,9 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln } from '$lib/utils/format-pln.js';
-  import type { TaxSummaryRecord, DividendResultRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln } from '#lib/utils/format-pln.js';
+  import type { TaxSummaryRecord, DividendResultRecord } from '#lib/db.js';
   import { TAX_RATE } from '../../core/types.js';
-  import {
-    sumDeductibleWithholding,
-    sumDividendTaxToPay,
-  } from '../../core/tax/aggregates.js';
+  import { dividendBreakdown } from '../../core/tax/aggregates.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
@@ -40,23 +37,23 @@
   );
 
   // --- Dividends breakdown (per-dividend, matching the table) ---
+  const dividendParts = $derived(dividendBreakdown({ rows: dividendResults }));
   const dividendSegments: Segment[] = $derived.by(() => {
-    const total = dividendResults.reduce((s, d) => s + d.amountPln, 0);
-    if (total <= 0) return [];
-
-    const taxPl = total * TAX_RATE;
-    const net = total - taxPl;
-    const deductible = sumDeductibleWithholding({ rows: dividendResults });
-    const toPay = sumDividendTaxToPay({ rows: dividendResults });
-
+    const { net, withholding, taxOwed, addBack } = dividendParts;
     return [
       { label: m.dash_net_profit(), value: net, color: '#10b981' },
-      { label: m.dash_withholding_tax(), value: deductible, color: '#f59e0b' },
-      { label: m.dash_dividend_tax_owed(), value: toPay, color: '#ef4444' },
+      { label: m.dash_withholding_tax(), value: withholding, color: '#f59e0b' },
+      { label: m.dash_dividend_tax_owed(), value: taxOwed, color: '#ef4444' },
+      {
+        label: m.dividend_warning_wht_refund_add_back_badge(),
+        value: addBack,
+        color: '#8b5cf6',
+      },
     ].filter((s) => s.value > 0);
   });
 
-  const dividendTotal = $derived(
+  // The bar is split over the sum of its parts, so the add-back never overflows it.
+  const dividendBarTotal = $derived(
     dividendSegments.reduce((sum, s) => sum + s.value, 0),
   );
 
@@ -145,7 +142,7 @@
       {m.dash_dividend_income()}
     </h3>
     <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
-      {formatPln(dividendTotal)}
+      {formatPln(dividendParts.income)}
     </p>
 
     {#if dividendSegments.length === 0}
@@ -159,8 +156,8 @@
         {#each dividendSegments as seg (seg.label)}
           <div
             class="relative min-w-[2px]"
-            style="width: {pct(seg.value, dividendTotal)}%; background-color: {seg.color}"
-            title="{seg.label}: {formatPln(seg.value)} ({pct(seg.value, dividendTotal)}%)"
+            style="width: {pct(seg.value, dividendBarTotal)}%; background-color: {seg.color}"
+            title="{seg.label}: {formatPln(seg.value)} ({pct(seg.value, dividendBarTotal)}%)"
           ></div>
         {/each}
       </div>
@@ -180,7 +177,7 @@
             <span class="text-slate-700 dark:text-slate-300">
               {formatPln(seg.value)}
               <span class="text-slate-400">
-                ({pct(seg.value, dividendTotal)}%)
+                ({pct(seg.value, dividendBarTotal)}%)
               </span>
             </span>
           </div>

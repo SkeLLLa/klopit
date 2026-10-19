@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { supportedBrokers } from '../src/core/parsers/registry.js';
 import { FAQ_ITEMS } from '../src/lib/constants/faq.js';
 
@@ -15,6 +16,8 @@ type JsonObject = Record<string, unknown>;
 type Messages = Record<string, string>;
 
 async function readJson<T>(path: string): Promise<T> {
+  // Inputs are repo-owned JSON files (package.json, messages/*.json) with known shapes.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return JSON.parse(await readFile(resolve(rootDir, path), 'utf8')) as T;
 }
 
@@ -164,8 +167,14 @@ await writeJson('static/ai/service.json', {
   'availableLanguage': ['English', 'Polish', 'Ukrainian'],
   'dataResidency': 'Browser IndexedDB; no server processing',
   'legalBasis': [
-    'Ustawa o PIT art. 30a (dywidendy, ryczalt 19%)',
-    'Ustawa o PIT art. 30b (zyski kapitalowe)',
+    'Ustawa o PIT art. 30b ust. 1 (zyski kapitalowe, 19%)',
+    'Ustawa o PIT art. 30b ust. 5a-5b (odliczenie podatku zaplaconego za granica)',
+    'Ustawa o PIT art. 30b ust. 6 (zeznanie PIT-38 wg art. 45 ust. 1a pkt 1)',
+    'Ustawa o PIT art. 45 ust. 1 i ust. 1a pkt 1 (termin 15 lutego - 30 kwietnia, odrebne zeznanie)',
+    'Ustawa o PIT art. 30a ust. 1 pkt 4 (dywidendy, ryczalt 19%)',
+    'Ustawa o PIT art. 30a ust. 9 (odliczenie podatku zagranicznego od dywidend, limit 19%)',
+    'Ustawa o PIT art. 11a ust. 1-2 (kurs sredni NBP z ostatniego dnia roboczego poprzedzajacego)',
+    'Ustawa o PIT art. 24 ust. 10 (FIFO, odrebnie dla kazdego rachunku papierow wartosciowych)',
     'Ustawa o PIT art. 9 ust. 3 (rozliczenie strat)',
     'Ordynacja podatkowa art. 63 par. 1a (zaokraglenia)',
     'OECD MTC art. 13 (capital gains)',

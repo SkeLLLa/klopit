@@ -1,16 +1,17 @@
 <script lang="ts">
-  import { Calendar } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { getCachedRates } from '$lib/services/rates.js';
+  import { Calendar } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { db } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { fromDateInput } from '#lib/utils/date-input.js';
+  import { getCachedRates } from '#lib/services/rates.js';
   import {
     formatDate,
     parseDate,
     toDateInput,
     datePlaceholder,
-  } from '$lib/utils/format-date.js';
+  } from '#lib/utils/format-date.js';
 
   pageTitle.set(m.page_rates());
 
@@ -34,11 +35,10 @@
 
   function handlePickerChange() {
     if (!pickerRef?.value) return;
-    const d = new Date(pickerRef.value);
-    if (!isNaN(d.getTime())) {
-      parsedDate = d;
-      fetchDateText = formatDate(d);
-    }
+    const d = fromDateInput(pickerRef.value);
+    if (!d) return;
+    parsedDate = d;
+    fetchDateText = formatDate(d);
   }
 
   async function handleFetch() {
@@ -79,9 +79,9 @@
       byDate[r.date][r.currency] = r.rate;
     }
 
-    const currencies = Object.keys(currencySeen).sort();
+    const currencies = Object.keys(currencySeen).toSorted();
     const pivotedRows = Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .toSorted(([a], [b]) => a.localeCompare(b))
       .map(([date, rates]) => ({
         date,
         rates: currencies.map((c) => rates[c] ?? null),

@@ -4,7 +4,6 @@ import { liveQuery, type Observable } from 'dexie';
 export function useLiveQuery<T>(querier: () => T | Promise<T>): {
   readonly current: T | undefined;
 } {
-  // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
   let data: T | undefined = $state(undefined);
 
   $effect(() => {

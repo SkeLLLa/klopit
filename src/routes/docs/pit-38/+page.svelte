@@ -1,11 +1,11 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight, ExternalLink } from 'lucide-svelte';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import LegalClaim from '#lib/components/docs/LegalClaim.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { ArrowRight, ExternalLink } from '@lucide/svelte';
 
   pageTitle.set(m.page_pit38());
 
@@ -62,7 +62,7 @@
     {
       key: 'art30b',
       label: 'Ustawa o PIT, art. 30b',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
       quote: '„podatek dochodowy wynosi 19% uzyskanego dochodu”',
     },
     {
@@ -74,7 +74,7 @@
     {
       key: 'art9',
       label: 'Ustawa o PIT, art. 9 ust. 3',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
       quote: '„nie może przekroczyć 50% wysokości tej straty”',
     },
     {
@@ -103,7 +103,6 @@
       {m.page_pit38_sec1_title()}
     </h2>
     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
       {@html m.page_pit38_sec1_body()}
       {@render citations(['pit38Forms', 'art30b', 'art30a'])}
     </p>
@@ -126,7 +125,6 @@
       {m.page_pit38_sec3_title({ year: yearStr })}
     </h2>
     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
       {@html m.page_pit38_sec3_body({ year: yearStr, deadline })}
       {@render citations(['pit38Forms'])}
     </p>
@@ -136,7 +134,6 @@
     <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
       {m.page_pit38_sec4_title()}
     </h2>
-    <!-- eslint-disable svelte/no-at-html-tags -- i18n messages, compile-time constants -->
     <ul class="list-disc space-y-2 pl-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
       <li>{@html m.page_pit38_sec4_c()}{@render citations(['art30b'])}</li>
       <li>{@html m.page_pit38_sec4_d()}{@render citations(['art30b', 'art9'])}</li>
@@ -144,7 +141,6 @@
       <li>{@html m.page_pit38_sec4_j()}</li>
       <li>{@html m.page_pit38_sec4_pitzg()}</li>
     </ul>
-    <!-- eslint-enable svelte/no-at-html-tags -->
   </section>
 
   <section id="instrukcja" class="space-y-3 scroll-mt-20">
@@ -155,7 +151,6 @@
       class="list-decimal space-y-2 pl-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300"
     >
       {#each steps as step, i (i)}
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
         <li>{@html linkify(step.msg, step.href)}</li>
       {/each}
     </ol>
@@ -166,7 +161,6 @@
       {m.page_pit38_sec6_title()}
     </h2>
     <p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -- i18n message, compile-time constant -->
       {@html m.page_pit38_sec6_intro()}
       {@render citations(['pit38Forms'])}
     </p>

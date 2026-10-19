@@ -6,6 +6,7 @@ export type {
   RawCreditInterest,
   CorporateAction,
   CarryInPosition,
+  EnrichedCarryInPosition,
   TransactionFee,
   ParsedStatement,
   TradeResult,
@@ -38,6 +39,12 @@ export { applyStockSplit, applyMerger } from './tax/corporate-actions.js';
 export type { FifoLot, MergerResult } from './tax/corporate-actions.js';
 export { buildPit38 } from './tax/pit38.js';
 export { roundToFullPln, roundToGroszUp } from './tax/rounding.js';
+export {
+  OPP_RATE_PER_MILLE,
+  oppAmountPln,
+  oppAmountTenGrosze,
+  oppTaxDueBase,
+} from './tax/opp.js';
 
 // Portfolio
 export { analyzePortfolio } from './portfolio/analyzer.js';

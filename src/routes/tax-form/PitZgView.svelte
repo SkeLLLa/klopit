@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Info } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
+  import { Info } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
   import type { PitZgFields } from '../../core/types.js';
   import SectionHeader from './SectionHeader.svelte';
   import FormField from './FormField.svelte';
@@ -18,6 +18,22 @@
     {m.tax_pitzg_title({ country: titleCountry })}
   </h2>
 
+  {#if !pitZg.required}
+    {#if hasCapitalGains || !hasDividends}
+      <p
+        class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+      >
+        {m.tax_pitzg_not_required_notice()}
+      </p>
+    {/if}
+    {#if hasDividends}
+      <p
+        class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+      >
+        {m.tax_pitzg_not_required_dividend_notice()}
+      </p>
+    {/if}
+  {/if}
   <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
     <div class="space-y-0.5">
       <FormField

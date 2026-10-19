@@ -2,7 +2,7 @@ export interface NavItem {
   labelKey: string;
   href: string;
   icon: string;
-  children?: NavItem[];
+  children?: NavItem[] | undefined;
 }
 
 export interface NavSection {
@@ -73,6 +73,21 @@ export const navigation: NavSection[] = [
                 icon: 'FileText',
               },
             ],
+          },
+          {
+            labelKey: 'nav_docs_schwab',
+            href: '/docs/schwab',
+            icon: 'FileText',
+          },
+          {
+            labelKey: 'nav_docs_revolut',
+            href: '/docs/revolut',
+            icon: 'FileText',
+          },
+          {
+            labelKey: 'nav_docs_alternatives',
+            href: '/docs/alternatives',
+            icon: 'FileText',
           },
           {
             labelKey: 'nav_faq',

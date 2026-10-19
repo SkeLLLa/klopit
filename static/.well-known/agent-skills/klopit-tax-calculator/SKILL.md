@@ -25,7 +25,7 @@ Use this skill when a user asks about kloPIT's capabilities, supported broker im
 ## Supported Tasks
 
 - Explain which tax forms and workflows kloPIT supports: PIT-38, PIT/ZG, FIFO capital gains, NBP exchange rates, dividend withholding credit, credit interest, prior-year loss carryforward, and carry-in positions.
-- Identify supported import sources from the public metadata and docs, including Interactive Brokers CSV, IBI Capital PDF, Charles Schwab CSV, and manual entry.
+- Identify supported import sources from the public metadata and docs, including Interactive Brokers CSV, IBI Capital PDF, Charles Schwab CSV (partial: ESPP deposits, RSU vests and sales; no dividends or withholding), and manual entry.
 - Point users to relevant public documentation pages from `llms.txt`.
 - Summarize the privacy, license, and open-source posture using public metadata.
 

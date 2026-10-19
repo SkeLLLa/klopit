@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+
 import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures', 'ib');

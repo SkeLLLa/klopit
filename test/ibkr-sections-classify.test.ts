@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { classifySection } from '../src/core/parsers/ibkr/sections.js';
 
 void describe('classifySection', () => {
@@ -24,13 +25,13 @@ void describe('classifySection', () => {
       classifySection({ section: 'Change in Dividend Accruals' }),
       'supported',
     );
+    assert.equal(
+      classifySection({ section: 'Account Information' }),
+      'supported',
+    );
   });
 
   void it('classifies ignorable sections', () => {
-    assert.equal(
-      classifySection({ section: 'Account Information' }),
-      'ignorable',
-    );
     assert.equal(classifySection({ section: 'Net Asset Value' }), 'ignorable');
     assert.equal(classifySection({ section: 'Change in NAV' }), 'ignorable');
     assert.equal(classifySection({ section: 'Cash Report' }), 'ignorable');
@@ -83,5 +84,12 @@ void describe('classifySection', () => {
     assert.equal(classifySection({ section: 'Foobar' }), 'unknown');
     assert.equal(classifySection({ section: '' }), 'unknown');
     assert.equal(classifySection({ section: 'Unknown Section' }), 'unknown');
+  });
+
+  void it('ignores the Payment In Lieu Of Dividends summary section', () => {
+    assert.equal(
+      classifySection({ section: 'Payment In Lieu Of Dividends' }),
+      'ignorable',
+    );
   });
 });

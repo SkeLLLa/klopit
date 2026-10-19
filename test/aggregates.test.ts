@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import {
   capitalGainsTax,
   groupByCountry,
   paymentSummaryAmount,
+  sectionGForeignFlatTax,
   roundedCapitalGainsBase,
   roundedCapitalGainsTaxDue,
-  roundedDividendCredit,
-  roundedDividendDifference,
-  roundedDividendTax,
   sumCost,
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
@@ -276,53 +275,106 @@ void describe('groupByCountry', () => {
 
 // ---- Rounded helpers ----
 
-void describe('roundedDividendTax', () => {
-  void it('returns exact value for clean amount (PIT-38 poz 47)', () => {
-    assert.equal(roundedDividendTax({ totalIncomePln: 1000 }), 190);
+const noInterest = { interestIncomePln: 0, interestForeignTaxPln: 0 };
+const noDividends = { dividendIncomePln: 0, dividendDeductiblePln: 0 };
+
+void describe('sectionGForeignFlatTax', () => {
+  void it('rounds dividend due half-up to full PLN (40.50 -> 41)', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: 149.5,
+      ...noInterest,
+    });
+    assert.equal(r.poz47, 190);
+    assert.equal(r.poz48, 149.5);
+    assert.equal(r.poz49, 41);
   });
 
-  void it('ceils fractional grosze', () => {
-    assert.equal(roundedDividendTax({ totalIncomePln: 33.33 }), 6.34);
+  void it('drops dividend due under 50 gr (40.49 -> 40)', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: 1002.6,
+      dividendDeductiblePln: 150,
+      ...noInterest,
+    });
+    assert.equal(r.poz47, 190.49);
+    assert.equal(r.poz49, 40);
   });
 
-  void it('returns 0 for zero income', () => {
-    assert.equal(roundedDividendTax({ totalIncomePln: 0 }), 0);
-  });
-});
-
-void describe('roundedDividendCredit', () => {
-  void it('caps at dividend tax (PIT-38 poz 48)', () => {
-    assert.equal(
-      roundedDividendCredit({ deductiblePln: 200, dividendTax: 190 }),
-      190,
-    );
+  void it('rounds interest tax up to the grosz (art. 63 § 1a)', () => {
+    const r = sectionGForeignFlatTax({
+      ...noDividends,
+      interestIncomePln: 33.33,
+      interestForeignTaxPln: 0,
+    });
+    assert.equal(r.poz47, 6.34);
+    assert.equal(r.poz48, 0);
+    assert.equal(r.poz49, 6.34);
   });
 
-  void it('returns deductible when less than tax', () => {
-    assert.equal(
-      roundedDividendCredit({ deductiblePln: 150, dividendTax: 190 }),
-      150,
-    );
+  void it('rounds the interest base up before applying the rate', () => {
+    const r = sectionGForeignFlatTax({
+      ...noDividends,
+      interestIncomePln: 33.331,
+      interestForeignTaxPln: 0,
+    });
+    // base 33.34 * 0.19 = 6.3346 -> 6.34
+    assert.equal(r.interest.tax, 6.34);
   });
 
-  void it('rounds to 2 decimal places', () => {
-    assert.equal(
-      roundedDividendCredit({ deductiblePln: 15.005, dividendTax: 20 }),
-      15.01,
-    );
-  });
-});
-
-void describe('roundedDividendDifference', () => {
-  void it('ceils to grosz (PIT-38 poz 49)', () => {
-    assert.equal(
-      roundedDividendDifference({ dividendTax: 190, credit: 150 }),
-      40,
-    );
+  void it('combines parts per component (mixed)', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: 149.5,
+      interestIncomePln: 33.33,
+      interestForeignTaxPln: 0,
+    });
+    assert.equal(r.poz47, 196.34);
+    assert.equal(r.poz48, 149.5);
+    assert.equal(r.poz49, 47.34);
   });
 
-  void it('returns 0 when credit >= tax', () => {
-    assert.equal(roundedDividendDifference({ dividendTax: 19, credit: 19 }), 0);
+  void it('caps each credit at its own part (art. 30a ust. 9)', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: 500,
+      interestIncomePln: 100,
+      interestForeignTaxPln: 0,
+    });
+    assert.equal(r.dividend.credit, 190);
+    assert.equal(r.poz48, 190);
+    assert.equal(r.poz49, 19);
+  });
+
+  void it('rounds the grosz-rounded dividend difference to full PLN', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: 2.6053,
+      dividendDeductiblePln: 0,
+      ...noInterest,
+    });
+    assert.equal(r.poz47, 0.5);
+    assert.equal(r.poz49, 1);
+  });
+
+  void it('clamps negative inputs to zero', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: -100,
+      dividendDeductiblePln: -5,
+      interestIncomePln: -50,
+      interestForeignTaxPln: -1,
+    });
+    assert.deepEqual([r.poz47, r.poz48, r.poz49], [0, 0, 0]);
+    const c = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: -50,
+      ...noInterest,
+    });
+    assert.equal(c.poz48, 0);
+    assert.equal(c.poz49, 190);
+  });
+
+  void it('returns zeros for no income', () => {
+    const r = sectionGForeignFlatTax({ ...noDividends, ...noInterest });
+    assert.deepEqual([r.poz47, r.poz48, r.poz49], [0, 0, 0]);
   });
 });
 

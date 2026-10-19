@@ -1,6 +1,7 @@
-import { FAQ_ITEMS } from '$lib/constants/faq.js';
-import { m } from '$lib/paraglide/messages.js';
-import { getLocale } from '$lib/paraglide/runtime';
+import { FAQ_ITEMS } from '#lib/constants/faq.js';
+import { faqMessages } from '#lib/faq-messages.js';
+import { m } from '#lib/paraglide/messages.js';
+import { getLocale } from '#lib/paraglide/runtime.js';
 
 const SITE_URL = 'https://klopit.co.pl';
 const localeTags = {
@@ -8,8 +9,6 @@ const localeTags = {
   pl: 'pl-PL',
   uk: 'uk-UA',
 } as const;
-
-const messages = m as unknown as Record<string, () => string>;
 
 function localizedUrl(
   pathname: string,
@@ -27,6 +26,8 @@ export const load = () => {
     meta: {
       title: m.page_faq_meta_title(),
       description: m.page_faq_meta_description(),
+      datePublished: '2026-04-12',
+      dateModified: '2026-10-19',
       jsonLd: {
         '@type': 'FAQPage',
         '@id': `${pageUrl}#faq`,
@@ -36,10 +37,10 @@ export const load = () => {
         'inLanguage': localeTags[locale],
         'mainEntity': FAQ_ITEMS.map((faq) => ({
           '@type': 'Question',
-          'name': messages[faq.questionKey](),
+          'name': faqMessages[faq.questionKey](),
           'acceptedAnswer': {
             '@type': 'Answer',
-            'text': messages[faq.answerKey](),
+            'text': faqMessages[faq.answerKey](),
           },
         })),
       },

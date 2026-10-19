@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import type { ImportedFileRecord } from '$lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import type { ImportedFileRecord } from '#lib/db.js';
 
   let { files }: { files: ImportedFileRecord[] } = $props();
 </script>

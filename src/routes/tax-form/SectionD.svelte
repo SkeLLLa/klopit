@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
+  import { AlertTriangle } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
   import type { Pit38Fields } from '../../core/types.js';
   import type { ApplyLossCarryForwardResult } from '../../core/tax/loss-carry-forward.js';
-  import { formatPlnValue } from '$lib/utils/format-pln.js';
+  import { formatPlnValue } from '#lib/utils/format-pln.js';
   import SectionHeader from './SectionHeader.svelte';
   import FormField from './FormField.svelte';
 
@@ -12,7 +12,7 @@
     lossDeduction,
   }: {
     pit38: Pit38Fields;
-    lossDeduction?: ApplyLossCarryForwardResult;
+    lossDeduction?: ApplyLossCarryForwardResult | undefined;
   } = $props();
 
   const perYear = $derived(lossDeduction?.perYear ?? []);

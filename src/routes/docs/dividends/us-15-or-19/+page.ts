@@ -1,5 +1,5 @@
-import type { GroundingSource } from '$lib/components/docs/grounding';
-import { getLocale, type Locale } from '$lib/paraglide/runtime';
+import type { GroundingSource } from '#lib/components/docs/grounding.js';
+import { getLocale, type Locale } from '#lib/paraglide/runtime.js';
 
 interface DividendPageContent {
   metaTitle: string;
@@ -38,7 +38,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
     metaDescription:
       'US dividends in PIT-38: when the 15% treaty credit applies, when a broker withholds 19% or 30%, the credit limit, art. 30a, and foreign refund options.',
     pageTitle: 'US dividends in PIT-38',
-    updatedLabel: 'Last updated: April 27, 2026',
+    updatedLabel: 'Last updated: October 19, 2026',
     h1: 'US dividends in PIT-38: 15% or 19%?',
     intro:
       'Short answer: Poland applies a 19% flat tax to US dividends. Under the Poland-US tax treaty you can credit foreign tax only up to 15% of the gross dividend. If the broker withheld 30% or 19%, the excess above 15 percentage points does not reduce Polish tax.',
@@ -114,7 +114,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       },
       {
         q: 'Do I need PIT/ZG for US dividends?',
-        a: 'Yes. Foreign dividends require a PIT/ZG attachment per country. The source country is the issuer residence, so for US companies you use the USA, not the exchange where the shares trade.',
+        a: "No. Foreign dividends are taxed under art. 30a and settled in PIT-38 section G, including the foreign tax credit. PIT/ZG has no field for dividends: its part C.3 covers only income under art. 30b, such as share sales. The source country still matters for the treaty credit cap. It is the issuer's residence, so for US companies it is the USA, not the country of the exchange where the shares trade.",
       },
       {
         q: 'How do I convert a USD dividend to PLN?',
@@ -126,7 +126,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       },
     ],
     relatedLinks: [
-      { label: 'PIT/ZG for dividends', href: '/docs/pit-zg' },
+      { label: 'PIT/ZG and dividends', href: '/docs/pit-zg' },
       { label: 'W-8BEN in IBKR', href: '/docs/ibkr/w8ben' },
       { label: 'PIT-38 FAQ', href: '/docs/faq' },
     ],
@@ -141,7 +141,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       {
         key: 'art11a',
         label: 'Polish PIT Act, article 11a',
-        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
         quote:
           '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
@@ -166,7 +166,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       'Calculate 19% Polish tax on the gross PLN amount.',
       'Calculate the treaty limit: 15% of the gross PLN amount.',
       'Treat WHT above the limit as non-creditable in Poland.',
-      'Enter the values in section G of PIT-38 and the relevant PIT/ZG attachment.',
+      'Enter the values in section G of PIT-38. Dividends do not need a PIT/ZG attachment.',
     ],
   },
   pl: {
@@ -174,7 +174,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
     metaDescription:
       'Dywidendy USA w PIT-38: kiedy 15% (UPO + W-8BEN), kiedy 19% (IB pobiera bez W-8BEN). Limit odliczenia, art. 30a, jak odzyskać nadpłatę za granicą.',
     pageTitle: 'Dywidendy USA w PIT-38',
-    updatedLabel: 'Ostatnia aktualizacja: 27 kwietnia 2026',
+    updatedLabel: 'Ostatnia aktualizacja: 19 października 2026',
     h1: 'Dywidendy USA w PIT-38: 15% czy 19%?',
     intro:
       'Krótka odpowiedź: Polska stosuje 19% zryczałtowanego podatku od dywidend amerykańskich. Z UPO Polska-USA odliczasz maksymalnie 15% podatku zapłaconego za granicą. Jeśli broker pobrał 30% albo 19%, nadwyżka ponad 15 pp nie zmniejsza polskiego podatku.',
@@ -250,7 +250,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       },
       {
         q: 'Czy potrzebuję PIT/ZG przy dywidendach USA?',
-        a: 'Tak. Dywidendy zagraniczne wymagają załącznika PIT/ZG per kraj. Krajem źródła jest rezydencja emitenta, więc dla amerykańskich spółek wpisujesz USA, a nie giełdę notowania.',
+        a: 'Nie. Dywidendy zagraniczne są opodatkowane na podstawie art. 30a i rozliczane w sekcji G PIT-38, łącznie z odliczeniem podatku zapłaconego za granicą. PIT/ZG nie ma pozycji na dywidendy: jego część C.3 dotyczy wyłącznie dochodów z art. 30b, np. ze zbycia akcji. Kraj źródła nadal ma znaczenie dla limitu odliczenia z umowy. Jest nim rezydencja emitenta, więc dla amerykańskich spółek to USA, a nie kraj giełdy notowania.',
       },
       {
         q: 'Jak przeliczyć dywidendę USD na PLN?',
@@ -262,7 +262,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       },
     ],
     relatedLinks: [
-      { label: 'PIT/ZG dla dywidend', href: '/docs/pit-zg' },
+      { label: 'PIT/ZG a dywidendy', href: '/docs/pit-zg' },
       { label: 'W-8BEN w IBKR', href: '/docs/ibkr/w8ben' },
       { label: 'FAQ PIT-38', href: '/docs/faq' },
     ],
@@ -277,7 +277,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       {
         key: 'art11a',
         label: 'Ustawa o PIT, art. 11a',
-        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
         quote:
           '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
@@ -302,7 +302,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       'Oblicz 19% polskiego podatku od brutto PLN.',
       'Oblicz limit UPO: 15% brutto PLN.',
       'Nadwyżkę WHT ponad limit potraktuj jako nieodliczalną w Polsce.',
-      'Wpisz wartości w sekcję G PIT-38 oraz odpowiedni PIT/ZG.',
+      'Wpisz wartości w sekcji G PIT-38. Dywidendy nie wymagają załącznika PIT/ZG.',
     ],
   },
   uk: {
@@ -310,7 +310,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
     metaDescription:
       'Дивіденди США в PIT-38: коли діє кредит 15% за угодою і W-8BEN, коли брокер утримує 19% або 30%, ліміт відрахування, ст. 30a та повернення надплати за кордоном.',
     pageTitle: 'Дивіденди США в PIT-38',
-    updatedLabel: 'Останнє оновлення: 27 квітня 2026',
+    updatedLabel: 'Останнє оновлення: 19 жовтня 2026',
     h1: 'Дивіденди США в PIT-38: 15% чи 19%?',
     intro:
       'Коротко: Польща застосовує 19% фіксований податок до дивідендів зі США. За податковою угодою Польща-США можна зарахувати іноземний податок лише до 15% валової дивіденди. Якщо брокер утримав 30% або 19%, надлишок понад 15 процентних пунктів не зменшує польський податок.',
@@ -386,7 +386,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       },
       {
         q: 'Чи потрібен PIT/ZG для дивідендів США?',
-        a: 'Так. Іноземні дивіденди потребують додатка PIT/ZG окремо для кожної країни. Країна джерела - це резидентство емітента, тому для американських компаній вказується США, а не біржа торгів.',
+        a: 'Ні. Іноземні дивіденди оподатковуються за ст. 30a і декларуються в секції G PIT-38 разом із зарахуванням податку, сплаченого за кордоном. У PIT/ZG немає позицій для дивідендів: частина C.3 стосується лише доходів за ст. 30b, зокрема від продажу акцій. Країна джерела все одно важлива для ліміту зарахування за договором. Це резидентство емітента, тому для американських компаній це США, а не країна біржі торгів.',
       },
       {
         q: 'Як перерахувати дивіденд USD у PLN?',
@@ -398,7 +398,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       },
     ],
     relatedLinks: [
-      { label: 'PIT/ZG для дивідендів', href: '/docs/pit-zg' },
+      { label: 'PIT/ZG і дивіденди', href: '/docs/pit-zg' },
       { label: 'W-8BEN в IBKR', href: '/docs/ibkr/w8ben' },
       { label: 'FAQ PIT-38', href: '/docs/faq' },
     ],
@@ -413,7 +413,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       {
         key: 'art11a',
         label: 'Польський закон про PIT, ст. 11a',
-        href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+        href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
         quote:
           '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
       },
@@ -438,7 +438,7 @@ const contentByLocale: Record<Locale, DividendPageContent> = {
       'Розрахуйте польський податок 19% від валової суми PLN.',
       'Розрахуйте ліміт угоди: 15% від валової суми PLN.',
       'Надлишок WHT понад ліміт вважайте таким, що не зараховується в Польщі.',
-      'Внесіть значення до секції G PIT-38 та відповідного додатка PIT/ZG.',
+      'Внесіть значення до секції G PIT-38. Додаток PIT/ZG для дивідендів не потрібен.',
     ],
   },
 };

@@ -3,6 +3,7 @@ import type {
   BrokerId,
   ImportWarning,
   ParsedStatement,
+  SellToCoverDetail,
   SkippedRow,
 } from '../../core/types.js';
 import {
@@ -15,7 +16,15 @@ import {
   type TransactionFeeRecord,
   type WithholdingTaxRecord,
 } from '../db.js';
+import { isCarryInCostMissing } from './carry-in.js';
+import { deriveImportWarnings } from './import-warnings.js';
+import { symbolsMissingIncentiveRegime } from './incentive.js';
 import { addImportedFile, appendImportWarnings } from './session.js';
+
+export {
+  deriveImportWarnings,
+  mergeImportWarnings,
+} from './import-warnings.js';
 
 export interface ImportFileArgs {
   sessionId: string;
@@ -34,6 +43,10 @@ export async function importFile(args: ImportFileArgs): Promise<{
   creditInterestCount: number;
   warnings: ImportWarning[];
   skippedRows: SkippedRow[];
+  /** Symbols whose RSU / ESPP lots in this file have no regime yet. */
+  incentiveSymbolsMissingRegime: string[];
+  /** Vests where the broker sold or withheld shares for taxes. */
+  sellToCover: SellToCoverDetail[];
 }> {
   const definition = getParserDefinition({ brokerId: args.brokerId });
   const result: ParsedStatement = await runParser({
@@ -42,9 +55,13 @@ export async function importFile(args: ImportFileArgs): Promise<{
   });
   const warnings = deriveImportWarnings({ skippedRows: result.skippedRows });
 
+  // Parsers without per-account data (IBI, Schwab) get one default account.
+  const defaultAccount = `${result.broker}:default`;
+
   // Store parsed trades
   const trades: TradeRecord[] = result.trades.map((t) => ({
     ...t,
+    account: t.account ?? defaultAccount,
     sessionId: args.sessionId,
   }));
 
@@ -81,14 +98,19 @@ export async function importFile(args: ImportFileArgs): Promise<{
   const corporateActions: CorporateActionRecord[] = result.corporateActions.map(
     (ca) => ({
       ...ca,
+      account: ca.account ?? defaultAccount,
       sessionId: args.sessionId,
     }),
   );
 
-  // Store carry-in positions
+  // Store carry-in positions. Broker statements carry no acquisition cost,
+  // so mark it explicitly as missing; the Data page asks the user for it.
   const carryInPositions: CarryInPositionRecord[] = result.carryInPositions.map(
     (p) => ({
       ...p,
+      costBasisSource:
+        p.costBasisSource ?? (isCarryInCostMissing(p) ? 'missing' : 'user'),
+      account: p.account ?? defaultAccount,
       sessionId: args.sessionId,
     }),
   );
@@ -143,6 +165,10 @@ export async function importFile(args: ImportFileArgs): Promise<{
     creditInterestCount: result.creditInterests.length,
     warnings,
     skippedRows: result.skippedRows,
+    incentiveSymbolsMissingRegime: symbolsMissingIncentiveRegime(result.trades),
+    sellToCover: result.warnings.flatMap((w) =>
+      w.sellToCover ? [w.sellToCover] : [],
+    ),
   };
 }
 
@@ -160,87 +186,4 @@ async function runParser(args: {
   }
   const buffer = await args.file.arrayBuffer();
   return args.definition.parse({ buffer });
-}
-
-export function deriveImportWarnings(args: {
-  skippedRows: SkippedRow[];
-}): ImportWarning[] {
-  return buildImportWarnings(
-    args.skippedRows.map((row) => ({
-      section: row.section,
-      kind: row.kind,
-      rowCount: 1,
-    })),
-  );
-}
-
-/**
- * Merge a list of ImportWarnings, collapsing duplicate (section, kind) entries
- * by summing rowCount and regenerating the message. Used when appending new
- * warnings onto an existing session record so a second file import that
- * produces the same section/kind doesn't create a duplicate entry (which would
- * crash Svelte's keyed each block in the warning banner).
- */
-export function mergeImportWarnings(args: {
-  warnings: readonly ImportWarning[];
-}): ImportWarning[] {
-  return buildImportWarnings(
-    args.warnings.map((warning) => ({
-      section: warning.section,
-      kind: warning.kind,
-      rowCount: warning.rowCount,
-    })),
-  );
-}
-
-function buildImportWarnings(
-  entries: Iterable<{
-    section: string;
-    kind: SkippedRow['kind'];
-    rowCount: number;
-  }>,
-): ImportWarning[] {
-  const groups = new Map<
-    string,
-    { section: string; kind: SkippedRow['kind']; rowCount: number }
-  >();
-
-  for (const entry of entries) {
-    const key = `${entry.section}::${entry.kind}`;
-    const current = groups.get(key);
-    if (current) {
-      current.rowCount += entry.rowCount;
-    } else {
-      groups.set(key, { ...entry });
-    }
-  }
-
-  return [...groups.values()]
-    .sort((a, b) =>
-      a.section === b.section
-        ? a.kind.localeCompare(b.kind)
-        : a.section.localeCompare(b.section),
-    )
-    .map((group) => ({
-      section: group.section,
-      kind: group.kind,
-      rowCount: group.rowCount,
-      message: formatImportWarningMessage(group),
-    }));
-}
-
-function formatImportWarningMessage(args: {
-  section: string;
-  kind: SkippedRow['kind'];
-  rowCount: number;
-}): string {
-  const count = String(args.rowCount);
-  switch (args.kind) {
-    case 'known-unsupported':
-      return `${args.section}: ${count} rows skipped (section not yet supported)`;
-    case 'unknown':
-      return `Unknown section '${args.section}': ${count} rows skipped`;
-    case 'parse-failure':
-      return `${args.section}: ${count} rows failed to parse`;
-  }
 }

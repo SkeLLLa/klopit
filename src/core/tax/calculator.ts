@@ -1,6 +1,6 @@
 import {
   TAX_RATE,
-  type CarryInPosition,
+  type EnrichedCarryInPosition,
   type CreditInterestResult,
   type DividendResult,
   type EnrichedCorporateAction,
@@ -21,38 +21,42 @@ import {
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
   sumDeductibleWithholding,
+  sumDividendAddBack,
   sumDividendIncome,
   sumProceeds,
   sumWithholding,
 } from './aggregates.js';
-import { calculateCapitalGains } from './capital-gains.js';
+import { calculateCapitalGains, type CarryInWarning } from './capital-gains.js';
 import { calculateCreditInterest } from './credit-interest.js';
 import { calculateDividends } from './dividends.js';
-import {
-  applyLossCarryForward,
-  type ApplyLossCarryForwardResult,
-} from './loss-carry-forward.js';
+import { type ApplyLossCarryForwardResult } from './loss-carry-forward.js';
 import { buildPitZg } from './pit-zg.js';
-import { buildPit38 } from './pit38.js';
+import { buildPit38, computeLossDeduction } from './pit38.js';
 
 export interface CalculateTaxesArgs {
   trades: EnrichedTrade[];
   dividends: EnrichedRawDividend[];
-  transactionFees?: TransactionFee[];
-  creditInterests?: EnrichedCreditInterest[];
+  transactionFees?: TransactionFee[] | undefined;
+  creditInterests?: EnrichedCreditInterest[] | undefined;
   withholdingTaxes: EnrichedWithholdingTax[];
   corporateActions: EnrichedCorporateAction[];
-  carryInPositions: CarryInPosition[];
+  carryInPositions: EnrichedCarryInPosition[];
   /**
    * Prior-year capital losses (art. 9 ust. 3 updof). Replaces the legacy
-   * single-number `priorYearLoss` field — each year carries its own
-   * residual and 50%-per-year cap.
+   * single-number `priorYearLoss` field — each year carries its own residual
+   * and 50%-per-year cap.
    */
-  priorLosses?: PriorYearLoss[];
+  priorLosses?: PriorYearLoss[] | undefined;
   taxPeriod: TaxPeriod;
-  symbolCountryMap?: Map<string, string>;
-  showDividendsInPitZg?: boolean;
-  reduceAdrFeesFromDividends?: boolean;
+  symbolCountryMap?: Map<string, string> | undefined;
+  /**
+   * Country map for dividends: `symbolCountryMap` plus the ADR issuer country.
+   * Defaults to `symbolCountryMap`.
+   */
+  dividendSymbolCountryMap?: Map<string, string> | undefined;
+  adrCountryConflicts?: ReadonlySet<string> | undefined;
+  showDividendsInPitZg?: boolean | undefined;
+  reduceAdrFeesFromDividends?: boolean | undefined;
 }
 
 export interface TaxCalculationResult {
@@ -64,6 +68,8 @@ export interface TaxCalculationResult {
   pitZg: PitZgFields[];
   /** Per-year breakdown of how prior-year losses were applied. */
   lossDeduction: ApplyLossCarryForwardResult;
+  /** Carry-ins (partly) covered by imported prior-year trades. */
+  carryInWarnings: CarryInWarning[];
 }
 
 /** Orchestrate full tax calculation pipeline */
@@ -84,12 +90,14 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
 
   const countryMap = args.symbolCountryMap ?? new Map<string, string>();
 
+  const carryInWarnings: CarryInWarning[] = [];
   const tradeResults = calculateCapitalGains({
     trades,
     corporateActions,
     carryInPositions,
     taxPeriod,
     symbolCountryMap: countryMap,
+    onWarning: (warning) => carryInWarnings.push(warning),
   });
 
   const dividendResults = calculateDividends({
@@ -98,21 +106,24 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     transactionFees,
     reduceAdrFeesFromDividends: reduceAdrFeesFromDividends ?? false,
     taxPeriod,
-    symbolCountryMap: countryMap,
+    symbolCountryMap: args.dividendSymbolCountryMap ?? countryMap,
+    adrCountryConflicts: args.adrCountryConflicts,
+    isinCountryMap: countryMap,
+    sells: trades
+      .filter((trade) => trade.type === 'sell')
+      .map((trade) => ({ symbol: trade.symbol, date: trade.datetime })),
   });
   const creditInterestResults = calculateCreditInterest({
     creditInterests,
     taxPeriod,
   });
 
-  const gainPln = Math.max(
-    sumProceeds({ rows: tradeResults }) - sumCost({ rows: tradeResults }),
-    0,
-  );
-  const lossDeduction = applyLossCarryForward({
-    gainPln,
+  // Single source of truth for poz. 30: computed from the grosz-rounded
+  // poz. 28 and shared by the summary, the breakdown and PIT-38.
+  const lossDeduction = computeLossDeduction({
+    trades: tradeResults,
     priorLosses: priorLosses ?? [],
-    currentYear: taxPeriod.year,
+    year: taxPeriod.year,
   });
 
   const summary = buildSummary({
@@ -121,6 +132,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     creditInterestResults,
     year: taxPeriod.year,
     lossDeduction,
+    carryInWarnings,
   });
 
   const pit38 = buildPit38({
@@ -129,11 +141,14 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     creditInterests: creditInterestResults,
     summary,
     priorLosses,
+    lossDeduction,
   });
   const pitZg = buildPitZg({
     trades: tradeResults,
     dividends: dividendResults,
     showDividends: showDividendsInPitZg ?? false,
+    taxBeforeCreditPln: pit38[33],
+    totalIncomePln: pit38[28],
   });
 
   return {
@@ -144,6 +159,7 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     pit38,
     pitZg,
     lossDeduction,
+    carryInWarnings,
   };
 }
 
@@ -153,6 +169,7 @@ function buildSummary(args: {
   creditInterestResults: CreditInterestResult[];
   year: number;
   lossDeduction: ApplyLossCarryForwardResult;
+  carryInWarnings: CarryInWarning[];
 }): TaxSummary {
   const totalProceedsPln = sumProceeds({ rows: args.tradeResults });
   const totalCostPln = sumCost({ rows: args.tradeResults });
@@ -170,10 +187,12 @@ function buildSummary(args: {
   const totalCreditInterestForeignTaxPln = sumCreditInterestForeignTax({
     rows: args.creditInterestResults,
   });
-  const dividendTaxOwedPln = Math.max(
-    totalDividendsPln * TAX_RATE - totalDeductibleWithholdingPln,
-    0,
-  );
+  const totalDividendAddBackPln = sumDividendAddBack({
+    rows: args.dividendResults,
+  });
+  const dividendTaxOwedPln =
+    Math.max(totalDividendsPln * TAX_RATE - totalDeductibleWithholdingPln, 0) +
+    totalDividendAddBackPln;
 
   const capitalGainAfterLcfPln = Math.max(
     Math.max(capitalGainPln, 0) - args.lossDeduction.deductedPln,
@@ -191,9 +210,22 @@ function buildSummary(args: {
     totalWithholdingPln,
     totalDeductibleWithholdingPln,
     dividendTaxOwedPln,
+    totalDividendAddBackPln,
     totalCreditInterestPln,
     totalCreditInterestForeignTaxPln,
     capitalGainAfterLcfPln,
     capitalGainTaxPostLcfPln,
+    missingRateCount:
+      args.tradeResults.filter((r) => r.rateUnavailable).length +
+      args.dividendResults.filter((r) => r.rateUnavailable).length +
+      args.creditInterestResults.filter((r) => r.rateUnavailable).length,
+    missingCostCount: args.tradeResults.filter((r) => r.costBasisMissing)
+      .length,
+    inconsistentCarryInCount: args.carryInWarnings.filter(
+      (w) => w.kind === 'carry-in-inconsistent',
+    ).length,
+    unassignedOverlapCount: args.carryInWarnings.filter(
+      (w) => w.kind === 'account-unassigned' && w.overlap,
+    ).length,
   };
 }

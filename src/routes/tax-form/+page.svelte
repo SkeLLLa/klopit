@@ -1,22 +1,26 @@
 <script lang="ts">
-  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { db } from '$lib/db.js';
-  import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from '@lucide/svelte';
   import {
-    calculateSessionTaxes,
-    clearSessionResults,
-  } from '$lib/services/tax.js';
-  import { createLogger } from '$lib/state/logger.svelte.js';
+    copyBlockReason,
+    isTaxFormIncomplete,
+  } from '#lib/utils/tax-form-status.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { db } from '#lib/db.js';
+  import { useLiveQuery } from '#lib/utils/live-query.svelte.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
+  import { calculateSessionTaxes } from '#lib/services/tax.js';
+  import { createLogger } from '#lib/state/logger.svelte.js';
 
   const log = createLogger('tax-form');
-  import { isSessionStale } from '$lib/utils/stale.js';
+  import { isSessionStale } from '#lib/utils/stale.js';
+  import { oppTaxDueBase } from '../../core/tax/opp.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
+  import { setCopyBlock } from './FormField.svelte';
   import PitZgView from './PitZgView.svelte';
+  import { requiredPitZg } from '../../core/tax/pit-zg.js';
   import SectionA from './SectionA.svelte';
   import SectionC from './SectionC.svelte';
   import SectionD from './SectionD.svelte';
@@ -43,18 +47,36 @@
   );
   const taxSummary = $derived(taxSummaryQuery.current);
   const pit38 = $derived(taxSummary?.pit38);
+  // Absent on summaries saved before the field existed: show nothing until
+  // the next (re)calculation fills it in.
+  const missingRateCount = $derived(taxSummary?.missingRateCount ?? 0);
+  // Sells of carry-ins whose acquisition cost is unknown (counted as 0).
+  const missingCostCount = $derived(taxSummary?.missingCostCount ?? 0);
+  // Carry-in snapshots that contradict the imported history (skipped, so the
+  // holdings may include shares that no longer exist).
+  const inconsistentCarryInCount = $derived(taxSummary?.inconsistentCarryInCount ?? 0);
+  // Rows without an account of an instrument also held in an assigned account.
+  const unassignedOverlapCount = $derived(taxSummary?.unassignedOverlapCount ?? 0);
+  const incomplete = $derived(isTaxFormIncomplete(taxSummary));
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,
       dataUpdatedAt: session?.dataUpdatedAt,
     }),
   );
+  // Stale or incomplete results must not be filed: disable copying PIT-38 values.
+  setCopyBlock(() => copyBlockReason({ stale, incomplete }));
 
   type ActiveDocument = 'pit38' | { pitZg: string };
   let activeDocument: ActiveDocument = $state('pit38');
 
   const pitZgList = $derived(taxSummary?.pitZg ?? []);
-  const pitZgCountries = $derived(pitZgList.map((z) => z.country));
+  const pitZgCountries = $derived(
+    requiredPitZg(pitZgList).map((z) => z.country),
+  );
+  const pitZgInformationalCountries = $derived(
+    pitZgList.filter((z) => !z.required).map((z) => z.country),
+  );
   const pitZgMap = $derived(
     new Map(pitZgList.map((z) => [z.country, z])),
   );
@@ -120,22 +142,6 @@
       calculating = false;
     }
   }
-
-  async function handleRecalculate() {
-    if (!sessionId) return;
-    calculating = true;
-    error = null;
-    try {
-      await clearSessionResults({ sessionId });
-      await calculateSessionTaxes({ sessionId });
-    } catch (e) {
-      log.error('handleRecalculate failed', e);
-      error = e instanceof Error ? e.message : String(e);
-    } finally {
-      calculating = false;
-    }
-  }
-
 </script>
 
 <h1 class="sr-only">{m.page_tax_form()}</h1>
@@ -148,7 +154,7 @@
       {m.tax_error_no_session()}
     </p>
     <a
-      href="/data"
+      href={localizeHref('/data')}
       class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
     >
       {m.tax_go_to_data()} <ArrowRight size={14} />
@@ -173,7 +179,7 @@
       {m.tax_error_no_data()}
     </p>
     <a
-      href="/data"
+      href={localizeHref('/data')}
       class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
     >
       {m.tax_go_to_data()} <ArrowRight size={14} />
@@ -181,7 +187,7 @@
   </div>
 {:else if calculating}
   <!-- Calculating -->
-  <div class="flex flex-col items-center justify-center py-24 text-center">
+  <div role="status" class="flex flex-col items-center justify-center py-24 text-center">
     <RefreshCw size={32} class="mb-3 animate-spin text-blue-500" />
     <p class="text-sm text-slate-600 dark:text-slate-400">
       {m.tax_calculating()}
@@ -204,38 +210,103 @@
 {:else if pit38}
   <!-- Tax form with sidebar -->
   <div class="space-y-4">
-    <!-- Stale banner -->
-    {#if stale}
-      <div
-        class="flex items-center justify-between gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
-      >
-        <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-          <AlertTriangle size={16} />
-          <span>{m.tax_stale_banner()}</span>
-        </div>
-        <button
-          onclick={() => void handleRecalculate()}
-          class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
-        >
-          <RefreshCw size={14} />
-          {m.tax_recalculate()}
-        </button>
-      </div>
-    {/if}
-
-    <!-- Recalculate bar -->
+    <!-- Header with recalculate -->
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
         PIT-38 ({session.year})
       </h2>
       <button
-        onclick={() => void handleRecalculate()}
-        class="inline-flex items-center gap-1.5 rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+        type="button"
+        onclick={() => void runCalculation()}
+        class={[
+          'inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium',
+          stale
+            ? 'bg-amber-600 text-white hover:bg-amber-700'
+            : incomplete
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800',
+        ]}
       >
-        <RefreshCw size={14} />
+        <RefreshCw size={14} aria-hidden="true" />
         {m.tax_recalculate()}
       </button>
     </div>
+
+    <!-- Stale banner -->
+    {#if stale}
+      <div
+        role="alert"
+        class="flex items-center gap-3 rounded border border-amber-400 bg-amber-50 px-4 py-2 dark:border-amber-500/60 dark:bg-amber-500/10"
+      >
+        <div class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle size={16} class="shrink-0" aria-hidden="true" />
+          <span>{m.tax_form_stale_banner()}</span>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Incomplete results banner (non-dismissable) -->
+    {#if incomplete}
+      <div
+        role="alert"
+        class="flex items-start justify-between gap-3 rounded border border-red-400 bg-red-50 px-4 py-3 dark:border-red-500/60 dark:bg-red-500/10"
+      >
+        <div class="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
+          <AlertCircle size={16} class="mt-0.5 shrink-0" />
+          <div class="space-y-2">
+            <p class="font-semibold">{m.tax_form_results_incomplete()}</p>
+            {#if missingRateCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_missing_rates_title()}</p>
+                <p>{m.tax_form_missing_rates_body({ count: missingRateCount })}</p>
+                <a
+                  href={localizeHref('/dashboard#trades')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.taxform_see_trades()}
+                </a>
+              </div>
+            {/if}
+            {#if missingCostCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_missing_cost_title()}</p>
+                <p>{m.tax_form_missing_cost_body({ count: missingCostCount })}</p>
+                <a
+                  href={localizeHref('/data#carry-in')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.data_tab_carry_in()}
+                </a>
+              </div>
+            {/if}
+            {#if inconsistentCarryInCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_inconsistent_carry_in_title()}</p>
+                <p>{m.tax_form_inconsistent_carry_in_body({ count: inconsistentCarryInCount })}</p>
+                <a
+                  href={localizeHref('/data#carry-in')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.data_tab_carry_in()}
+                </a>
+              </div>
+            {/if}
+            {#if unassignedOverlapCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_unassigned_overlap_title()}</p>
+                <p>{m.tax_form_unassigned_overlap_body({ count: unassignedOverlapCount })}</p>
+                <a
+                  href={localizeHref('/data')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.nav_data()}
+                </a>
+              </div>
+            {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <!-- Transparency banner -->
     <div
@@ -253,15 +324,24 @@
       </a>
     </div>
 
+    {#if incomplete}
+      <p
+        class="w-fit rounded border-2 border-dashed border-red-500 px-3 py-1 text-sm font-bold tracking-wider text-red-600 uppercase dark:text-red-400"
+      >
+        {m.tax_form_missing_rates_draft()}
+      </p>
+    {/if}
+
     <!-- Sidebar + Content layout -->
     <div class="flex gap-6">
       <DocumentSidebar
         countries={pitZgCountries}
+        informationalCountries={pitZgInformationalCountries}
         {activeDocument}
         onselect={(doc) => (activeDocument = doc)}
       />
 
-      <div class="min-w-0 flex-1">
+      <div class={['min-w-0 flex-1', (incomplete || stale) && 'opacity-60']}>
         {#if typeof activeDocument === 'string'}
           <!-- PIT-38 sections -->
           <div class="space-y-4">
@@ -270,11 +350,14 @@
             <SectionD {pit38} lossDeduction={taxSummary?.lossDeduction} />
             <SectionE {pit38} />
             <SectionF {pit38} />
-            <SectionG {pit38} />
+            <SectionG
+              {pit38}
+              dividendAddBackPln={taxSummary?.totalDividendAddBackPln ?? 0}
+            />
             <SectionH {pit38} />
             <OppDonation
               sessionId={session.id}
-              taxDueBase={pit38[35]}
+              taxDueBase={oppTaxDueBase({ pit38 })}
               krs={session.oppKrs ?? ''}
               details={session.oppDetails ?? ''}
               consent={session.oppConsent ?? false}

@@ -1,17 +1,27 @@
 <script lang="ts">
-  import { Info } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { calculateSessionTaxes } from '$lib/services/tax.js';
-  import { sessionState } from '$lib/state/session.svelte.js';
-  import { updateSession } from '$lib/services/session.js';
-  import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
+  import { Info } from '@lucide/svelte';
+  import DeleteConfirm from '#lib/components/DeleteConfirm.svelte';
+  import { db } from '#lib/db.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import {
+    BackupError,
+    exportBackup,
+    importBackup,
+    readBackupFile,
+    type BackupFile,
+    type BackupErrorCode,
+  } from '#lib/services/backup.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { calculateSessionTaxes } from '#lib/services/tax.js';
+  import { sessionState } from '#lib/state/session.svelte.js';
+  import { updateSession } from '#lib/services/session.js';
+  import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
   import {
     LOG_LEVELS,
     loggerState,
     type LogLevel,
-  } from '$lib/state/logger.svelte.js';
+  } from '#lib/state/logger.svelte.js';
 
   pageTitle.set(m.settings_title());
 
@@ -60,6 +70,91 @@
       error = e instanceof Error ? e.message : String(e);
     } finally {
       saving = false;
+    }
+  }
+
+  let backupFileInput: HTMLInputElement | undefined = $state(undefined);
+  let backupBusy = $state(false);
+  let backupError: string | null = $state(null);
+  let backupMessage: string | null = $state(null);
+  let pendingBackup: BackupFile | null = $state(null);
+
+  const BACKUP_ERROR_MESSAGES: Record<BackupErrorCode, () => string> = {
+    corrupt: () => m.settings_backup_error_corrupt(),
+    format: () => m.settings_backup_error_format(),
+    formatVersion: () => m.settings_backup_error_format_version(),
+    schemaNewer: () => m.settings_backup_error_schema_newer(),
+    schemaOlder: () => m.settings_backup_error_schema_older(),
+    tooLarge: () => m.settings_backup_error_too_large(),
+    invalid: () => m.settings_backup_error_invalid(),
+  };
+
+  function describeBackupError(e: unknown): string {
+    if (e instanceof BackupError) return BACKUP_ERROR_MESSAGES[e.code]();
+    return m.settings_backup_error_generic({
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  async function handleBackupExport() {
+    backupBusy = true;
+    backupError = null;
+    backupMessage = null;
+    try {
+      const text = await exportBackup({ appVersion: __APP_VERSION__ });
+      const url = URL.createObjectURL(
+        new Blob([text], { type: 'application/json' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `klopit-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      backupError = describeBackupError(e);
+    } finally {
+      backupBusy = false;
+    }
+  }
+
+  async function handleBackupFileChosen(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    backupError = null;
+    backupMessage = null;
+    if (!file) return;
+    backupBusy = true;
+    try {
+      // Validate before asking, so a bad file never reaches the confirmation.
+      pendingBackup = await readBackupFile(file);
+    } catch (err) {
+      backupError = describeBackupError(err);
+    } finally {
+      backupBusy = false;
+    }
+  }
+
+  async function handleBackupConfirm() {
+    const backup = pendingBackup;
+    pendingBackup = null;
+    if (backup === null) return;
+    backupBusy = true;
+    try {
+      await importBackup({ backup });
+      // Re-resolve the active session; falls back to the first one when the
+      // previous id is no longer in the restored data.
+      sessionState.init(
+        // oxlint-disable-next-line unicorn/no-array-reverse -- Dexie Collection#reverse(), not Array#reverse()
+        await db.sessions.orderBy('year').reverse().toArray(),
+      );
+      backupMessage = m.settings_backup_success();
+    } catch (e) {
+      backupError = describeBackupError(e);
+    } finally {
+      backupBusy = false;
     }
   }
 
@@ -274,6 +369,67 @@
         </div>
       </section>
     {/if}
+
+    <section
+      class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+    >
+      <div class="space-y-3">
+        <div>
+          <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {m.settings_backup_title()}
+          </h3>
+          <p class="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            {m.settings_backup_description()}
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onclick={handleBackupExport}
+            disabled={backupBusy}
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            {m.settings_backup_export()}
+          </button>
+          <button
+            type="button"
+            onclick={() => backupFileInput?.click()}
+            disabled={backupBusy}
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            {m.settings_backup_import()}
+          </button>
+          <input
+            bind:this={backupFileInput}
+            type="file"
+            accept="application/json,.json"
+            class="hidden"
+            tabindex="-1"
+            aria-hidden="true"
+            onchange={handleBackupFileChosen}
+          />
+        </div>
+
+        <div role="status" aria-live="polite">
+          {#if backupMessage}
+            <p class="text-xs text-green-700 dark:text-green-400">{backupMessage}</p>
+          {/if}
+        </div>
+        {#if backupError}
+          <p role="alert" class="text-xs text-red-600 dark:text-red-400">
+            {backupError}
+          </p>
+        {/if}
+      </div>
+    </section>
+
+    <DeleteConfirm
+      message={m.settings_backup_confirm()}
+      open={pendingBackup !== null}
+      onconfirm={handleBackupConfirm}
+      oncancel={() => (pendingBackup = null)}
+    />
 
     <section
       class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"

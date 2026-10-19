@@ -1,21 +1,24 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
   import {
     FileText,
     Folder,
     ChevronRight,
     ChevronDown,
     MapPin,
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
 
   type ActiveDocument = 'pit38' | { pitZg: string };
 
   let {
     countries,
+    informationalCountries = [],
     activeDocument,
     onselect,
   }: {
     countries: string[];
+    informationalCountries?: string[] | undefined;
     activeDocument: ActiveDocument;
     onselect: (doc: ActiveDocument) => void;
   } = $props();
@@ -33,6 +36,7 @@
   }
 
   const hasPitZg = $derived(countries.length > 0);
+  const hasInformational = $derived(informationalCountries.length > 0);
 </script>
 
 <!-- Desktop sidebar -->
@@ -49,6 +53,7 @@
 
     <!-- PIT-38 -->
     <button
+      aria-current={isActive('pit38') ? 'page' : undefined}
       class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 pl-6 text-left {isActive('pit38') ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}"
       onclick={() => onselect('pit38')}
     >
@@ -57,9 +62,10 @@
     </button>
 
     <!-- PIT/ZG parent -->
-    {#if hasPitZg}
+    {#if hasPitZg || hasInformational}
       <button
         class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 pl-6 text-left text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+        aria-expanded={pitZgExpanded}
         onclick={() => (pitZgExpanded = !pitZgExpanded)}
       >
         {#if pitZgExpanded}
@@ -70,17 +76,42 @@
         {m.tax_sidebar_pitzg()}
       </button>
 
-      <!-- Country children -->
       {#if pitZgExpanded}
+        <!-- Required country children -->
         {#each countries as country (country)}
           <button
             class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 pl-12 text-left {isActive({ pitZg: country }) ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}"
+            aria-current={isActive({ pitZg: country }) ? 'page' : undefined}
             onclick={() => onselect({ pitZg: country })}
           >
             <FileText size={14} />
             {country}
           </button>
         {/each}
+
+        <!-- Countries without credited foreign tax: PIT/ZG not required -->
+        {#if hasInformational}
+          <p
+            id="pitzg-not-required-hint"
+            class="px-2 pt-2 pl-12 text-xs text-slate-600 dark:text-slate-300"
+          >
+            {m.tax_sidebar_pitzg_not_required()}
+          </p>
+          <p class="px-2 pb-1 pl-12 text-xs text-slate-600 dark:text-slate-300">
+            {m.tax_sidebar_pitzg_not_required_hint()}
+          </p>
+          {#each informationalCountries as country (country)}
+            <button
+              class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 pl-12 text-left italic {isActive({ pitZg: country }) ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}"
+              aria-current={isActive({ pitZg: country }) ? 'page' : undefined}
+              aria-describedby="pitzg-not-required-hint"
+              onclick={() => onselect({ pitZg: country })}
+            >
+              <FileText size={14} />
+              {country}
+            </button>
+          {/each}
+        {/if}
       {/if}
     {/if}
   </div>
@@ -88,7 +119,7 @@
   <!-- Country mapping link -->
   <div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-600">
     <a
-      href="/data"
+      href={localizeHref('/data')}
       class="flex items-center gap-1.5 px-2 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
     >
       <MapPin size={12} />
@@ -116,5 +147,12 @@
     {#each countries as country (country)}
       <option value="pitzg:{country}">PIT/ZG — {country}</option>
     {/each}
+    {#if hasInformational}
+      <optgroup label={m.tax_sidebar_pitzg_not_required_group()}>
+        {#each informationalCountries as country (country)}
+          <option value="pitzg:{country}">PIT/ZG — {country}</option>
+        {/each}
+      </optgroup>
+    {/if}
   </select>
 </div>

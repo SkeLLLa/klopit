@@ -18,18 +18,43 @@ export type BrokerId = (typeof BrokerId)[keyof typeof BrokerId];
 // ---------------------------------------------------------------------------
 
 /**
- * Origin tag attached to a parsed trade. Defaults to `'trade'` (regular
- * broker transaction) when omitted. Parsers that produce synthetic lots
- * from employee-share-purchase programs set `'espp'`; parsers that produce
- * synthetic lots from restricted stock unit plans set `'rsu'`. Both keep
- * the buy + sell legs visible and tagged in the output.
+ * Origin tag attached to a parsed trade. Defaults to `'trade'` (regular broker
+ * transaction) when omitted. Parsers that produce synthetic lots from
+ * employee-share-purchase programs set `'espp'`; parsers that produce synthetic
+ * lots from restricted stock unit plans set `'rsu'`. Both keep the buy + sell
+ * legs visible and tagged in the output.
  */
 export type TradeSource = 'trade' | 'espp' | 'rsu';
+
+/**
+ * Tax regime of employee-incentive shares (RSU / ESPP), chosen per lot.
+ *
+ * - `qualifying` — programme of the company or its parent under a shareholders'
+ *   resolution (art. 24 ust. 11-12b updof): no income at acquisition, the cost
+ *   on sale is the price actually paid.
+ * - `taxed-at-acquisition` — the vest / purchase was taxed as income (e.g.
+ *   PIT-11): the cost on sale is the price paid plus the income already taxed
+ *   (art. 23 ust. 1 pkt 38 updof).
+ */
+export type IncentiveRegime = 'qualifying' | 'taxed-at-acquisition';
+
+/** Employee-incentive data of a buy lot; see {@link IncentiveRegime}. */
+export interface TradeIncentive {
+  /** Absent until the user chooses; the lot's cost is then flagged missing. */
+  regime?: IncentiveRegime | undefined;
+  /**
+   * Income already taxed at acquisition, total for the lot in PLN. When absent
+   * it is derived from `fmvPerShare`.
+   */
+  taxedIncomePln?: number | undefined;
+  /** Fair market value per share at vest / purchase, in the trade currency. */
+  fmvPerShare?: number | undefined;
+}
 
 /** Raw trade from broker statement */
 export interface Trade {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   datetime: Date;
   quantity: number;
@@ -39,83 +64,179 @@ export interface Trade {
   commissionCurrency: string;
   type: 'buy' | 'sell';
   /** Origin of this trade; absent means regular trade. */
-  source?: TradeSource;
+  source?: TradeSource | undefined;
   /**
-   * Optional lot partition key. When set, FIFO treats this trade as living
-   * in a separate queue keyed by (symbol|isin, lotId), bypassing the global
+   * Optional lot partition key. When set, FIFO treats this trade as living in a
+   * separate queue keyed by (symbol|isin, lotId), bypassing the global
    * per-security FIFO. Used by IBI ESPP where each order pairs a specific
    * grant-purchase with its own sell — grants can be bought and sold in any
    * interleaving, so commingling them through a single FIFO queue mis-
-   * allocates per-transaction P&L even though the annual tax total is the
-   * same. Parsers that don't populate this field leave `lotKey` at its
-   * default symbol/ISIN value.
+   * allocates per-transaction P&L even though the annual tax total is the same.
+   * Parsers that don't populate this field leave `lotKey` at its default
+   * symbol/ISIN value.
    */
-  lotId?: string;
+  lotId?: string | undefined;
+  /** Employee-incentive regime of an RSU / ESPP buy lot. Not indexed. */
+  incentive?: TradeIncentive | undefined;
   /**
-   * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no
-   * effect on tax computation. Currently set only by the IBI parsers.
+   * Optional plan identifier (e.g. "MNDY ESPP"). Audit metadata; no effect on
+   * tax computation. Currently set only by the IBI parsers.
    */
-  plan?: string;
+  plan?: string | undefined;
+  /**
+   * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows.
+   */
+  account?: string | undefined;
+  /**
+   * Foreign tax paid on this sale, in the trade currency (>= 0, sells only).
+   * User claim; creditable only up to the treaty and art. 30b ust. 5a limits.
+   */
+  foreignTax?: number | undefined;
+  /**
+   * Payment date of `foreignTax`. Its D-1 NBP rate converts the tax (art. 11a
+   * ust. 3 updof). Defaults to the date the sell's own rate uses.
+   */
+  foreignTaxDate?: Date | undefined;
 }
 
 /** Raw dividend income */
 export interface RawDividend {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   date: Date;
+  /** Signed amount: positive = dividend paid, negative = reversal/correction. */
   amount: number;
+  /**
+   * Instrument is an ADR (broker `Type` column); its source state is the
+   * issuer's.
+   */
+  isAdr?: boolean | undefined;
+  /**
+   * Issuer country (ISO alpha-2) read from the broker's WHT description, ADRs
+   * only.
+   */
+  adrCountry?: string | undefined;
+  /**
+   * 'payment-in-lieu' for substitute payments on lent shares; absent =
+   * ordinary.
+   */
+  kind?: PaymentKind | undefined;
 }
+
+export type PaymentKind = 'dividend' | 'payment-in-lieu';
 
 /** Raw withholding tax on dividends */
 export interface RawWithholdingTax {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   date: Date;
+  /** Signed amount: negative = tax withheld, positive = refund/reversal. */
   amount: number;
+  kind?: PaymentKind | undefined;
+  /** Source state (ISO alpha-2) from the broker's "- XX Tax" description suffix. */
+  taxCountry?: string | undefined;
 }
 
 /** Corporate action */
 export interface CorporateAction {
-  type: 'stock-split' | 'merger';
+  type: 'stock-split' | 'merger' | 'transfer';
+  /**
+   * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows. A
+   * `transfer` has no single account: see `fromAccount` / `toAccount`.
+   */
+  account?: string | undefined;
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   datetime: Date;
-  // Stock split fields
+  // Stock split fields (a transfer stores 1 / 1)
   numerator: number;
   denominator: number;
+  // Transfer fields (only when type === 'transfer'): `quantity` shares of the
+  // instrument move from `fromAccount` to `toAccount` at `datetime`. Not a
+  // disposal: lots keep their cost and acquisition date.
+  fromAccount?: string | undefined;
+  toAccount?: string | undefined;
+  quantity?: number | undefined;
   // Merger fields (only when type === 'merger')
-  targetSymbol?: string;
-  targetIsin?: string;
-  conversionRatio?: number;
-  cashPerShare?: number;
-  cashCurrency?: string;
-  /** Total cash received from merger (in original currency, from CSV Proceeds column) */
-  cashTotalProceeds?: number;
+  targetSymbol?: string | undefined;
+  targetIsin?: string | undefined;
+  conversionRatio?: number | undefined;
+  cashPerShare?: number | undefined;
+  cashCurrency?: string | undefined;
+  /**
+   * Total cash received from merger (in original currency, from CSV Proceeds
+   * column)
+   */
+  cashTotalProceeds?: number | undefined;
   /** FMV of new shares received (in original currency, from CSV Value column) */
-  newSharesValue?: number;
+  newSharesValue?: number | undefined;
 }
 
-/** Carry-in position from prior year */
+/**
+ * How the acquisition cost of a carry-in position was established.
+ *
+ * - `user` — cost entered by the user (`costBasis` + `currency`, or
+ *   `costBasisPln`).
+ * - `zero-confirmed` — user explicitly confirmed cost 0 (e.g. RSU / incentive
+ *   program shares not taxed at vesting, art. 24 ust. 11-12b updof).
+ * - `missing` — no cost known yet; the result is flagged as not final.
+ */
+export type CarryInCostBasisSource = 'user' | 'zero-confirmed' | 'missing';
+
+/**
+ * Open position carried in from a prior year (shares bought earlier, sold now).
+ * Its acquisition cost is deductible in the year of sale (art. 23 ust. 1 pkt 38
+ * with art. 30b ust. 2 pkt 1 updof) — it was never "claimed" in the purchase
+ * year.
+ *
+ * `quantity` is the position held at the end of `year`.
+ */
 export interface CarryInPosition {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   quantity: number;
   year: number;
+  /** Real acquisition date: drives FIFO ordering and the NBP rate date. */
+  acquisitionDate?: Date | undefined;
+  /** Total cost for `quantity` in `currency`, including commission. */
+  costBasis?: number | undefined;
+  /** ISO currency code of `costBasis` ('PLN' allowed). */
+  currency?: string | undefined;
+  /** Optional manual PLN total cost override (skips the FX lookup). */
+  costBasisPln?: number | undefined;
+  costBasisSource?: CarryInCostBasisSource | undefined;
+  /**
+   * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows.
+   */
+  account?: string | undefined;
+}
+
+/** Carry-in position with its acquisition cost resolved to PLN. */
+export interface EnrichedCarryInPosition extends CarryInPosition {
+  /** Total PLN cost for `quantity` (0 when missing or rate unavailable). */
+  costPln: number;
+  rateUnavailable: boolean;
+  /** True when no cost was entered and zero cost was not confirmed. */
+  costMissing: boolean;
 }
 
 /**
  * A capital-loss carried in from a prior tax year.
  *
- * Per art. 9 ust. 3 updof, a loss reported in year `year` may be deducted
- * from gains in the next 5 tax years, with at most 50% of the original
- * loss applied in any single year.
+ * Per art. 9 ust. 3 updof, a loss reported in year `year` may be deducted from
+ * gains in the next 5 tax years, with at most 50% of the original loss applied
+ * in any single year.
  *
- * - `totalLossPln` — the original loss amount reported on PIT-38 poz29 for `year`.
+ * - `totalLossPln` — the original loss amount reported on PIT-38 poz29 for
+ *   `year`.
  * - `alreadyDeductedPln` — cumulative amount already deducted in prior years
- *   (across all sessions). Used to track the residual available for the
- *   current calculation.
+ *   (across all sessions). Used to track the residual available for the current
+ *   calculation.
  */
 export interface PriorYearLoss {
   year: number;
@@ -126,7 +247,7 @@ export interface PriorYearLoss {
 /** Transaction fee from broker (e.g. French transaction tax) */
 export interface TransactionFee {
   symbol: string;
-  isin?: string;
+  isin?: string | undefined;
   currency: string;
   datetime: Date;
   amount: number;
@@ -146,6 +267,18 @@ export interface ParseWarning {
   line: number;
   section: string;
   message: string;
+  /** Set for warnings the import UI reports in its own words. */
+  kind?: 'sell-to-cover' | undefined;
+  /** Vest details of a `sell-to-cover` warning. */
+  sellToCover?: SellToCoverDetail | undefined;
+}
+
+/** A vest where the broker sold or withheld shares for taxes. */
+export interface SellToCoverDetail {
+  symbol: string;
+  date: Date;
+  /** Shares sold or withheld (not in the imported net quantity). */
+  shares: number;
 }
 
 /** Classification of a CSV row that the parser intentionally skipped. */
@@ -160,12 +293,12 @@ export interface SkippedRow {
   kind: SkippedRowKind;
   /** 1-based line number in the CSV as fed to the parser. */
   line: number;
-  assetCategory?: string;
-  currency?: string;
-  symbol?: string;
+  assetCategory?: string | undefined;
+  currency?: string | undefined;
+  symbol?: string | undefined;
   /** Raw datetime string as it appeared in the CSV. */
-  datetime?: string;
-  description?: string;
+  datetime?: string | undefined;
+  description?: string | undefined;
   /** Exact raw CSV line, verbatim. */
   rawLine: string;
 }
@@ -181,7 +314,7 @@ export interface ImportWarning {
 /** Result of parsing a single broker CSV file */
 export interface ParsedStatement {
   broker: string;
-  brokerCountry?: string;
+  brokerCountry?: string | undefined;
   year: number;
   trades: Trade[];
   dividends: RawDividend[];
@@ -213,8 +346,12 @@ export interface TradeResult {
   exchangeRate: number;
   proceedsPln: number;
   costPln: number;
+  /** Sell commission in PLN, already included in costPln (unset for non-sells). */
+  sellCommissionPln?: number | undefined;
   gainLossPln: number;
   rateUnavailable: boolean;
+  /** A FIFO lot consumed by this sell had no NBP rate; its cost was counted as 0. */
+  costRateUnavailable?: boolean | undefined;
   country: string;
   /** Pre-LCF per-trade tax: max(gainLossPln, 0) * 0.19. Display-only. */
   taxPln: number;
@@ -222,6 +359,8 @@ export interface TradeResult {
   foreignTaxPln: number;
   /** Foreign tax paid in original currency (default 0). */
   foreignTaxOriginal: number;
+  /** Sell consumed a carry-in lot with no known acquisition cost. */
+  costBasisMissing?: boolean | undefined;
 }
 
 /** Warning on a dividend result */
@@ -231,6 +370,75 @@ export type DividendWarning =
     }
   | {
       kind: 'unknown-country';
+    }
+  | {
+      /** Payment in lieu: withholding above the treaty rate is not credited. */
+      kind: 'pil-excess-not-credited';
+    }
+  | {
+      /** Payment in lieu is a substitute payment, not an issuer dividend. */
+      kind: 'pil-substitute';
+    }
+  | {
+      /** ADR rows disagree on the issuer country; ISIN country used instead. */
+      kind: 'adr-country-conflict';
+    }
+  | {
+      /** Dividend rows for one event net below 0; amount floored to 0. */
+      kind: 'net-negative';
+    }
+  | {
+      /** WHT refunds exceed withholding for one event; WHT floored to 0. */
+      kind: 'wht-net-refund';
+    }
+  | {
+      /**
+       * A reversal or refund posted on `reversalDate` was netted into this
+       * event. Across years the earlier return may need a correction (art. 81
+       * OP).
+       */
+      kind: 'reversed-later';
+      reversalDate: string;
+      crossYear: boolean;
+    }
+  | {
+      /** Info row: reverses a payment from an earlier period. */
+      kind: 'reverses-prior-year';
+      originalDate: string;
+    }
+  | {
+      /** WHT posted on `whtDate` was attached to this event by symbol. */
+      kind: 'wht-matched-by-symbol';
+      whtDate: string;
+    }
+  | {
+      /**
+       * Withholding with no dividend to attach to; credited as 0.
+       * `likelySaleTax`: a same-symbol sale is within days (US §1446(f)).
+       */
+      kind: 'wht-unmatched';
+      likelySaleTax?: boolean;
+    }
+  | {
+      /** WHT refunded on `refundDate` in a later year; see the add-back there. */
+      kind: 'wht-refunded-later';
+      refundDate: string;
+    }
+  | {
+      /**
+       * Info row: a refund of earlier-year WHT adds back the credit (art. 45
+       * ust. 3a).
+       */
+      kind: 'wht-refund-add-back';
+      originalDate: string;
+    }
+  | {
+      /**
+       * Info row: a WHT refund with no withholding or dividend in the data. A
+       * credit taken for it in an earlier year must be added back (art. 45 ust.
+       * 3a); the earlier year's statement can be imported instead.
+       */
+      kind: 'wht-refund-unmatched';
     };
 
 /** Dividend with PLN conversion and matched withholding */
@@ -241,9 +449,12 @@ export interface DividendResult {
   /** Dividend amount used as the Polish tax base after optional adjustments. */
   amountOriginal: number;
   withholdingTaxOriginal: number;
-  /** ADR/GDR fees subtracted from the dividend base when the compatibility setting is enabled. */
-  adrFeeOriginal?: number;
-  adrFeePln?: number;
+  /**
+   * ADR/GDR fees subtracted from the dividend base when the compatibility
+   * setting is enabled.
+   */
+  adrFeeOriginal?: number | undefined;
+  adrFeePln?: number | undefined;
   amountPln: number;
   withholdingTaxPln: number;
   exchangeRate: number;
@@ -251,13 +462,28 @@ export interface DividendResult {
   country: string;
   /** Resolved treaty cap rate at calc time (e.g. 0.15 for US). */
   creditCapRate: number;
-  /** Treaty-capped deductible withholding: min(withholdingTaxPln, amountPln * creditCapRate). */
+  /**
+   * Treaty-capped deductible withholding: min(withholdingTaxPln, amountPln *
+   * creditCapRate).
+   */
   deductibleWithholdingPln: number;
   /** Gross PL tax on this dividend: amountPln * 0.19. */
   taxPlnGross: number;
   /** Net tax to pay: max(taxPlnGross - deductibleWithholdingPln, 0). */
   taxToPayPln: number;
-  warnings?: DividendWarning[];
+  /**
+   * Credit taken in an earlier year that a refund received in this one adds
+   * back (art. 45 ust. 3a updof), PLN. Set on info rows only.
+   */
+  addBackPln?: number | undefined;
+  /**
+   * Info row: carries a warning (and maybe an add-back), no income. Excluded
+   * from counts and withholding totals. On unmatched-WHT rows the withholding
+   * fields show the absolute net of the in-period rows (a refund shows its
+   * amount).
+   */
+  isInfo?: boolean | undefined;
+  warnings?: DividendWarning[] | undefined;
 }
 
 /** Credit interest result after tax calculation (art. 30a ust. 1 pkt 3) */
@@ -279,26 +505,38 @@ export interface CreditInterestResult {
 /**
  * Per-country PIT/ZG attachment fields.
  *
- * PIT-38 attachments use PIT/ZG section C.3 for income and foreign tax
- * under art. 30b. Foreign dividends are art. 30a flat-rate income and stay
- * in PIT-38 section G by default. They are included here only when the
- * session's `showDividendsInPitZg` compatibility setting is enabled.
+ * PIT-38 attachments use PIT/ZG section C.3 for income and foreign tax under
+ * art. 30b. Foreign dividends are art. 30a flat-rate income and stay in PIT-38
+ * section G by default. They are included here only when the session's
+ * `showDividendsInPitZg` compatibility setting is enabled.
  */
 export interface PitZgFields {
   country: string;
   countryNamePl: string;
 
+  /**
+   * Whether the attachment must be filed: only when foreign tax on capital
+   * gains is credited (art. 30b ust. 5a/5b updof). Otherwise no foreign tax on
+   * gains is recorded and the row is informational.
+   */
+  required: boolean;
+  /**
+   * Foreign tax on gains that can be credited (art. 30b ust. 5a cap); 0 = not
+   * required.
+   */
+  creditableForeignTaxPln?: number | undefined;
+
   // Capital gains / share income (PIT/ZG C.3, present for sell trades)
-  proceedsPln?: number;
-  costPln?: number;
-  gainPln?: number;
-  lossPln?: number;
-  tradeForeignTaxPln?: number;
+  proceedsPln?: number | undefined;
+  costPln?: number | undefined;
+  gainPln?: number | undefined;
+  lossPln?: number | undefined;
+  tradeForeignTaxPln?: number | undefined;
 
   // Optional dividend compatibility section
-  dividendIncomePln?: number;
-  dividendForeignTaxPln?: number;
-  deductibleDividendTaxPln?: number;
+  dividendIncomePln?: number | undefined;
+  dividendForeignTaxPln?: number | undefined;
+  deductibleDividendTaxPln?: number | undefined;
 }
 
 /** Aggregated tax summary for a year */
@@ -312,17 +550,47 @@ export interface TaxSummary {
   totalWithholdingPln: number;
   totalDeductibleWithholdingPln: number;
   dividendTaxOwedPln: number;
+  /**
+   * Credit from earlier years added back by WHT refunds received this year
+   * (art. 45 ust. 3a updof). Included in `dividendTaxOwedPln`.
+   */
+  totalDividendAddBackPln?: number | undefined;
   totalCreditInterestPln: number;
   totalCreditInterestForeignTaxPln: number;
-  /** Capital gain after prior-year loss deduction: max(gain - lcfDeducted, 0). */
+  /**
+   * Capital gain after prior-year loss deduction: max(gain - lcfDeducted, 0),
+   * where lcfDeducted is the PIT-38 poz. 30 value (computed from poz. 28).
+   */
   capitalGainAfterLcfPln: number;
   /** Post-LCF capital gain tax (raw, unrounded): capitalGainAfterLcfPln * 0.19. */
   capitalGainTaxPostLcfPln: number;
+  /**
+   * Number of trade, dividend and credit-interest results with a missing NBP
+   * rate.
+   */
+  missingRateCount: number;
+  /**
+   * Number of in-period trade results (sells / merger cash) that consumed a
+   * carry-in lot whose acquisition cost is unknown (counted as 0).
+   */
+  missingCostCount: number;
+  /**
+   * Number of carry-in snapshots that contradict the imported history (it
+   * implies more shares than the broker reported). They are skipped, so the
+   * holdings may contain shares that no longer exist.
+   */
+  inconsistentCarryInCount: number;
+  /**
+   * Instruments with rows that have no account while the session has several
+   * accounts and the instrument is also held in an assigned account: FIFO per
+   * account may be wrong.
+   */
+  unassignedOverlapCount: number;
 }
 
 /**
- * Valid position numbers on the PIT-38(18) form.
- * Gaps (32, 42) are tax-rate display rows — not stored as fields.
+ * Valid position numbers on the PIT-38(18) form. Gaps (32, 42) are tax-rate
+ * display rows — not stored as fields.
  */
 export type Pit38Position =
   // Section C — Capital gains/losses (art. 30b ust. 1)
@@ -397,7 +665,20 @@ export interface TaxPeriod {
 /** Trade with pre-resolved exchange rate */
 export interface EnrichedTrade extends Trade {
   exchangeRate: number;
+  /**
+   * NBP rate of the vest / purchase date itself, for valuing income taxed at
+   * acquisition. Set when `exchangeRate` is a settlement-date rate; falls back
+   * to `exchangeRate` (which is then the vest-date rate itself).
+   */
+  incomeExchangeRate?: number | undefined;
+  /**
+   * The vest-date rate was required (settlement-date rates on) but could not be
+   * fetched; `incomeExchangeRate` is unset and must not fall back.
+   */
+  incomeRateUnavailable?: boolean | undefined;
   commissionExchangeRate: number;
+  /** NBP rate for `foreignTax` (art. 11a ust. 3); set only when it is > 0. */
+  foreignTaxExchangeRate?: number | undefined;
   rateUnavailable: boolean;
 }
 

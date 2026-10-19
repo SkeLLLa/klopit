@@ -1,4 +1,5 @@
 import { SvelteMap } from 'svelte/reactivity';
+
 import type { SkippedRow } from '../../core/types.js';
 
 function createSkippedRowsStore() {

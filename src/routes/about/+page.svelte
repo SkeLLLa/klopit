@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
-  import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
-  import { ArrowRight, Bug, ChevronDown, FileText, ListChecks, Lock, Scale } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { KLO_ACRONYMS } from '#lib/constants/acronyms.js';
+  import GitHubIcon from '#lib/components/ui/GitHubIcon.svelte';
+  import { ArrowRight, Bug, ChevronDown, FileText, ListChecks, Lock, Scale } from '@lucide/svelte';
 
   pageTitle.set(m.page_about());
 
@@ -148,7 +148,7 @@
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       {#each githubCards as card (card.title)}
         <a
-          href={card.href}
+          href={card.href.startsWith('http') ? card.href : localizeHref(card.href)}
           target={card.href.startsWith('http') ? '_blank' : undefined}
           rel={card.href.startsWith('http') ? 'noopener noreferrer' : undefined}
           class="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-emerald-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:border-emerald-500/45"

@@ -5,6 +5,8 @@ import {
   type RawDividend,
   type RawWithholdingTax,
   type Trade,
+  type TradeIncentive,
+  type TradeSource,
 } from '../../types.js';
 import { cleanField, parseCsvLine } from '../shared/csv-utils.js';
 import type { CsvParserDefinition, StatementParser } from '../types.js';
@@ -36,6 +38,12 @@ function parseMoney(value: string): number | undefined {
   if (Number.isNaN(parsed)) return undefined;
 
   return isNegative ? -parsed : parsed;
+}
+
+function formatDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${String(date.getFullYear())}-${month}-${day}`;
 }
 
 function firstDefined(...values: (number | undefined)[]): number | undefined {
@@ -170,6 +178,10 @@ class SchwabParser implements StatementParser {
       parseMoney(args.row.get('PurchasePrice') ?? ''),
       parseMoney(args.row.get('FairMarketValuePrice') ?? ''),
     );
+    const fmvPerShare = firstDefined(
+      parseMoney(args.row.get('PurchaseFairMarketValue') ?? ''),
+      parseMoney(args.row.get('FairMarketValuePrice') ?? ''),
+    );
     const datetime =
       parseUsDate(args.row.get('PurchaseDate') ?? '') ??
       parseUsDate(args.row.get('Date') ?? '');
@@ -193,6 +205,8 @@ class SchwabParser implements StatementParser {
         parseMoney(args.row.get('FeesAndCommissions') ?? '') ?? 0,
       ),
       type: 'buy',
+      source: 'espp',
+      incentive: fmvPerShare === undefined ? {} : { fmvPerShare },
     });
   }
 
@@ -201,16 +215,24 @@ class SchwabParser implements StatementParser {
       parseMoney(args.row.get('NetSharesDeposited') ?? ''),
       parseMoney(args.row.get('Quantity') ?? ''),
     );
-    const price = firstDefined(
+    const fmvPerShare = firstDefined(
       parseMoney(args.row.get('FairMarketValuePrice') ?? ''),
       parseMoney(args.row.get('VestFairMarketValue') ?? ''),
+    );
+    const sharesWithheld = parseMoney(
+      args.row.get('SharesSoldWithheldForTaxes') ?? '',
     );
     const datetime =
       parseUsDate(args.row.get('VestDate') ?? '') ??
       parseUsDate(args.row.get('Date') ?? '');
     const symbol = args.row.get('Symbol') ?? '';
 
-    if (!symbol || !datetime || quantity === undefined || price === undefined) {
+    if (
+      !symbol ||
+      !datetime ||
+      quantity === undefined ||
+      fmvPerShare === undefined
+    ) {
       this.addWarning({
         section: 'Schwab',
         line: args.line,
@@ -219,15 +241,29 @@ class SchwabParser implements StatementParser {
       return;
     }
 
+    if (sharesWithheld !== undefined && sharesWithheld > 0) {
+      this.addWarning({
+        section: 'Schwab',
+        line: args.line,
+        kind: 'sell-to-cover',
+        sellToCover: { symbol, date: datetime, shares: sharesWithheld },
+        message: `Sell-to-cover detected for ${symbol} vest on ${formatDate(datetime)}: ${String(sharesWithheld)} shares were sold or withheld for taxes and are not imported; only the ${String(quantity)} net shares are. Check the income taxed at vest in your PIT-11.`,
+      });
+    }
+
+    // RSUs cost nothing to receive: the price paid is 0 and the vest FMV is
+    // kept for the "taxed at acquisition" regime.
     this.pushTrade({
       symbol,
       datetime,
       quantity,
-      price,
+      price: 0,
       commission: Math.abs(
         parseMoney(args.row.get('FeesAndCommissions') ?? '') ?? 0,
       ),
       type: 'buy',
+      source: 'rsu',
+      incentive: { fmvPerShare },
     });
   }
 
@@ -289,7 +325,9 @@ class SchwabParser implements StatementParser {
     price: number;
     commission: number;
     type: 'buy' | 'sell';
-    proceeds?: number;
+    proceeds?: number | undefined;
+    source?: TradeSource | undefined;
+    incentive?: TradeIncentive | undefined;
   }): void {
     this.trades.push({
       symbol: args.symbol,
@@ -301,6 +339,8 @@ class SchwabParser implements StatementParser {
       commission: Math.abs(args.commission),
       commissionCurrency: 'USD',
       type: args.type,
+      ...(args.source ? { source: args.source } : {}),
+      ...(args.incentive ? { incentive: args.incentive } : {}),
     });
 
     const tradeYear = args.datetime.getFullYear();
@@ -311,11 +351,15 @@ class SchwabParser implements StatementParser {
     section: string;
     line: number;
     message: string;
+    kind?: ParseWarning['kind'] | undefined;
+    sellToCover?: ParseWarning['sellToCover'] | undefined;
   }): void {
     this.warnings.push({
       line: args.line,
       section: args.section,
       message: args.message,
+      ...(args.kind ? { kind: args.kind } : {}),
+      ...(args.sellToCover ? { sellToCover: args.sellToCover } : {}),
     });
   }
 }

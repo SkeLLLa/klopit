@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+
 import { ibiDefinition, parseIbiText } from '../src/core/parsers/ibi/index.js';
 
 /**
- * Synthetic text that mirrors the shape `extractPdfText` emits for the
- * IBI "Sale Of Stock Activity Statement" template. Each hand-authored
- * test uses a subset of this layout so failures localise to the field
- * under test.
+ * Synthetic text that mirrors the shape `extractPdfText` emits for the IBI
+ * "Sale Of Stock Activity Statement" template. Each hand-authored test uses a
+ * subset of this layout so failures localise to the field under test.
  *
  * All personal data (name, IDs, amounts) is fictional; ticker is MNDY
  * (monday.com Ltd.) as a stand-in for ESPP-issuing employers.
@@ -210,11 +211,11 @@ void describe('parseIbiText', () => {
 });
 
 /**
- * Anonymized IBI-format PDF fixture, generated at test-time with
- * pdf-lib. Positions text tokens to mimic the real statement layout so
- * unpdf's positional extraction + `reconstructText` row-grouping can be
- * exercised end-to-end without committing a binary or relying on a
- * gitignored private statement.
+ * Anonymized IBI-format PDF fixture, generated at test-time with pdf-lib.
+ * Positions text tokens to mimic the real statement layout so unpdf's
+ * positional extraction + `reconstructText` row-grouping can be exercised
+ * end-to-end without committing a binary or relying on a gitignored private
+ * statement.
  */
 async function generateIbiPdf(data: {
   orderNumber: string;
@@ -299,14 +300,14 @@ async function generateIbiPdf(data: {
   return copy;
 }
 
-void describe('ibiDefinition — end-to-end PDF parse', () => {
-  async function parseGenerated(
-    data: Parameters<typeof generateIbiPdf>[0],
-  ): Promise<ReturnType<typeof parseIbiText>> {
-    const buffer = await generateIbiPdf(data);
-    return ibiDefinition.parse({ buffer });
-  }
+async function parseGenerated(
+  data: Parameters<typeof generateIbiPdf>[0],
+): Promise<ReturnType<typeof parseIbiText>> {
+  const buffer = await generateIbiPdf(data);
+  return ibiDefinition.parse({ buffer });
+}
 
+void describe('ibiDefinition — end-to-end PDF parse', () => {
   void it('parses a cross-year ESPP sale (granted 2024, sold 2025)', async () => {
     const result = await parseGenerated({
       orderNumber: '1234567',

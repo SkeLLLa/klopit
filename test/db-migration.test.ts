@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it, mock } from 'node:test';
+
 import {
+  buildSessionSymbolIsinMap,
+  migrateCarryInPositionV14,
   renameInteractiveBrokersToIbkr,
   stripLegacyPriorYearLoss,
+  type LegacyCarryInRow,
   type LegacySessionRecord,
   type SessionWithFiles,
 } from '../src/lib/db-migrations.js';
@@ -110,5 +114,73 @@ void describe('v9 migration: renameInteractiveBrokersToIbkr', () => {
       session.files?.map((f) => f.broker),
       ['ibkr', 'ibi'],
     );
+  });
+});
+
+void describe('v14 migration: migrateCarryInPositionV14', () => {
+  void it('copies ISIN from a same-session trade and marks cost missing', () => {
+    const isinMap = buildSessionSymbolIsinMap([
+      { sessionId: 's1', symbol: 'MSFT' },
+      { sessionId: 's1', symbol: 'aapl', isin: 'US0378331005' },
+      { sessionId: 's2', symbol: 'MSFT', isin: 'US5949181045' },
+    ]);
+    const row: LegacyCarryInRow = { sessionId: 's1', symbol: 'AAPL' };
+    migrateCarryInPositionV14(row, isinMap);
+    assert.equal(row.isin, 'US0378331005');
+    assert.equal(row.costBasisSource, 'missing');
+
+    // Another session's ISIN must not leak in.
+    const other: LegacyCarryInRow = { sessionId: 's1', symbol: 'MSFT' };
+    migrateCarryInPositionV14(other, isinMap);
+    assert.equal(other.isin, undefined);
+  });
+
+  void it('keeps an existing ISIN and cost source', () => {
+    const row: LegacyCarryInRow = {
+      sessionId: 's1',
+      symbol: 'AAPL',
+      isin: 'XX0000000000',
+      costBasis: 100,
+      costBasisSource: 'user',
+    };
+    migrateCarryInPositionV14(
+      row,
+      buildSessionSymbolIsinMap([
+        { sessionId: 's1', symbol: 'AAPL', isin: 'US0378331005' },
+      ]),
+    );
+    assert.equal(row.isin, 'XX0000000000');
+    assert.equal(row.costBasisSource, 'user');
+  });
+
+  void it('falls back to corporate-action source and target ISINs', () => {
+    const isinMap = buildSessionSymbolIsinMap(
+      [],
+      [
+        {
+          sessionId: 's1',
+          symbol: 'OLD',
+          isin: 'US0000000001',
+          targetSymbol: 'NEW',
+          targetIsin: 'US0000000002',
+        },
+      ],
+    );
+    const old: LegacyCarryInRow = { sessionId: 's1', symbol: 'old' };
+    const renamed: LegacyCarryInRow = { sessionId: 's1', symbol: 'NEW' };
+    migrateCarryInPositionV14(old, isinMap);
+    migrateCarryInPositionV14(renamed, isinMap);
+    assert.equal(old.isin, 'US0000000001');
+    assert.equal(renamed.isin, 'US0000000002');
+  });
+
+  void it('ignores a corporate-action ISIN for a symbol traded without ISIN', () => {
+    const isinMap = buildSessionSymbolIsinMap(
+      [{ sessionId: 's1', symbol: 'OLD' }],
+      [{ sessionId: 's1', symbol: 'OLD', isin: 'US0000000001' }],
+    );
+    const row: LegacyCarryInRow = { sessionId: 's1', symbol: 'OLD' };
+    migrateCarryInPositionV14(row, isinMap);
+    assert.equal(row.isin, undefined);
   });
 });

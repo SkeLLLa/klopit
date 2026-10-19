@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import {
   capitalGainsTax,
   roundedCapitalGainsBase,
-  roundedDividendCredit,
-  roundedDividendTax,
+  sectionGForeignFlatTax,
   sumCost,
   sumDeductibleWithholding,
   sumDividendIncome,
@@ -14,6 +14,7 @@ import {
   sumWithholding,
 } from '../src/core/tax/aggregates.js';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
+import { roundToGrosz } from '../src/core/tax/rounding.js';
 import type {
   EnrichedRawDividend,
   EnrichedTrade,
@@ -180,14 +181,18 @@ void describe('summary <-> per-row invariants', () => {
       rows: result.dividends,
     });
 
-    const expectedPoz47 = roundedDividendTax({ totalIncomePln: divIncome });
-    const expectedPoz48 = roundedDividendCredit({
-      deductiblePln: divDeductible,
-      dividendTax: expectedPoz47,
+    const expected = sectionGForeignFlatTax({
+      dividendIncomePln: divIncome,
+      dividendDeductiblePln: divDeductible,
+      interestIncomePln: 0,
+      interestForeignTaxPln: 0,
     });
+    const expectedPoz47 = expected.poz47;
+    const expectedPoz48 = expected.poz48;
 
     assert.equal(result.pit38[47], expectedPoz47);
     assert.equal(result.pit38[48], expectedPoz48);
+    assert.equal(result.pit38[49], expected.poz49);
   });
 
   void it('PIT-38 capital gains positions match aggregate helpers', () => {
@@ -260,5 +265,61 @@ void describe('summary <-> per-row invariants', () => {
           result.summary.capitalGainAfterLcfPln * 0.19,
       ) < 0.01,
     );
+  });
+
+  void it('loss deduction always equals grosz-exact PIT-38 poz. 30', () => {
+    // Deterministic LCG so failures are reproducible.
+    let seed = 0x5eed;
+    const rand = (): number => {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31;
+      return seed / 2 ** 31;
+    };
+    const amount = (max: number): number =>
+      Math.round(rand() * max * 1000) / 1000;
+
+    for (let i = 0; i < 200; i++) {
+      const cost = amount(10000);
+      const proceeds = amount(10000);
+      const result = calculateTaxes({
+        trades: [
+          makeTrade({
+            datetime: new Date(2024, 0, 15),
+            quantity: 1,
+            price: cost,
+            type: 'buy',
+            exchangeRate: 1,
+            commissionExchangeRate: 1,
+          }),
+          makeTrade({
+            datetime: new Date(2024, 6, 15),
+            quantity: 1,
+            price: proceeds,
+            proceeds,
+            type: 'sell',
+            exchangeRate: 1,
+            commissionExchangeRate: 1,
+          }),
+        ],
+        dividends: [],
+        creditInterests: [],
+        withholdingTaxes: [],
+        corporateActions: [],
+        carryInPositions: [],
+        priorLosses: [
+          { year: 2021, totalLossPln: amount(5000), alreadyDeductedPln: 0 },
+          { year: 2023, totalLossPln: amount(5000), alreadyDeductedPln: 0 },
+        ],
+        taxPeriod: taxPeriod2024,
+      });
+
+      const label = `cost=${String(cost)} proceeds=${String(proceeds)}`;
+      assert.equal(result.lossDeduction.deductedPln, result.pit38[30], label);
+      assert.equal(
+        result.pit38[30],
+        roundToGrosz({ amount: result.pit38[30] }),
+        label,
+      );
+      assert.ok(result.pit38[30] <= result.pit38[28], label);
+    }
   });
 });

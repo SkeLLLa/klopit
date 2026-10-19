@@ -1,14 +1,15 @@
 <script lang="ts">
-  import { Calendar } from 'lucide-svelte';
+  import { Calendar } from '@lucide/svelte';
   import { untrack } from 'svelte';
   import SveltyPicker from 'svelty-picker';
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import {
     formatDatetime,
     parseDatetime,
     datetimePlaceholder,
-  } from '$lib/utils/format-date.js';
+  } from '#lib/utils/format-date.js';
   import type { Trade } from '../../core/types.js';
+  import AccountField from './AccountField.svelte';
 
   const PICKER_FORMAT = 'yyyy-mm-dd hh:ii';
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -28,11 +29,14 @@
   let {
     initial,
     defaultYear,
+    accounts = [],
     onsave,
     oncancel,
   }: {
-    initial?: Partial<Trade>;
-    defaultYear?: number;
+    initial?: Partial<Trade> | undefined;
+    defaultYear?: number | undefined;
+    /** Distinct accounts in the session; the field shows when there are several. */
+    accounts?: string[] | undefined;
     onsave: (trade: Trade) => void;
     oncancel: () => void;
   } = $props();
@@ -56,7 +60,16 @@
   let commission = $state(seed?.commission?.toString() ?? '0');
   let commissionCurrency = $state(seed?.commissionCurrency ?? '');
   let currency = $state(seed?.currency ?? 'USD');
-  let errors: Record<string, string> = $state({});
+  let accountChoice: string | undefined = $state(seed?.account);
+  // The session's only account is preselected until the user picks another.
+  const account = $derived(
+    accountChoice ?? (accounts.length === 1 ? accounts[0] : undefined),
+  );
+  let foreignTax = $state(seed?.foreignTax?.toString() ?? '');
+  let foreignTaxDate = $state(
+    seed?.foreignTaxDate ? dateToPickerValue(seed.foreignTaxDate).slice(0, 10) : '',
+  );
+  let errors: Partial<Record<'symbol' | 'datetime' | 'quantity' | 'price' | 'currency' | 'foreignTax', string>> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.
   // This only seeds svelty-picker's internal value; the text input stays
@@ -121,7 +134,7 @@
   }
 
   function validate(): boolean {
-    const e: Record<string, string> = {};
+    const e: Partial<Record<'symbol' | 'datetime' | 'quantity' | 'price' | 'currency' | 'foreignTax', string>> = {};
     if (!symbol.trim()) e.symbol = m.data_validation_required();
     if (!datetimeText.trim()) {
       e.datetime = m.data_validation_required();
@@ -133,6 +146,10 @@
     const p = parseFloat(price);
     if (isNaN(p) || p < 0) e.price = m.data_validation_must_be_non_negative();
     if (!currency.trim()) e.currency = m.data_validation_required();
+    if (type === 'sell' && foreignTax.trim() !== '') {
+      const ft = parseFloat(foreignTax);
+      if (isNaN(ft) || ft < 0) e.foreignTax = m.data_validation_must_be_non_negative();
+    }
     errors = e;
     return Object.keys(e).length === 0;
   }
@@ -145,6 +162,8 @@
     const p = parseFloat(price);
     const proc = proceeds ? parseFloat(proceeds) : qty * p;
     const comm = parseFloat(commission) || 0;
+    const ft = type === 'sell' && foreignTax.trim() !== '' ? parseFloat(foreignTax) : 0;
+    const ftDate = ft > 0 ? pickerValueToDate(`${foreignTaxDate} 00:00`) : null;
 
     onsave({
       symbol: symbol.trim().toUpperCase(),
@@ -157,6 +176,9 @@
       commission: comm,
       commissionCurrency: (commissionCurrency.trim() || currency.trim()).toUpperCase(),
       type,
+      account,
+      ...(ft > 0 ? { foreignTax: ft } : {}),
+      ...(ftDate ? { foreignTaxDate: ftDate } : {}),
     });
   }
 </script>
@@ -218,7 +240,29 @@
       <label for="trade-comm-currency" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_commission_currency()}</label>
       <input id="trade-comm-currency" type="text" bind:value={commissionCurrency} placeholder={currency} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
     </div>
+    <div>
+        <label for="trade-account" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_account()}</label>
+        <AccountField id="trade-account" {accounts} value={account} onchange={(v) => (accountChoice = v)} />
+    </div>
+    {#if type === 'sell'}
+      <div>
+        <label for="trade-foreign-tax" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_foreign_tax()}</label>
+        <input id="trade-foreign-tax" type="number" step="any" min="0" bind:value={foreignTax} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+        {#if errors.foreignTax}<span class="text-xs text-red-500">{errors.foreignTax}</span>{/if}
+      </div>
+      <div>
+        <label for="trade-foreign-tax-date" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_foreign_tax_date()}</label>
+        <input id="trade-foreign-tax-date" type="date" bind:value={foreignTaxDate} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+      </div>
+    {/if}
   </div>
+  {#if type === 'sell'}
+    <div class="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+      <p>{m.data_foreign_tax_help_treaty()}</p>
+      <p>{m.data_foreign_tax_help_reclaim()}</p>
+      <p>{m.data_foreign_tax_help_israel()}</p>
+    </div>
+  {/if}
   <div class="flex justify-end gap-2">
     <button type="button" onclick={oncancel} class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700">
       {m.data_cancel()}

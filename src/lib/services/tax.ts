@@ -1,8 +1,10 @@
+import { NbpRateNotYetPublishedError } from '../../core/nbp.js';
 import {
   calculateTaxes,
   type TaxCalculationResult,
 } from '../../core/tax/calculator.js';
-import { buildSymbolCountryMap } from '../../core/tax/symbol-country.js';
+import { isIncentiveBuy } from '../../core/tax/incentive.js';
+import { buildSymbolCountryMaps } from '../../core/tax/symbol-country.js';
 import type {
   EnrichedCorporateAction,
   EnrichedCreditInterest,
@@ -13,6 +15,7 @@ import type {
 } from '../../core/types.js';
 import { db } from '../db.js';
 import { createLogger } from '../state/logger.svelte.js';
+import { enrichCarryInPositions } from './carry-in.js';
 import {
   fetchRatesForSession,
   getFixingRate,
@@ -31,15 +34,15 @@ function toDateString(d: Date): string {
 }
 
 /**
- * Resolve NBP fixing rate for a given currency/date, logging any error
- * before returning a sentinel. Centralizes the `rateUnavailable` fallback
- * so failures show up in the console instead of silently producing 0 PLN.
+ * Resolve NBP fixing rate for a given currency/date, logging any error before
+ * returning a sentinel. Centralizes the `rateUnavailable` fallback so failures
+ * show up in the console instead of silently producing 0 PLN.
  */
 async function tryGetFixingRate(args: {
   currency: string;
   date: string;
   scope: string;
-  useTradeSettlementDate?: boolean;
+  useTradeSettlementDate?: boolean | undefined;
 }): Promise<{ rate: number; date: string } | undefined> {
   try {
     const getRate = args.useTradeSettlementDate
@@ -51,6 +54,12 @@ async function tryGetFixingRate(args: {
     });
     return { rate: rate.rate, date: rate.date };
   } catch (e) {
+    if (e instanceof NbpRateNotYetPublishedError) {
+      log.warn(
+        `tryGetFixingRate(${args.scope}): NBP rate for ${args.currency} on ${e.date} is not yet published (event ${args.date}); recalculate later`,
+      );
+      return undefined;
+    }
     const message = e instanceof Error ? e.message : String(e);
     log.warn(
       `tryGetFixingRate(${args.scope}): no rate for ${args.currency} on ${args.date}: ${message}`,
@@ -109,16 +118,27 @@ export async function calculateSessionTaxes(args: {
     .equals(args.sessionId)
     .toArray();
 
-  const symbolCountryMap = buildSymbolCountryMap({
-    trades,
-    dividends,
-    overrides,
-  });
+  const countryMaps = buildSymbolCountryMaps({ trades, dividends, overrides });
+  const overriddenForDividends = new Set(
+    overrides
+      .filter((o) => (o.scope ?? 'both') !== 'gains')
+      .map((o) => o.symbol),
+  );
+  const adrCountryConflicts = new Set(
+    [...countryMaps.adrConflicts].filter(
+      (symbol) => !overriddenForDividends.has(symbol),
+    ),
+  );
 
   // 4. Prefetch and cache NBP rates
   log.info('calculateSessionTaxes: prefetching NBP rates');
   const ratesStart = performance.now();
-  await fetchRatesForSession({ sessionId: args.sessionId });
+  try {
+    await fetchRatesForSession({ sessionId: args.sessionId });
+  } catch (e) {
+    // Prefetch is an optimisation; per-row lookups below retry.
+    log.warn('calculateSessionTaxes: NBP prefetch failed', e);
+  }
   log.debug(
     `calculateSessionTaxes: NBP prefetch done in ${String(Math.round(performance.now() - ratesStart))}ms`,
   );
@@ -139,11 +159,47 @@ export async function calculateSessionTaxes(args: {
         scope: 'trade.commission',
         useTradeSettlementDate: session.useSettlementDateForTradeRates ?? false,
       });
+      // Income taxed at vest is valued at the vest-date rate even when the
+      // trade itself uses the settlement-date rate.
+      const needsIncomeRate =
+        (session.useSettlementDateForTradeRates ?? false) &&
+        isIncentiveBuy(trade);
+      const incomeRate = needsIncomeRate
+        ? await tryGetFixingRate({
+            currency: trade.currency,
+            date: dateStr,
+            scope: 'trade.incentive',
+          })
+        : undefined;
+      // Foreign tax on the sale: art. 11a ust. 3, D-1 of the payment date
+      // (default: the date the sell's own rate uses).
+      const hasForeignTax =
+        trade.type === 'sell' && (trade.foreignTax ?? 0) > 0;
+      const foreignTaxRate =
+        hasForeignTax && trade.foreignTaxDate
+          ? await tryGetFixingRate({
+              currency: trade.currency,
+              date: toDateString(trade.foreignTaxDate),
+              scope: 'trade.foreignTax',
+            })
+          : rate;
+      // A missing rate becomes 0 here; rateUnavailable propagates through
+      // FIFO lots to every sell that consumes them (capital-gains.ts).
       return {
         ...trade,
         exchangeRate: rate?.rate ?? 0,
         commissionExchangeRate: comRate?.rate ?? 0,
-        rateUnavailable: rate === undefined || comRate === undefined,
+        ...(incomeRate ? { incomeExchangeRate: incomeRate.rate } : {}),
+        ...(needsIncomeRate && !incomeRate
+          ? { incomeRateUnavailable: true }
+          : {}),
+        ...(hasForeignTax
+          ? { foreignTaxExchangeRate: foreignTaxRate?.rate ?? 0 }
+          : {}),
+        rateUnavailable:
+          rate === undefined ||
+          comRate === undefined ||
+          (hasForeignTax && foreignTaxRate === undefined),
       };
     }),
   );
@@ -199,6 +255,21 @@ export async function calculateSessionTaxes(args: {
     }),
   );
 
+  // 8b. Resolve carry-in acquisition costs to PLN (art. 23 ust. 1 pkt 38
+  // with art. 30b ust. 2 pkt 1: deducted in the year of sale; art. 11a
+  // ust. 2: NBP rate before the acquisition date)
+  const enrichedCarryIns = await enrichCarryInPositions({
+    positions: carryInPositions,
+    getRate: async ({ currency, date }) =>
+      (
+        await tryGetFixingRate({
+          currency,
+          date: toDateString(date),
+          scope: 'carryIn',
+        })
+      )?.rate,
+  });
+
   // 9. Enrich corporate actions with fixing rates for cash component
   const enrichedCorporateActions: EnrichedCorporateAction[] = await Promise.all(
     corporateActions.map(async (ca) => {
@@ -247,14 +318,16 @@ export async function calculateSessionTaxes(args: {
       creditInterests: enrichedCreditInterests,
       withholdingTaxes: enrichedWithholding,
       corporateActions: enrichedCorporateActions,
-      carryInPositions,
+      carryInPositions: enrichedCarryIns,
       priorLosses: priorLosses.map((p) => ({
         year: p.year,
         totalLossPln: p.totalLossPln,
         alreadyDeductedPln: p.alreadyDeductedPln,
       })),
       taxPeriod,
-      symbolCountryMap,
+      symbolCountryMap: countryMaps.gains,
+      dividendSymbolCountryMap: countryMaps.dividends,
+      adrCountryConflicts,
       showDividendsInPitZg: session.showDividendsInPitZg ?? false,
       reduceAdrFeesFromDividends: session.reduceAdrFeesFromDividends ?? false,
     });
@@ -305,6 +378,7 @@ export async function calculateSessionTaxes(args: {
         pit38: result.pit38,
         pitZg: result.pitZg,
         lossDeduction: result.lossDeduction,
+        carryInWarnings: result.carryInWarnings,
       });
 
       // 13. Update session status
@@ -322,38 +396,4 @@ export async function calculateSessionTaxes(args: {
     `calculateSessionTaxes:done in ${String(Math.round(performance.now() - startedAt))}ms`,
   );
   return result;
-}
-
-/** Clear calculated results for a session (keep parsed data) */
-export async function clearSessionResults(args: {
-  sessionId: string;
-}): Promise<void> {
-  await db.transaction(
-    'rw',
-    [
-      db.tradeResults,
-      db.dividendResults,
-      db.creditInterestResults,
-      db.taxSummaries,
-      db.sessions,
-    ],
-    async () => {
-      await Promise.all([
-        db.tradeResults.where('sessionId').equals(args.sessionId).delete(),
-        db.dividendResults.where('sessionId').equals(args.sessionId).delete(),
-        db.creditInterestResults
-          .where('sessionId')
-          .equals(args.sessionId)
-          .delete(),
-        db.taxSummaries.delete(args.sessionId),
-      ]);
-      await updateSession({
-        id: args.sessionId,
-        changes: {
-          status: 'draft',
-          calculatedAt: undefined,
-        },
-      });
-    },
-  );
 }

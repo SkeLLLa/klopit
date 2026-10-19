@@ -4,10 +4,10 @@
 
   interface Props {
     sources: GroundingSource[];
-    keys?: string[];
+    keys?: string[] | undefined;
     variant?: 'inline' | 'list';
-    labelledBy?: string;
-    class?: string;
+    labelledBy?: string | undefined;
+    class?: string | undefined;
   }
 
   let {

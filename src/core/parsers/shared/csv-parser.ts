@@ -14,9 +14,10 @@ import type { StatementParser } from '../types.js';
 import { parseCsvLine } from './csv-utils.js';
 
 /**
- * Abstract base class for CSV-based broker parsers.
- * Handles CSV splitting, row filtering (Header vs Data), state accumulation, and finish() assembly.
- * Subclasses implement processRow() for section-specific parsing and getBrokerId() for identity.
+ * Abstract base class for CSV-based broker parsers. Handles CSV splitting, row
+ * filtering (Header vs Data), state accumulation, and finish() assembly.
+ * Subclasses implement processRow() for section-specific parsing and
+ * getBrokerId() for identity.
  */
 export abstract class CsvStatementParser implements StatementParser {
   protected year = 0;
@@ -45,6 +46,7 @@ export abstract class CsvStatementParser implements StatementParser {
 
   /**
    * Process a single data row. Called only for rows where column 2 is "Data".
+   *
    * @param args - The section name (column 1) and all CSV fields for this row
    */
   protected abstract processRow(args: {
@@ -86,7 +88,8 @@ export abstract class CsvStatementParser implements StatementParser {
 
   /** Assemble the final ParsedStatement from accumulated state */
   finish(): ParsedStatement {
-    // Backfill ISINs on trades, dividends, and withholding taxes from the
+    // Backfill ISINs on trades, dividends, withholding taxes, corporate
+    // actions, fees and carry-in positions from the
     // symbolToIsin map. The Financial Instrument Information section may
     // appear AFTER other sections in the CSV, so ISINs might be missing
     // at parse time but available now.
@@ -105,6 +108,9 @@ export abstract class CsvStatementParser implements StatementParser {
     for (const fee of this.transactionFees) {
       fee.isin ??= this.symbolToIsin.get(fee.symbol);
     }
+    for (const p of this.carryInPositions) {
+      p.isin ??= this.symbolToIsin.get(p.symbol);
+    }
 
     // Year inference fallback — max year from all parsed dates
     if (this.year === 0) {
@@ -116,6 +122,26 @@ export abstract class CsvStatementParser implements StatementParser {
       for (const d of allDates) {
         const y = d.getFullYear();
         if (y > this.year) this.year = y;
+      }
+    }
+
+    // Carry-ins parsed before the statement year was known have year 0.
+    // Derive the prior year from the inferred statement year, or drop them:
+    // a snapshot without a year cannot be placed on the FIFO timeline.
+    const yearless = this.carryInPositions.filter((p) => p.year <= 0);
+    if (yearless.length > 0) {
+      if (this.year > 0) {
+        for (const p of yearless) p.year = this.year - 1;
+        this.addWarning({
+          section: 'Carry-in positions',
+          message: `Carry-in positions parsed before the statement period; assumed held at the end of ${String(this.year - 1)}.`,
+        });
+      } else {
+        this.carryInPositions = this.carryInPositions.filter((p) => p.year > 0);
+        this.addWarning({
+          section: 'Carry-in positions',
+          message: `Statement year unknown; skipped ${String(yearless.length)} carry-in position(s). Add them manually on the Data page.`,
+        });
       }
     }
 
@@ -150,11 +176,11 @@ export abstract class CsvStatementParser implements StatementParser {
     section: string;
     kind: SkippedRowKind;
     rawLine: string;
-    assetCategory?: string;
-    currency?: string;
-    symbol?: string;
-    datetime?: string;
-    description?: string;
+    assetCategory?: string | undefined;
+    currency?: string | undefined;
+    symbol?: string | undefined;
+    datetime?: string | undefined;
+    description?: string | undefined;
   }): void {
     this.skippedRows.push({
       line: this.lineNumber,

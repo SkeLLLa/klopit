@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { Pit38Fields } from '../../core/types.js';
   import SectionHeader from './SectionHeader.svelte';
   import FormField from './FormField.svelte';
 
-  let { pit38 }: { pit38: Pit38Fields } = $props();
+  let {
+    pit38,
+    dividendAddBackPln = 0,
+  }: { pit38: Pit38Fields; dividendAddBackPln?: number } = $props();
 </script>
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
@@ -17,6 +20,13 @@
     <FormField label={m.tax_g_flat_rate_tax()} poz={46} value={pit38[46]} />
     <FormField label={m.tax_g_dividend_tax()} poz={47} value={pit38[47]} />
     <FormField label={m.tax_g_foreign_withholding()} poz={48} value={pit38[48]} />
+    {#if dividendAddBackPln > 0}
+      <FormField
+        label={m.tax_g_wht_add_back_label()}
+        value={dividendAddBackPln}
+        help={m.tax_g_wht_add_back_help()}
+      />
+    {/if}
     <FormField label={m.tax_g_difference()} poz={49} value={pit38[49]} />
     <FormField label={m.tax_g_advance_payments()} poz={50} value={pit38[50]} />
     <div class="my-2 border-t border-slate-200 dark:border-slate-600"></div>

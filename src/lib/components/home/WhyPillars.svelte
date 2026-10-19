@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { DollarSign, Globe, GitFork, UserX } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { DollarSign, Globe, GitFork, UserX } from '@lucide/svelte';
 
   const pillars = [
     { icon: DollarSign, label: m.home_why_free_label(), desc: m.home_why_free_desc() },

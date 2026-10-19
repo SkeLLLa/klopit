@@ -5,18 +5,18 @@ interface PositionedToken {
 }
 
 /**
- * Reconstruct a PDF page's text in visual reading order by grouping
- * tokens into rows (similar y, within `yTolerance` points) and sorting
- * each row by x. Without this, PDF text layers emit tokens in stream
- * order, which for the IBI template interleaves labels and values
- * unhelpfully (labels right-to-left, then values left-to-right).
+ * Reconstruct a PDF page's text in visual reading order by grouping tokens into
+ * rows (similar y, within `yTolerance` points) and sorting each row by x.
+ * Without this, PDF text layers emit tokens in stream order, which for the IBI
+ * template interleaves labels and values unhelpfully (labels right-to-left,
+ * then values left-to-right).
  */
 function reconstructText(args: {
   tokens: readonly PositionedToken[];
   yTolerance: number;
 }): string {
   const { yTolerance } = args;
-  const sorted = [...args.tokens].sort((a, b) => b.y - a.y);
+  const sorted = args.tokens.toSorted((a, b) => b.y - a.y);
   const rows: PositionedToken[][] = [];
   let currentY: number | undefined;
   for (const tok of sorted) {
@@ -30,8 +30,7 @@ function reconstructText(args: {
   return rows
     .map((row) =>
       row
-        .slice()
-        .sort((a, b) => a.x - b.x)
+        .toSorted((a, b) => a.x - b.x)
         .map((t) => t.str.trim())
         .filter((s) => s.length > 0)
         .join(' '),
@@ -41,9 +40,9 @@ function reconstructText(args: {
 
 /**
  * Extract positionally-aware text from a PDF buffer using `unpdf`, an
- * isomorphic wrapper around pdfjs-dist. Works identically in Node (test
- * runner) and the browser (Vite bundler), so we don't need the legacy
- * build + worker gymnastics pdfjs-dist normally requires.
+ * isomorphic wrapper around pdfjs-dist. Works identically in Node (test runner)
+ * and the browser (Vite bundler), so we don't need the legacy build + worker
+ * gymnastics pdfjs-dist normally requires.
  */
 export async function extractPdfText(args: {
   buffer: ArrayBuffer;

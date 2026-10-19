@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { ExternalLink } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
+  import { ExternalLink } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
 
   let {
     symbol,
     class: klass = '',
   }: {
     symbol: string;
-    class?: string;
+    class?: string | undefined;
   } = $props();
 
   const href = $derived(

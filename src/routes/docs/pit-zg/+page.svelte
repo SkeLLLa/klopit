@@ -1,11 +1,11 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { ArrowRight } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import LegalClaim from '#lib/components/docs/LegalClaim.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { ArrowRight } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
 
   pageTitle.set(m.page_pitzg_h1());
 
@@ -30,7 +30,7 @@
     },
     {
       key: 'art30b',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
       label: m.page_pitzg_links_lexlege_title(),
       quote: '„z odpłatnego zbycia papierów wartościowych”',
     },

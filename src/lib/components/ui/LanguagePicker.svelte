@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { getLocale, locales, localizeHref } from '$lib/paraglide/runtime';
+  import { getLocale, locales, localizeHref } from '#lib/paraglide/runtime.js';
   import { page } from '$app/state';
 
-  let { collapsed = false }: { collapsed?: boolean } = $props();
+  let { collapsed = false }: { collapsed?: boolean | undefined } = $props();
 
   const locale = $derived(getLocale());
   const currentPath = $derived(page.url.pathname);

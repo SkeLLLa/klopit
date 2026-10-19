@@ -18,7 +18,23 @@
       "type": "image/svg+xml"
     },
     {
-      "purpose": "any maskable",
+      "sizes": "192x192",
+      "src": "/icons/icon-192.png",
+      "type": "image/png"
+    },
+    {
+      "sizes": "512x512",
+      "src": "/icons/icon-512.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "512x512",
+      "src": "/icons/icon-maskable-512.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any",
       "sizes": "512x512",
       "src": "/icons/icon-512.svg",
       "type": "image/svg+xml"

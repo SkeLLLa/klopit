@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { ExternalLink } from 'lucide-svelte';
+  import { ExternalLink } from '@lucide/svelte';
   import type { GroundingLinkVariant } from './grounding';
 
   interface Props {
     href: string;
     label: string;
-    number?: number;
-    quote?: string;
-    variant?: GroundingLinkVariant;
-    external?: boolean;
-    ariaLabel?: string;
-    class?: string;
+    number?: number | undefined;
+    quote?: string | undefined;
+    variant?: GroundingLinkVariant | undefined;
+    external?: boolean | undefined;
+    ariaLabel?: string | undefined;
+    class?: string | undefined;
   }
 
   let {

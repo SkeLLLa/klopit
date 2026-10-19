@@ -19,26 +19,68 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 - [PIT/ZG attachment guide](https://klopit.co.pl/docs/pit-zg/)
 - [FAQ](https://klopit.co.pl/docs/faq/)
 - [Supported brokers and features](https://klopit.co.pl/docs/brokers/)
+- [Trade date vs settlement date](https://klopit.co.pl/docs/trade-vs-settlement-date/)
 
 ## Broker guides
 
 - [Interactive Brokers — Activity Statement CSV](https://klopit.co.pl/docs/ibkr/)
 - [W-8BEN form for US dividends](https://klopit.co.pl/docs/ibkr/w8ben/)
+- [IBI Capital overview](https://klopit.co.pl/docs/ibi/)
 - [IBI Capital ESPP](https://klopit.co.pl/docs/ibi/espp/)
 - [IBI Capital RSU](https://klopit.co.pl/docs/ibi/rsu/)
+- [Charles Schwab — ESPP, RSU and sales CSV](https://klopit.co.pl/docs/schwab/)
+- [Revolut — manual entry guide](https://klopit.co.pl/docs/revolut/)
 
 ## Tax topics
 
 - [US dividends — 15% or 19% withholding](https://klopit.co.pl/docs/dividends/us-15-or-19/)
+- [Comparison with alternatives](https://klopit.co.pl/docs/alternatives/)
 
-## Localized entry points
+## Polski (pl)
 
-- [English (default)](https://klopit.co.pl/)
-- [Polski](https://klopit.co.pl/pl/)
-- [Українська](https://klopit.co.pl/uk/)
+- [Strona główna](https://klopit.co.pl/pl/)
+- [O kloPIT](https://klopit.co.pl/pl/about/)
+- [Wsparcie](https://klopit.co.pl/pl/support/)
+- [Dokumentacja](https://klopit.co.pl/pl/docs/)
+- [PIT-38](https://klopit.co.pl/pl/docs/pit-38/)
+- [PIT/ZG](https://klopit.co.pl/pl/docs/pit-zg/)
+- [Najczęstsze pytania](https://klopit.co.pl/pl/docs/faq/)
+- [Obsługiwani brokerzy](https://klopit.co.pl/pl/docs/brokers/)
+- [Data transakcji a data rozliczenia](https://klopit.co.pl/pl/docs/trade-vs-settlement-date/)
+- [Interactive Brokers (IBKR)](https://klopit.co.pl/pl/docs/ibkr/)
+- [W-8BEN](https://klopit.co.pl/pl/docs/ibkr/w8ben/)
+- [IBI Capital](https://klopit.co.pl/pl/docs/ibi/)
+- [IBI ESPP](https://klopit.co.pl/pl/docs/ibi/espp/)
+- [IBI RSU](https://klopit.co.pl/pl/docs/ibi/rsu/)
+- [Charles Schwab](https://klopit.co.pl/pl/docs/schwab/)
+- [Revolut](https://klopit.co.pl/pl/docs/revolut/)
+- [Dywidendy z USA — 15% czy 19%](https://klopit.co.pl/pl/docs/dividends/us-15-or-19/)
+- [Porównanie z alternatywami](https://klopit.co.pl/pl/docs/alternatives/)
+
+## Українська (uk)
+
+- [Калькулятор PIT-38](https://klopit.co.pl/uk/)
+- [Про kloPIT](https://klopit.co.pl/uk/about/)
+- [Підтримка](https://klopit.co.pl/uk/support/)
+- [Документація](https://klopit.co.pl/uk/docs/)
+- [PIT-38](https://klopit.co.pl/uk/docs/pit-38/)
+- [PIT/ZG](https://klopit.co.pl/uk/docs/pit-zg/)
+- [Часті запитання](https://klopit.co.pl/uk/docs/faq/)
+- [Підтримувані брокери](https://klopit.co.pl/uk/docs/brokers/)
+- [Дата угоди чи дата розрахунку](https://klopit.co.pl/uk/docs/trade-vs-settlement-date/)
+- [Interactive Brokers (IBKR)](https://klopit.co.pl/uk/docs/ibkr/)
+- [W-8BEN](https://klopit.co.pl/uk/docs/ibkr/w8ben/)
+- [IBI Capital](https://klopit.co.pl/uk/docs/ibi/)
+- [IBI ESPP](https://klopit.co.pl/uk/docs/ibi/espp/)
+- [IBI RSU](https://klopit.co.pl/uk/docs/ibi/rsu/)
+- [Charles Schwab](https://klopit.co.pl/uk/docs/schwab/)
+- [Revolut](https://klopit.co.pl/uk/docs/revolut/)
+- [Дивіденди зі США — 15% чи 19%](https://klopit.co.pl/uk/docs/dividends/us-15-or-19/)
+- [Порівняння з альтернативами](https://klopit.co.pl/uk/docs/alternatives/)
 
 ## AI discovery endpoints
 
+- [Full documentation as one Markdown file](https://klopit.co.pl/llms-full.txt) (every docs page also has a Markdown mirror at its URL + `index.md`)
 - [AI summary](https://klopit.co.pl/ai/summary.json)
 - [AI FAQ](https://klopit.co.pl/ai/faq.json)
 - [AI service description](https://klopit.co.pl/ai/service.json)
@@ -50,9 +92,9 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 
 - Import CSV from Interactive Brokers Activity Statements (trades, dividends, withholding tax, corporate actions).
 - Import PDF from IBI Capital for ESPP and RSU grants with per-grant FIFO lots.
-- Import CSV from Charles Schwab.
-- Manual entry for trades, dividends and foreign withholding tax for any other broker.
-- Capital gains via FIFO per ISIN, with lot-level isolation for ESPP grants.
+- Import CSV from Charles Schwab (ESPP deposits, RSU vests, sales). Schwab dividends are not imported (add dividends and their withholding by hand).
+- Manual entry for trades, dividends (with the tax withheld abroad) and carry-in positions for any other broker.
+- Capital gains via FIFO per ISIN and per broker account (art. 24 ust. 10 ustawy o PIT), with lot-level isolation for ESPP grants.
 - NBP Table A average exchange rates from the business day preceding each transaction or dividend.
 - Foreign dividend withholding credit capped per dividend at the lower of 19% and the bilateral tax-treaty rate.
 - PIT-38 Section C (proceeds and costs), Section D (tax base and 19% tax), Section G (foreign dividends), Section H (total tax due).
@@ -60,6 +102,20 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 - Loss carryforward over 5 years with the 50% annual cap.
 - Carry-in positions across tax years.
 - Symbol-to-country override table for treaty rate selection.
+
+## Legal basis (ustawa o PIT)
+
+Polish personal income tax act (ustawa z dnia 26 lipca 1991 r. o podatku dochodowym od osób fizycznych), consolidated text.
+
+- art. 30b ust. 1 ustawy o PIT — 19% tax on income from the paid disposal of securities and derivatives (capital gains)
+- art. 30b ust. 5a–5b ustawy o PIT — deduction of tax paid abroad on that income, limited to the proportional part of the Polish tax
+- art. 30b ust. 6 ustawy o PIT — annual return for this income: the return under art. 45 ust. 1a pkt 1 (PIT-38)
+- art. 45 ust. 1 i ust. 1a pkt 1 ustawy o PIT — filing window 15 February – 30 April of the following year; a separate return for art. 30b income
+- art. 30a ust. 1 pkt 4 ustawy o PIT — 19% flat tax on dividends and other income from a share in the profits of legal persons
+- art. 30a ust. 9 ustawy o PIT — deduction of tax paid abroad on dividends, capped at the tax at 19%
+- art. 11a ust. 1–2 ustawy o PIT — foreign-currency income and costs converted at the NBP average rate from the last business day before the income or cost date
+- art. 24 ust. 10 ustawy o PIT — FIFO when the purchase price cannot be identified, applied separately for each securities account
+- art. 9 ust. 3 ustawy o PIT — loss carryforward: 5 years, at most 50% of the loss per year, or a one-off deduction of up to 5 000 000 zł
 
 ## Disclaimer
 

@@ -1,8 +1,5 @@
-<script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import type { Snippet } from 'svelte';
-
-  type TabId =
+<script lang="ts" module>
+  export type TabId =
     | 'trades'
     | 'dividends'
     | 'interest'
@@ -10,13 +7,18 @@
     | 'corporateActions'
     | 'carryIn'
     | 'skipped';
+</script>
+
+<script lang="ts">
+  import { m } from '#lib/paraglide/messages.js';
+  import type { Snippet } from 'svelte';
 
   let {
     activeTab = $bindable('trades'),
     counts,
     children,
   }: {
-    activeTab?: TabId;
+    activeTab?: TabId | undefined;
     counts: Record<TabId, number>;
     children: Snippet<[TabId]>;
   } = $props();

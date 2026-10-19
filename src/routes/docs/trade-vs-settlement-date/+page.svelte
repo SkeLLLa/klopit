@@ -1,7 +1,7 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import LegalClaim from '#lib/components/docs/LegalClaim.svelte';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
 
   let { data } = $props();
 

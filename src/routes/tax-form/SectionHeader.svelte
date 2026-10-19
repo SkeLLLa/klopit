@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { localizeHref } from '$lib/paraglide/runtime';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
 
   let {
     title,
@@ -8,9 +8,9 @@
     seeTransactionsLabel,
   }: {
     title: string;
-    placeholder?: boolean;
-    seeTransactionsHref?: string;
-    seeTransactionsLabel?: string;
+    placeholder?: boolean | undefined;
+    seeTransactionsHref?: string | undefined;
+    seeTransactionsLabel?: string | undefined;
   } = $props();
 </script>
 

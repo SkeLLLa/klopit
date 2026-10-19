@@ -1,6 +1,12 @@
-import { m } from '$lib/paraglide/messages.js';
-import { importFile } from '$lib/services/import.js';
-import type { BrokerId, ImportWarning, SkippedRow } from '../../core/types.js';
+import type {
+  BrokerId,
+  ImportWarning,
+  SellToCoverDetail,
+  SkippedRow,
+} from '../../core/types.js';
+
+import { m } from '#lib/paraglide/messages.js';
+import { importFile } from '#lib/services/import.js';
 
 export interface ImportFileResult {
   fileName: string;
@@ -8,6 +14,8 @@ export interface ImportFileResult {
   message: string;
   warnings: ImportWarning[];
   skippedRows: SkippedRow[];
+  incentiveSymbolsMissingRegime: string[];
+  sellToCover: SellToCoverDetail[];
 }
 
 export async function importFiles(args: {
@@ -20,6 +28,8 @@ export async function importFiles(args: {
 
   for (const file of files) {
     try {
+      // Files are imported one at a time: each import read-modify-writes the session record.
+      // oxlint-disable-next-line eslint/no-await-in-loop
       const result = await importFile({
         sessionId,
         brokerId,
@@ -37,6 +47,8 @@ export async function importFiles(args: {
         }),
         warnings: result.warnings,
         skippedRows: result.skippedRows,
+        incentiveSymbolsMissingRegime: result.incentiveSymbolsMissingRegime,
+        sellToCover: result.sellToCover,
       });
     } catch (err) {
       results.push({
@@ -48,6 +60,8 @@ export async function importFiles(args: {
         }),
         warnings: [],
         skippedRows: [],
+        incentiveSymbolsMissingRegime: [],
+        sellToCover: [],
       });
     }
   }

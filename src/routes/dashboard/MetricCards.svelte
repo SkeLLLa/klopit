@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { formatPln } from '$lib/utils/format-pln.js';
-  import type { TaxSummaryRecord } from '$lib/db.js';
-  import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { formatPln } from '#lib/utils/format-pln.js';
+  import type { TaxSummaryRecord } from '#lib/db.js';
+  import { TrendingUp, TrendingDown, Minus, Info } from '@lucide/svelte';
   import { TAX_RATE } from '../../core/types.js';
 
   interface Props {
     taxSummary: TaxSummaryRecord;
-    prevYearSummary?: TaxSummaryRecord;
+    prevYearSummary?: TaxSummaryRecord | undefined;
     sellTradeCount: number;
     dividendCount: number;
     creditInterestCount: number;
@@ -56,9 +56,9 @@
     value: number;
     subtitle: string;
     color: 'blue' | 'green' | 'red' | 'amber';
-    prevValue?: number;
+    prevValue?: number | undefined;
     lowerIsBetter: boolean;
-    info?: string;
+    info?: string | undefined;
   }
 
   const cards: CardData[] = $derived([

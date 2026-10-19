@@ -1,9 +1,9 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight, CheckCircle2, Clock, FileText, MinusCircle } from 'lucide-svelte';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { ArrowRight, CheckCircle2, Clock, FileText, MinusCircle } from '@lucide/svelte';
 
   let { data } = $props();
 
@@ -17,13 +17,13 @@
     {
       key: 'art30b',
       label: 'Ustawa o PIT, art. 30b',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/',
       quote: '„podatek dochodowy wynosi 19% uzyskanego dochodu”',
     },
     {
       key: 'art11a',
       label: 'Ustawa o PIT, art. 11a',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/',
       quote: '„z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu”',
     },
     {
@@ -35,7 +35,7 @@
     {
       key: 'art9',
       label: 'Ustawa o PIT, art. 9 ust. 3',
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/',
       quote: '„nie może przekroczyć 50% wysokości tej straty”',
     },
     {
@@ -153,6 +153,20 @@
         class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
       >
         {content.manualCta}
+        <ArrowRight size={12} />
+      </a>
+      <a
+        href={localizeHref('/docs/revolut')}
+        class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
+      >
+        {content.revolutLabel}
+        <ArrowRight size={12} />
+      </a>
+      <a
+        href={localizeHref('/docs/alternatives')}
+        class="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
+      >
+        {content.alternativesLabel}
         <ArrowRight size={12} />
       </a>
     </div>

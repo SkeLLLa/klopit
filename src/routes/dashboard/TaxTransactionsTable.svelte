@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
-  import { m } from '$lib/paraglide/messages.js';
-  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
-  import { formatDatetime, formatDate } from '$lib/utils/format-date.js';
-  import { formatPlnValue } from '$lib/utils/format-pln.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { TAX_RATE } from '../../core/types.js';
+  import { AlertTriangle } from '@lucide/svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '#lib/db.js';
+  import { formatDatetime, formatDate } from '#lib/utils/format-date.js';
+  import { formatPlnValue } from '#lib/utils/format-pln.js';
+  import { mergeBadges, type WarningBadge } from '#lib/utils/merge-badges.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { TAX_RATE, type DividendWarning } from '../../core/types.js';
   import {
     sumDividendTaxGross,
     sumDeductibleWithholding,
@@ -23,6 +24,82 @@
   } = $props();
 
   const TAX_PCT = TAX_RATE * 100;
+
+  /** Badge, tooltip title and description for the cross-date matching warnings. */
+  function matchingBadge(
+    warning: DividendWarning,
+    div: DividendResultRecord,
+  ): WarningBadge | undefined {
+    switch (warning.kind) {
+      case 'reversed-later':
+        return {
+          badge: m.dividend_warning_reversed_later_badge(),
+          title: m.dividend_warning_reversed_later_title(),
+          description: warning.crossYear
+            ? m.dividend_warning_reversed_later_cross_year_description({
+                date: warning.reversalDate,
+              })
+            : m.dividend_warning_reversed_later_description({
+                date: warning.reversalDate,
+              }),
+        };
+      case 'reverses-prior-year':
+        return {
+          badge: m.dividend_warning_reverses_prior_year_badge(),
+          title: m.dividend_warning_reverses_prior_year_title(),
+          description: m.dividend_warning_reverses_prior_year_description({
+            date: warning.originalDate,
+          }),
+        };
+      case 'wht-matched-by-symbol':
+        return {
+          badge: m.dividend_warning_wht_matched_by_symbol_badge(),
+          title: m.dividend_warning_wht_matched_by_symbol_title(),
+          description: m.dividend_warning_wht_matched_by_symbol_description({
+            date: warning.whtDate,
+          }),
+        };
+      case 'wht-unmatched':
+        return {
+          badge: m.dividend_warning_wht_unmatched_badge(),
+          title: m.dividend_warning_wht_unmatched_title(),
+          description: warning.likelySaleTax
+            ? m.dividend_warning_wht_unmatched_sale_description()
+            : m.dividend_warning_wht_unmatched_description(),
+        };
+      case 'wht-refunded-later':
+        return {
+          badge: m.dividend_warning_wht_refunded_later_badge(),
+          title: m.dividend_warning_wht_refunded_later_title(),
+          description: m.dividend_warning_wht_refunded_later_description({
+            date: warning.refundDate,
+          }),
+        };
+      case 'wht-refund-add-back':
+        return {
+          badge: m.dividend_warning_wht_refund_add_back_badge(),
+          title: m.dividend_warning_wht_refund_add_back_title(),
+          description: m.dividend_warning_wht_refund_add_back_description({
+            date: warning.originalDate,
+            amount: formatPlnValue(div.addBackPln ?? 0),
+          }),
+        };
+      case 'wht-refund-unmatched':
+        return {
+          badge: m.dividend_warning_wht_refund_unmatched_badge(),
+          title: m.dividend_warning_wht_refund_unmatched_title(),
+          description: m.dividend_warning_wht_refund_unmatched_description(),
+        };
+      default:
+        return undefined;
+    }
+  }
+
+  function matchingBadges(div: DividendResultRecord): WarningBadge[] {
+    return mergeBadges({
+      badges: (div.warnings ?? []).flatMap((w) => matchingBadge(w, div) ?? []),
+    });
+  }
 
   const sellTrades = $derived.by(() => {
     const out = tradeResults
@@ -70,7 +147,7 @@
   );
   const divTotalTaxPl = $derived(sumDividendTaxGross({ rows: dividendResults }));
   const divTotalWithholding = $derived(
-    dividendResults.reduce((s, d) => s + d.withholdingTaxPln, 0),
+    dividendResults.reduce((s, d) => (d.isInfo ? s : s + d.withholdingTaxPln), 0),
   );
   const divTotalDeductible = $derived(sumDeductibleWithholding({ rows: dividendResults }));
   const divTotalWithholdingPct = $derived(
@@ -153,7 +230,10 @@
               >
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
-                >{formatPlnValue(trade.costPln)}</td
+                >{formatPlnValue(trade.costPln)}{#if trade.sellCommissionPln}<div
+                  class="text-xs text-slate-500 dark:text-slate-400"
+                  >{m.dash_tax_sell_commission_included({ amount: formatPlnValue(trade.sellCommissionPln) })}</div
+                >{/if}</td
               >
               <td
                 class="px-3 py-2 text-right tabular-nums {trade.gainLossPln >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}"
@@ -165,7 +245,17 @@
               >
               <td class="px-3 py-2">
                 {#if trade.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  {@const rateHint = trade.costRateUnavailable
+                    ? m.dash_rate_missing_cost()
+                    : m.dash_rate_unavailable()}
+                  <span class="cursor-help" title={rateHint} aria-label={rateHint}>
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
+                {/if}
+                {#if trade.costBasisMissing}
+                  <span title={m.data_cost_status_missing()} aria-label={m.data_cost_status_missing()}>
+                    <AlertTriangle size={14} class="text-red-500" />
+                  </span>
                 {/if}
               </td>
             </tr>
@@ -258,7 +348,17 @@
               >
               <td class="px-3 py-2">
                 {#if trade.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  {@const rateHint = trade.costRateUnavailable
+                    ? m.dash_rate_missing_cost()
+                    : m.dash_rate_unavailable()}
+                  <span class="cursor-help" title={rateHint} aria-label={rateHint}>
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
+                {/if}
+                {#if trade.costBasisMissing}
+                  <span title={m.data_cost_status_missing()} aria-label={m.data_cost_status_missing()}>
+                    <AlertTriangle size={14} class="text-red-500" />
+                  </span>
                 {/if}
               </td>
             </tr>
@@ -331,31 +431,77 @@
             {@const hasUnknownCountry =
               div.warnings?.some((w) => w.kind === 'unknown-country') ??
               div.country === 'XX'}
+            {@const hasAdrConflict =
+              div.warnings?.some((w) => w.kind === 'adr-country-conflict') ??
+              false}
+            {@const hasPilExcess =
+              div.warnings?.some((w) => w.kind === 'pil-excess-not-credited') ??
+              false}
+            {@const hasPilSubstitute =
+              div.warnings?.some((w) => w.kind === 'pil-substitute') ?? false}
+            {@const hasNetNegative =
+              div.warnings?.some((w) => w.kind === 'net-negative') ?? false}
+            {@const hasWhtNetRefund =
+              div.warnings?.some((w) => w.kind === 'wht-net-refund') ?? false}
             {@const warningText = hasWhtLapse
               ? m.dividend_warning_wht_lapse_description()
-              : hasUnknownCountry
-                ? m.dividend_warning_unknown_country_description()
-                : undefined}
+              : hasWhtNetRefund
+                ? m.dividend_warning_wht_net_refund_description()
+                : hasPilExcess
+                  ? m.dividend_warning_pil_excess_description({ country: div.country })
+                  : hasAdrConflict
+                    ? m.dividend_warning_adr_country_conflict_description()
+                    : hasUnknownCountry
+                      ? m.dividend_warning_unknown_country_description()
+                      : hasPilSubstitute
+                        ? m.dividend_warning_pil_substitute_description({ country: div.country })
+                        : undefined}
+            {@const badges = matchingBadges(div)}
+            {@const isUnmatched =
+              div.warnings?.some(
+                (w) => w.kind === 'wht-unmatched' || w.kind === 'wht-refund-unmatched',
+              ) ?? false}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}
             <tr
-              class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+              class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 {isUnmatched
+                ? 'italic text-slate-500 dark:text-slate-400'
+                : ''}"
             >
               <td class="px-3 py-2 text-slate-600 dark:text-slate-300"
                 >{formatDate(div.date)}</td
               >
               <td
                 class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100"
-                >{div.symbol}</td
               >
+                {div.symbol}
+                {#each badges as b (b.badge)}
+                  <span
+                    class="ml-1 cursor-help rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal not-italic text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                    title={b.description}
+                    aria-label="{b.title}: {b.description}">{b.badge}</span
+                  >
+                {/each}
+              </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
-                >{formatPlnValue(div.amountPln)}</td
               >
+                {#if hasNetNegative}
+                  <span
+                    class="cursor-help text-amber-600 dark:text-amber-400"
+                    title={m.dividend_warning_net_negative_description()}
+                    aria-label={m.dividend_warning_net_negative_description()}
+                  >
+                    {formatPlnValue(div.amountPln)}
+                  </span>
+                {:else}
+                  {formatPlnValue(div.amountPln)}
+                {/if}
+              </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
-                >{formatPlnValue(taxPl)}</td
+                >{isUnmatched ? '—' : formatPlnValue(taxPl)}</td
               >
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300"
@@ -402,7 +548,13 @@
               </td>
               <td class="px-3 py-2">
                 {#if div.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  <span
+                    class="cursor-help"
+                    title={m.dash_rate_unavailable()}
+                    aria-label={m.dash_rate_unavailable()}
+                  >
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
                 {/if}
               </td>
             </tr>
@@ -501,7 +653,13 @@
               >
               <td class="px-3 py-2">
                 {#if row.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  <span
+                    class="cursor-help"
+                    title={m.dash_rate_unavailable()}
+                    aria-label={m.dash_rate_unavailable()}
+                  >
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
                 {/if}
               </td>
             </tr>

@@ -3,11 +3,37 @@ const MAX_RANGE_DAYS = 93;
 
 export class NbpFetchError extends Error {
   readonly url: string;
+  /** HTTP status code, when the request reached the API. */
+  readonly status?: number | undefined;
 
-  constructor(args: { url: string; message: string; cause?: unknown }) {
+  constructor(args: {
+    url: string;
+    message: string;
+    status?: number | undefined;
+    cause?: unknown;
+  }) {
     super(args.message, { cause: args.cause });
     this.name = 'NbpFetchError';
     this.url = args.url;
+    this.status = args.status;
+  }
+}
+
+/**
+ * The NBP rate needed for a lookup does not exist yet: the candidate day is
+ * today (table A is published around midday Warsaw time) or in the future (e.g.
+ * an estimated T+2 settlement date). Art. 11a updof requires the rate of that
+ * exact business day, so walking back to an older rate would be wrong.
+ */
+export class NbpRateNotYetPublishedError extends Error {
+  readonly currency: string;
+  readonly date: string;
+
+  constructor(args: { currency: string; date: string }) {
+    super(`NBP rate for ${args.currency} on ${args.date} is not yet published`);
+    this.name = 'NbpRateNotYetPublishedError';
+    this.currency = args.currency;
+    this.date = args.date;
   }
 }
 
@@ -49,6 +75,7 @@ function daysBetween(a: Date, b: Date): number {
 function eachDay(start: Date, end: Date): string[] {
   const days: string[] = [];
   const current = new Date(start);
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- `current` is a Date mutated in place via setDate()
   while (current <= end) {
     days.push(toDateString(current));
     current.setDate(current.getDate() + 1);
@@ -77,6 +104,7 @@ function splitIntoChunks(
   const chunks: { start: string; end: string }[] = [];
   const current = new Date(start);
 
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- `current` is a Date mutated in place via setDate()
   while (current <= end) {
     const chunkEnd = new Date(current);
     chunkEnd.setDate(chunkEnd.getDate() + MAX_RANGE_DAYS - 1);
@@ -124,13 +152,24 @@ async function fetchChunk(
   }
 
   if (!response.ok) {
+    // NBP answers 400 for invalid ranges (end date in the future, start after
+    // end, > 93 days). Include the body so the reason is visible in logs.
+    let body = '';
+    try {
+      body = (await response.text()).trim();
+    } catch {
+      // Body unavailable — the status code alone is enough.
+    }
     throw new NbpFetchError({
       url,
-      message: `NBP API error: ${String(response.status)} ${response.statusText} for ${url}`,
+      status: response.status,
+      message: `NBP API error: ${String(response.status)} ${response.statusText} for ${url}${body ? ` (${body})` : ''}`,
       cause: response,
     });
   }
 
+  // Response shape is defined by the NBP Web API (https://api.nbp.pl/); not validated at runtime.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return (await response.json()) as NbpApiResponse;
 }
 

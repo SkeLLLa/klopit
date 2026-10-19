@@ -17,10 +17,10 @@ import {
 } from './shared.js';
 
 /**
- * Regex: "Order Number: 1234567" — appears once in the page header. The
- * order number uniquely identifies a single ESPP grant-purchase + sell
- * pair; we use it as the trade's `lotId` so the FIFO engine isolates each
- * order into its own queue.
+ * Regex: "Order Number: 1234567" — appears once in the page header. The order
+ * number uniquely identifies a single ESPP grant-purchase + sell pair; we use
+ * it as the trade's `lotId` so the FIFO engine isolates each order into its own
+ * queue.
  */
 const ORDER_NUMBER_RE = /Order Number:\s*(\S+)/;
 const GRANT_DATE_RE = /Grant Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;

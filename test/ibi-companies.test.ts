@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+
 import { resolveIbiTicker } from '../src/core/parsers/ibi/companies.js';
 
 void describe('resolveIbiTicker', () => {

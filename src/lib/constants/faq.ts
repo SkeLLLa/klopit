@@ -47,4 +47,13 @@ export const FAQ_ITEMS = [
     questionKey: 'faq_12_question',
     answerKey: 'faq_12_answer',
   },
+  {
+    id: 'rsu-espp-cost',
+    questionKey: 'faq_13_question',
+    answerKey: 'faq_13_answer',
+  },
 ] as const;
+
+export type FaqMessageKey = (typeof FAQ_ITEMS)[number][
+  | 'questionKey'
+  | 'answerKey'];

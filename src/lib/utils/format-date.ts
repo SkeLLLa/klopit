@@ -1,4 +1,4 @@
-import { getLocale } from '$lib/paraglide/runtime';
+import { getLocale } from '#lib/paraglide/runtime.js';
 
 const localeMap: Record<string, string> = {
   en: 'en-GB',
@@ -53,7 +53,10 @@ export function formatDatetime(d: Date | string): string {
   return datetimeFormatter().format(toLocal(d));
 }
 
-/** Placeholder string showing the expected datetime format for the current locale. */
+/**
+ * Placeholder string showing the expected datetime format for the current
+ * locale.
+ */
 export function datetimePlaceholder(): string {
   const locale = getBcp47Locale();
   if (locale === 'en-GB') return 'DD/MM/YYYY, HH:mm';
@@ -68,8 +71,9 @@ export function datePlaceholder(): string {
 }
 
 /**
- * Parse a locale-formatted datetime string (e.g. "11/04/2026, 14:30" or "11.04.2026, 14:30")
- * into a Date. Accepts `/`, `.`, or `-` as date separators. Returns null if unparseable.
+ * Parse a locale-formatted datetime string (e.g. "11/04/2026, 14:30" or
+ * "11.04.2026, 14:30") into a Date. Accepts `/`, `.`, or `-` as date
+ * separators. Returns null if unparseable.
  */
 const datetimeRe =
   /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})[,\s]+(\d{1,2}):(\d{2})$/;
@@ -84,8 +88,8 @@ export function parseDatetime(input: string): Date | null {
 }
 
 /**
- * Parse a locale-formatted date string (e.g. "11/04/2026" or "11.04.2026")
- * into a Date. Returns null if unparseable.
+ * Parse a locale-formatted date string (e.g. "11/04/2026" or "11.04.2026") into
+ * a Date. Returns null if unparseable.
  */
 const dateRe = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/;
 
@@ -98,9 +102,13 @@ export function parseDate(input: string): Date | null {
   return d;
 }
 
-/** Format a Date to the ISO datetime-local value (YYYY-MM-DDTHH:mm) for native inputs. */
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Format a Date to the ISO datetime-local value (YYYY-MM-DDTHH:mm) for native
+ * inputs.
+ */
 export function toDatetimeLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
   const Y = String(d.getFullYear());
   const M = pad(d.getMonth() + 1);
   const D = pad(d.getDate());
@@ -111,7 +119,6 @@ export function toDatetimeLocal(d: Date): string {
 
 /** Format a Date to the ISO date value (YYYY-MM-DD) for native inputs. */
 export function toDateInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
   const Y = String(d.getFullYear());
   const M = pad(d.getMonth() + 1);
   const D = pad(d.getDate());

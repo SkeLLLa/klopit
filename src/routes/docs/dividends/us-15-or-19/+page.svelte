@@ -1,9 +1,9 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { ArrowRight } from 'lucide-svelte';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import LegalClaim from '#lib/components/docs/LegalClaim.svelte';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { ArrowRight } from '@lucide/svelte';
 
   let { data } = $props();
 

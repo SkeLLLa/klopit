@@ -1,11 +1,11 @@
 <script lang="ts">
-  import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
-  import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
-  import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { m } from '$lib/paraglide/messages.js';
-  import { localizeHref } from '$lib/paraglide/runtime';
-  import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight } from 'lucide-svelte';
+  import GroundingLinks from '#lib/components/docs/GroundingLinks.svelte';
+  import LegalClaim from '#lib/components/docs/LegalClaim.svelte';
+  import type { GroundingSource } from '#lib/components/docs/grounding.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
+  import { pageTitle } from '#lib/state/page-title.svelte.js';
+  import { ArrowRight } from '@lucide/svelte';
 
   pageTitle.set(m.page_docs_ib());
 
@@ -19,7 +19,7 @@
     {
       key: 'art30a',
       label: m.docs_ib_adr_source_pit(),
-      href: 'https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/',
+      href: 'https://lexlege.pb.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/',
       quote: '„z dywidend ... pobiera się 19%”',
     },
     {
@@ -40,7 +40,6 @@
     <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
       {m.docs_ib_export_title()}
     </h2>
-    <!-- eslint-disable svelte/no-at-html-tags -- i18n messages are compile-time constants from Paraglide, not user input -->
     <ol class="list-decimal space-y-2 pl-6 text-slate-700 dark:text-slate-300">
       <li>{@html m.docs_ib_step1()}</li>
       <li>{@html m.docs_ib_step2()}</li>
@@ -48,7 +47,6 @@
       <li>{@html m.docs_ib_step4()}</li>
       <li>{@html m.docs_ib_step5()}</li>
     </ol>
-    <!-- eslint-enable svelte/no-at-html-tags -->
   </section>
 
   <section class="space-y-3">
@@ -88,9 +86,7 @@
     <ArrowRight size={16} class="text-blue-600 dark:text-blue-400" />
   </a>
 
-  <!-- eslint-disable svelte/no-at-html-tags -->
   <p class="border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
     {@html m.docs_more_brokers_coming()}
   </p>
-  <!-- eslint-enable svelte/no-at-html-tags -->
 </div>
