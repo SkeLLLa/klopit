@@ -166,7 +166,7 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 
 **Why:** You trade in USD or EUR, but Polish taxes are reported in PLN.
 
-**Legal basis:** [Art. 11a ust. 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) — income in foreign currencies is converted to PLN using the average NBP exchange rate from **the last business day preceding** the date of income. For costs: [art. 22 ust. 1](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-22/) applies the same NBP rate principle.
+**Legal basis:** [Art. 11a ust. 1 ustawy o PIT](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) — income in foreign currencies is converted to PLN using the average NBP exchange rate from **the last business day preceding** the date of income. For costs: [art. 11a ust. 2](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/) applies the same NBP rate principle (the last business day before the cost was incurred).
 
 **How it works:**
 
@@ -206,15 +206,17 @@ By default both rates are the average NBP Table A rate from the last business da
 
 A carry-in must belong to a year before the tax year, and its acquisition date (if any) must fall on or before December 31 of that year.
 
-Carry-ins are keyed by ISIN when known (the parser back-fills it from the statement's instrument list), falling back to the symbol, so they match the trades that sell them.
+Carry-ins are keyed by ISIN when known (the parser back-fills it from the statement's instrument list), falling back to the ISIN of a trade or corporate action with the same symbol, then to the symbol, so they match the trades that sell them. A corporate action's ISIN is not used for a symbol whose trades have no ISIN, since those trades are keyed by symbol.
 
-**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date, so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). An undated carry-in is placed just before the first imported trade of the instrument after the previous snapshot (and never after the end of its year), because shares the imported history cannot explain must be older than it. On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
+**Step 2 — Build unified timeline.** All trades, corporate actions and carry-in positions are merged into a single timeline, sorted by datetime. A carry-in is placed at its acquisition date, so FIFO consumes lots in true acquisition order ([art. 24 ust. 10](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)). An undated carry-in is placed just before the first imported trade of the instrument after the previous snapshot (and never after the end of its year), because shares the imported history cannot explain are assumed to be older than it. On the same datetime, **corporate actions are processed first, then carry-ins, then trades** (e.g., a stock split on the same day as a sale adjusts quantities first).
 
-Carry-ins are treated as per-instrument **snapshots**: "held N shares at the end of year Y". Years are processed in ascending order. For each snapshot the holding implied by the imported events (and earlier snapshots) at December 31 of Y is computed, and only the difference is seeded:
+Carry-ins are treated as per-instrument **snapshots**: "held N shares at the end of year Y". Years are processed in ascending order. Imported sells that the imported history cannot cover (the holding would go negative) sold shares held before it: those shares are seeded as a separate lot at the first such sell, priced like the oldest carry-in row of the snapshot. Then the holding implied by the imported events (and earlier snapshots) at December 31 of Y is computed, and only the difference is seeded:
 
-- If the snapshot equals the implied holding, nothing is added (a later-year snapshot of the same shares is not double counted).
-- If the snapshot exceeds it, only the extra shares are seeded. When imported buys already explain part of the snapshot, the latest-acquired rows are reduced first, a warning is shown, and a reduced row's cost is pro-rated per share (with a separate warning).
-- If the snapshot is below the implied holding, the imports and the snapshot disagree (missing or duplicate imports): the snapshot is skipped and a warning is shown.
+- If the snapshot equals the implied holding, nothing is added and a warning is shown (a later-year snapshot of the same shares, or a position fully explained by imported buys, is not double counted). Such rows need no acquisition cost and are not listed as missing one.
+- If the snapshot exceeds it, only the extra shares are seeded. When imported buys already explain part of the snapshot, the latest-acquired rows are reduced first, a warning is shown, and the cost of a partly seeded row is pro-rated per share (with a separate warning).
+- If the snapshot is below the implied holding, the imports and the snapshot disagree (missing or duplicate imports): the snapshot is skipped, a warning is shown, and the tax form is marked incomplete (copying disabled), because the calculation may still hold shares the broker no longer reports.
+
+A merger target without an ISIN is matched through the same symbol → ISIN lookup, so its lots join the target's trades.
 
 Splits dated after a carry-in's acquisition and up to December 31 of its year are assumed to be already reflected in its quantity and are not applied again; later splits are applied by the timeline as usual.
 
@@ -747,7 +749,7 @@ When you download your Activity Statement from Interactive Brokers and import it
 5. **Carry-In Positions**
    - Shares you owned before importing (from prior years)
    - Needed for accurate FIFO calculations
-   - Imported from broker statements (e.g. IBKR Mark-to-Market prior quantity) without a cost; add the acquisition date and cost basis on the Data page, or confirm a zero cost for RSUs
+   - Imported from broker statements (e.g. IBKR Mark-to-Market prior quantity) without a cost; add the acquisition date and cost basis on the Data page, or confirm a zero cost for shares from a qualifying incentive program
    - Sales of carry-ins without a cost are flagged as "cost missing"
 
 6. **Credit Interest**

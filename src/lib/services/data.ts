@@ -124,11 +124,20 @@ export async function updateCarryInPosition(args: {
   const existing = await db.carryInPositions.get(args.id);
   if (!existing)
     throw new Error(`Carry-in position ${String(args.id)} not found`);
-  const merged = normalizeCarryInPosition(
-    { ...existing, ...args.changes },
-    { sessionYear: await sessionYear(existing.sessionId) },
+  const merged = { ...existing, ...args.changes };
+  // A PLN override would silently hide an edited cost or currency: drop it
+  // unless the change sets it too.
+  const { changes } = args;
+  const costEdited =
+    ('costBasis' in changes && changes.costBasis !== existing.costBasis) ||
+    ('currency' in changes &&
+      (changes.currency ?? 'PLN') !== (existing.currency ?? 'PLN'));
+  if (costEdited && !('costBasisPln' in changes)) delete merged.costBasisPln;
+  await db.carryInPositions.put(
+    normalizeCarryInPosition(merged, {
+      sessionYear: await sessionYear(existing.sessionId),
+    }),
   );
-  await db.carryInPositions.put(merged);
 }
 
 export async function deleteCarryInPosition(args: {

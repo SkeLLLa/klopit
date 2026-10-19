@@ -9,6 +9,7 @@
   import InvestedAreaChart from './InvestedAreaChart.svelte';
   import TaxTransactionsTable from './TaxTransactionsTable.svelte';
   import { m } from '$lib/paraglide/messages.js';
+  import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { sessionState } from '$lib/state/session.svelte.js';
   import { db } from '$lib/db.js';
@@ -87,7 +88,7 @@
   // --- Carry-in cost basis warnings ---
   const hasCostBasisMissing = $derived(
     (taxSummary?.missingCostCount ?? 0) > 0 ||
-    tradeResults.some((t: TradeResultRecord) => t.costBasisMissing === true),
+    tradeResults.some((t: TradeResultRecord) => t.costBasisMissing),
   );
   const carryInWarnings = $derived(taxSummary?.carryInWarnings ?? []);
 
@@ -213,10 +214,10 @@
 
     <!-- Carry-in cost basis missing banner -->
     {#if hasCostBasisMissing}
-      <div class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+      <div role="alert" class="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
         <AlertTriangle size={16} />
         <span>{m.dashboard_cost_basis_missing_warning()}</span>
-        <a href="/data#carry-in" class="ml-auto font-medium underline">{m.data_tab_carry_in()}</a>
+        <a href={localizeHref('/data#carry-in')} class="ml-auto font-medium underline">{m.data_tab_carry_in()}</a>
       </div>
     {/if}
 

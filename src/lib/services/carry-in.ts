@@ -1,3 +1,4 @@
+import type { CarryInWarning } from '../../core/tax/capital-gains.js';
 import type {
   CarryInPosition,
   EnrichedCarryInPosition,
@@ -175,4 +176,29 @@ export function normalizeCarryInPosition<T extends CarryInPosition>(
     costBasisSource = 'zero-confirmed';
   }
   return { ...pos, symbol, currency, costBasisSource };
+}
+
+/**
+ * True when the last calculation did not use this carry-in row: imported trades
+ * fully explained its snapshot, or the snapshot contradicted them. Such rows
+ * need no acquisition cost.
+ */
+export function isCarryInIgnored(
+  row: CarryInPosition,
+  warnings: readonly CarryInWarning[],
+): boolean {
+  return warnings.some((w) => {
+    if (w.kind === 'carry-in-cost-prorated' || w.year !== row.year) {
+      return false;
+    }
+    const sameInstrument =
+      row.isin && w.isin
+        ? row.isin.toUpperCase() === w.isin.toUpperCase()
+        : row.symbol.toUpperCase() === w.symbol.toUpperCase();
+    if (!sameInstrument) return false;
+    return (
+      w.kind === 'carry-in-inconsistent' ||
+      w.coveredQuantity >= w.carryInQuantity * (1 - 1e-9)
+    );
+  });
 }

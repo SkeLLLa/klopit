@@ -50,7 +50,12 @@
   const missingRateCount = $derived(taxSummary?.missingRateCount ?? 0);
   // Sells of carry-ins whose acquisition cost is unknown (counted as 0).
   const missingCostCount = $derived(taxSummary?.missingCostCount ?? 0);
-  const incomplete = $derived(missingRateCount + missingCostCount > 0);
+  // Carry-in snapshots that contradict the imported history (skipped, so the
+  // holdings may include shares that no longer exist).
+  const inconsistentCarryInCount = $derived(taxSummary?.inconsistentCarryInCount ?? 0);
+  const incomplete = $derived(
+    missingRateCount + missingCostCount + inconsistentCarryInCount > 0,
+  );
   // Incomplete results must not be filed: disable copying PIT-38 values.
   setCopyDisabled(() => incomplete);
   const stale = $derived(
@@ -259,6 +264,18 @@
               <div>
                 <p class="font-medium">{m.tax_form_missing_cost_title()}</p>
                 <p>{m.tax_form_missing_cost_body({ count: missingCostCount })}</p>
+                <a
+                  href={localizeHref('/data#carry-in')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.data_tab_carry_in()}
+                </a>
+              </div>
+            {/if}
+            {#if inconsistentCarryInCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_inconsistent_carry_in_title()}</p>
+                <p>{m.tax_form_inconsistent_carry_in_body({ count: inconsistentCarryInCount })}</p>
                 <a
                   href={localizeHref('/data#carry-in')}
                   class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"

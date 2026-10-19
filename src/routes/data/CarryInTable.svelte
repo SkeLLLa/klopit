@@ -13,7 +13,9 @@
   import {
     CarryInValidationError,
     isCarryInCostMissing,
+    isCarryInIgnored,
     parseDecimalInput,
+    type CarryInValidationCode,
   } from '$lib/services/carry-in.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
@@ -21,9 +23,15 @@
   import type { CarryInPosition } from '../../core/types.js';
 
   let { sessionId, sessionYear }: { sessionId: string; sessionYear: number } = $props();
+  const uid = $props.id();
+  const errorId = `${uid}-error`;
 
   const records = useLiveQuery(() =>
     db.carryInPositions.where('sessionId').equals(sessionId).sortBy('symbol'),
+  );
+  // Warnings from the last calculation: rows it did not use need no cost.
+  const carryInWarnings = useLiveQuery(
+    async () => (await db.taxSummaries.get(sessionId))?.carryInWarnings ?? [],
   );
 
   // Currencies offered for the cost basis: PLN plus every session trade currency.
@@ -45,6 +53,8 @@
   let editCurrency = $state('');
   let editZeroConfirmed = $state(false);
   let editError = $state('');
+  type EditField = 'symbol' | 'quantity' | 'year' | 'date' | 'cost';
+  let editErrorField: EditField | null = $state(null);
   let deleteTarget: CarryInPositionRecord | null = $state(null);
 
   const currencyOptions = $derived.by(() => {
@@ -61,6 +71,7 @@
 
   function fillEditor(row?: CarryInPositionRecord) {
     editError = '';
+    editErrorField = null;
     editSymbol = row?.symbol ?? '';
     editIsin = row?.isin ?? '';
     editQuantity = row ? String(row.quantity) : '';
@@ -100,6 +111,28 @@
     };
   }
 
+  const ERROR_FIELDS: Record<CarryInValidationCode, EditField> = {
+    'symbol-required': 'symbol',
+    'quantity-invalid': 'quantity',
+    'year-invalid': 'year',
+    'year-not-prior': 'year',
+    'date-after-year': 'date',
+    'cost-invalid': 'cost',
+    'date-required-for-fx': 'date',
+  };
+
+  /** ARIA attributes marking the input that caused the validation error. */
+  function invalidAttrs(field: EditField) {
+    return editErrorField === field
+      ? { 'aria-invalid': true, 'aria-describedby': errorId }
+      : {};
+  }
+
+  // Focus the first input when the editor opens.
+  function focusOnMount(node: HTMLElement) {
+    node.focus();
+  }
+
   function errorMessage(e: unknown): string {
     if (!(e instanceof CarryInValidationError)) return e instanceof Error ? e.message : String(e);
     switch (e.code) {
@@ -132,6 +165,7 @@
       editingId = null;
     } catch (e) {
       editError = errorMessage(e);
+      editErrorField = e instanceof CarryInValidationError ? ERROR_FIELDS[e.code] : null;
     }
   }
 
@@ -152,12 +186,12 @@
 
 {#snippet editorRow()}
   <tr class="border-b border-slate-100 dark:border-slate-800">
-    <td class="px-3 py-2"><input type="text" aria-label={m.data_symbol()} bind:value={editSymbol} onkeydown={handleKeydown} class={inputClass} /></td>
+    <td class="px-3 py-2"><input type="text" aria-label={m.data_symbol()} {...invalidAttrs('symbol')} bind:value={editSymbol} onkeydown={handleKeydown} class={inputClass} {@attach focusOnMount} /></td>
     <td class="px-3 py-2"><input type="text" aria-label={m.data_isin()} bind:value={editIsin} onkeydown={handleKeydown} class={inputClass} /></td>
-    <td class="px-3 py-2"><input type="text" inputmode="decimal" aria-label={m.data_quantity()} bind:value={editQuantity} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
-    <td class="px-3 py-2"><input type="text" inputmode="numeric" aria-label={m.data_year()} bind:value={editYear} onkeydown={handleKeydown} class="{inputClass} w-24" /></td>
-    <td class="px-3 py-2"><input type="date" aria-label={m.data_acquisition_date()} bind:value={editAcquisitionDate} onkeydown={handleKeydown} class={inputClass} /></td>
-    <td class="px-3 py-2"><input type="text" inputmode="decimal" aria-label={m.data_cost_basis()} bind:value={editCostBasis} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
+    <td class="px-3 py-2"><input type="text" inputmode="decimal" aria-label={m.data_quantity()} {...invalidAttrs('quantity')} bind:value={editQuantity} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
+    <td class="px-3 py-2"><input type="text" inputmode="numeric" aria-label={m.data_year()} {...invalidAttrs('year')} bind:value={editYear} onkeydown={handleKeydown} class="{inputClass} w-24" /></td>
+    <td class="px-3 py-2"><input type="date" aria-label={m.data_acquisition_date()} {...invalidAttrs('date')} bind:value={editAcquisitionDate} onkeydown={handleKeydown} class={inputClass} /></td>
+    <td class="px-3 py-2"><input type="text" inputmode="decimal" aria-label={m.data_cost_basis()} {...invalidAttrs('cost')} bind:value={editCostBasis} onkeydown={handleKeydown} class="{inputClass} text-right" /></td>
     <td class="px-3 py-2">
       <select aria-label={m.data_currency()} bind:value={editCurrency} class={inputClass}>
         {#each currencyOptions as currency (currency)}
@@ -176,11 +210,15 @@
         <button onclick={() => void saveEdit()} class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700">{m.data_save()}</button>
         <button onclick={() => (editingId = null)} class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">{m.data_cancel()}</button>
       </div>
-      {#if editError}
-        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{editError}</p>
-      {/if}
     </td>
   </tr>
+  {#if editError}
+    <tr class="border-b border-slate-100 dark:border-slate-800">
+      <td colspan="9" class="px-3 pb-2">
+        <p id={errorId} role="alert" class="text-xs text-red-600 dark:text-red-400">{editError}</p>
+      </td>
+    </tr>
+  {/if}
 {/snippet}
 
 <div>
@@ -226,7 +264,8 @@
             {#if editingId === row.id}
               {@render editorRow()}
             {:else}
-              {@const costMissing = isCarryInCostMissing(row)}
+              {@const ignored = isCarryInIgnored(row, carryInWarnings.current ?? [])}
+              {@const costMissing = !ignored && isCarryInCostMissing(row)}
               <tr class="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 {costMissing ? 'bg-amber-50 dark:bg-amber-900/20' : ''}">
                 <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{row.symbol}</td>
                 <td class="px-3 py-2 text-slate-500 dark:text-slate-400">
@@ -242,7 +281,9 @@
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{row.costBasisPln ?? row.costBasis ?? '—'}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{row.costBasisPln === undefined ? (row.currency ?? '—') : 'PLN'}</td>
                 <td class="px-3 py-2 text-xs">
-                  {#if costMissing}
+                  {#if ignored}
+                    <span class="text-slate-500 dark:text-slate-400">{m.data_cost_status_ignored()}</span>
+                  {:else if costMissing}
                     <span class="inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-300">
                       <AlertTriangle size={12} />
                       {m.data_cost_status_missing()}

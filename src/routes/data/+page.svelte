@@ -1,11 +1,10 @@
 <script lang="ts">
-  import type { ComponentProps } from 'svelte';
   import { m } from '$lib/paraglide/messages.js';
   import {
     deriveImportWarnings,
     mergeImportWarnings,
   } from '$lib/services/import.js';
-  import { isCarryInCostMissing } from '$lib/services/carry-in.js';
+  import { isCarryInCostMissing, isCarryInIgnored } from '$lib/services/carry-in.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { db, type SessionRecord } from '$lib/db.js';
@@ -16,7 +15,7 @@
   import SessionBar from './SessionBar.svelte';
   import SessionInfo from './SessionInfo.svelte';
   import ActionBar from './ActionBar.svelte';
-  import DataTabs from './DataTabs.svelte';
+  import DataTabs, { type TabId } from './DataTabs.svelte';
   import SkippedTable from './SkippedTable.svelte';
   import TradesTable from './TradesTable.svelte';
   import DividendsTable from './DividendsTable.svelte';
@@ -31,10 +30,11 @@
   pageTitle.set(m.page_data());
 
   // `/data#carry-in` (linked from the dashboard and tax form) opens that tab.
-  let dataTab: ComponentProps<typeof DataTabs>['activeTab'] = $state('trades');
-  $effect(() => {
+  let dataTab: TabId = $state('trades');
+  function syncTabFromHash() {
     if (window.location.hash === '#carry-in') dataTab = 'carryIn';
-  });
+  }
+  $effect(syncTabFromHash);
 
   type SessionWithImportWarnings = SessionRecord & {
     importWarnings?: ImportWarning[];
@@ -80,11 +80,22 @@
       ]);
     return { trades, dividends, withholding, corporateActions, creditInterest, carryIn };
   });
-  // Carry-ins without an acquisition cost (imported from MTM or legacy rows).
+  // Carry-ins without an acquisition cost (imported from MTM or legacy rows),
+  // except rows the last calculation did not use.
   const carryInsMissingCost = useLiveQuery<string[]>(async () => {
     if (!activeSessionId) return [];
-    const rows = await db.carryInPositions.where('sessionId').equals(activeSessionId).toArray();
-    return [...new Set(rows.filter(isCarryInCostMissing).map((row) => row.symbol))];
+    const [rows, summary] = await Promise.all([
+      db.carryInPositions.where('sessionId').equals(activeSessionId).toArray(),
+      db.taxSummaries.get(activeSessionId),
+    ]);
+    const warnings = summary?.carryInWarnings ?? [];
+    return [
+      ...new Set(
+        rows
+          .filter((row) => isCarryInCostMissing(row) && !isCarryInIgnored(row, warnings))
+          .map((row) => row.symbol),
+      ),
+    ];
   });
   const inMemorySkippedRows = $derived(
     activeSessionId ? skippedRowsStore.getSkippedRows({ sessionId: activeSessionId }) : [],
@@ -133,6 +144,8 @@
     showDeleteSessionConfirm = false;
   }
 </script>
+
+<svelte:window onhashchange={syncTabFromHash} />
 
 <h1 class="sr-only">{m.page_data()}</h1>
 
