@@ -185,7 +185,9 @@ All inputs arrive **pre-enriched** with NBP exchange rates resolved by the servi
 
 By default both rates are the average NBP Table A rate from the last business day preceding the transaction date. With the settlement-date setting enabled, trade rates use the last Polish business day preceding the estimated T+2 settlement date.
 
-**Missing rates:** If an NBP rate cannot be resolved (e.g. the fetch failed while offline), the amount is converted at rate 0 and the row is flagged `rateUnavailable`. A missing rate on a **buy** is carried on its FIFO lot (through stock splits and mergers), so every sell that consumes that lot is also flagged (`rateUnavailable` + `costRateUnavailable`), even when the buy happened in an earlier year. `TaxSummary.missingRateCount` counts all flagged trade, dividend and credit-interest rows; when it is above 0 the Tax Form page shows a red banner and marks the form as a draft that must not be filed.
+**Fetching and caching:** Rates are fetched from the NBP API (at most 93 days per request) and cached in IndexedDB. NBP publishes table A on business days around 12:15 Warsaw time and rejects requests for dates after today, so requests are always clamped to today (Europe/Warsaw). Days without a table are cached as holidays only once they are in the past; today's missing table is never cached. If the required rate is not published yet (an event dated today, or an estimated T+2 settlement date in the future), it is reported as missing rather than replaced by an older rate. Recalculate after publication to pick up the correct rate.
+
+**Missing rates:** If an NBP rate cannot be resolved (not yet published, or the fetch failed, e.g. while offline), the amount is converted at rate 0 and the row is flagged `rateUnavailable`. A missing rate on a **buy** is carried on its FIFO lot (through stock splits and mergers), so every sell that consumes that lot is also flagged (`rateUnavailable` + `costRateUnavailable`), even when the buy happened in an earlier year. `TaxSummary.missingRateCount` counts all flagged trade, dividend and credit-interest rows; when it is above 0 the dashboard shows a warning, and the Tax Form page shows a red banner, marks the form as a draft that must not be filed and disables copying PIT-38 values.
 
 ---
 
@@ -977,7 +979,7 @@ A: Duplicates will appear. You can delete the old ones manually.
 A: Currently: take a screenshot or copy-paste values. Full export planned.
 
 **Q: What if NBP rates are unavailable?**  
-A: The app stores a note and uses the last available rate. Tax is still calculated, but flagged for review.
+A: Weekends and NBP holidays are normal: the app uses the last published rate before the event date, as art. 11a requires. If the required rate is not published yet (e.g. today's table, published around 12:15) or cannot be fetched, the affected rows are computed with rate 0 and flagged, the results are marked incomplete, and copying PIT-38 values is disabled. Recalculate later to fill them in.
 
 **Q: Can I calculate taxes for multiple years at once?**  
 A: Yes — create separate sessions for each year. Each calculates independently.

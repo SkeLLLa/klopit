@@ -202,3 +202,97 @@ void describe('KlopitDB schema upgrade', () => {
     klopit.close();
   });
 });
+
+void describe('KlopitDB v15 upgrade (NBP null-rate purge)', () => {
+  void it('drops cached null NBP rates, keeps real rates and flags calculated sessions stale', async () => {
+    const dbName = `klopit_upgrade_${String(Date.now())}_${Math.random().toString(36).slice(2)}`;
+
+    const legacy = new Dexie(dbName);
+    legacy.version(1).stores({
+      sessions: 'id, year',
+      trades: '++id, sessionId, symbol, datetime',
+      dividends: '++id, sessionId, symbol, date',
+      corporateActions: '++id, sessionId, datetime',
+      tradeResults: '++id, sessionId, symbol, datetime',
+      dividendResults: '++id, sessionId, symbol, date',
+      taxSummaries: 'sessionId',
+      nbpRates: 'id, currency, date',
+    });
+    legacy.version(2).stores({
+      withholdingTaxes: '++id, sessionId, symbol, date',
+      carryInPositions: '++id, sessionId, symbol',
+      transactionFees: '++id, sessionId, symbol, datetime',
+    });
+    legacy.version(3).stores({
+      symbolCountryOverrides: '++id, sessionId, symbol',
+    });
+    legacy.version(6).stores({
+      priorLosses: '++id, sessionId, year, [sessionId+year]',
+    });
+    legacy.version(8).stores({
+      creditInterests: '++id, sessionId, date',
+      creditInterestResults: '++id, sessionId, date',
+    });
+    legacy.version(13).stores({
+      trades:
+        '++id, sessionId, symbol, datetime, [sessionId+symbol], [sessionId+symbol+isin]',
+      dividends:
+        '++id, sessionId, symbol, date, [sessionId+symbol], [sessionId+symbol+isin]',
+    });
+    await legacy.open();
+    const calculatedAt = new Date('2026-10-14T08:00:00.000Z');
+    await legacy.table('sessions').add({
+      id: 'calculated-session',
+      year: 2026,
+      createdAt: calculatedAt,
+      updatedAt: calculatedAt,
+      files: [],
+      status: 'calculated',
+      calculatedAt,
+      showDividendsInPitZg: false,
+    });
+    await legacy.table('trades').add({
+      sessionId: 'calculated-session',
+      symbol: 'AAPL',
+      datetime: new Date(2026, 9, 13),
+    });
+    await legacy.table('taxSummaries').put({
+      sessionId: 'calculated-session',
+      year: 2026,
+    });
+    await legacy.table('nbpRates').bulkPut([
+      {
+        id: 'USD:2026-10-13',
+        currency: 'USD',
+        date: '2026-10-13',
+        rate: 4.0,
+        table: '200/A/NBP/2026',
+      },
+      {
+        id: 'USD:2026-10-14',
+        currency: 'USD',
+        date: '2026-10-14',
+        rate: null,
+        table: '',
+      },
+    ]);
+    legacy.close();
+
+    const klopit = new KlopitDB(dbName);
+    await klopit.open();
+
+    assert.equal(await klopit.nbpRates.get('USD:2026-10-14'), undefined);
+    assert.equal((await klopit.nbpRates.get('USD:2026-10-13'))?.rate, 4.0);
+    assert.equal(await klopit.trades.count(), 1);
+    assert.equal(await klopit.taxSummaries.count(), 1);
+    const session = await klopit.sessions.get('calculated-session');
+    assert.equal(session?.status, 'calculated');
+    assert.ok(
+      session.dataUpdatedAt !== undefined &&
+        session.dataUpdatedAt.getTime() > calculatedAt.getTime(),
+      'calculated session should be flagged stale',
+    );
+
+    klopit.close();
+  });
+});

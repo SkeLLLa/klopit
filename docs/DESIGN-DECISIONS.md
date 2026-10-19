@@ -454,25 +454,24 @@ Warnings are reserved for rows the user may reasonably expect to matter for tax 
 
 ---
 
-## Design Decision: Exchange Rate Fallback to Last Known
+## Design Decision: Exchange Rate Lookup and Unavailable Rates
 
 ### The Problem
 
-NBP only provides rates for business days. What if you traded on a weekend?
+Art. 11a updof requires the NBP average rate from the **last business day before** the event date. NBP publishes table A only on business days, around midday Warsaw time, and its API rejects (HTTP 400) any range ending after today. So the rate for "today" is not known until midday, and rates for future days (e.g. an estimated T+2 settlement date) do not exist yet.
 
 ### The Solution
 
-When rate is unavailable for a date:
-
-1. Look for the most recent business day before that date
-2. Use that rate as a proxy
-3. Flag it as "rate unavailable" in the results
+1. **Normal walk back**: starting from the day before the reference date, skip weekends and NBP holidays (days with no table) until a published rate is found, at most 14 days back. This is the regular art. 11a lookup, not a fallback.
+2. **Today and future are never assumed**: requests are clamped to today (Europe/Warsaw). If the required business day is today (before publication) or in the future, the lookup fails with "not yet published" instead of walking back to an older, legally wrong rate.
+3. **Failure is flagged, not filled**: when no rate can be resolved, the row gets `rateUnavailable` and is computed with rate 0. The summary counts such rows (`missingRateCount`); when it is above 0 the dashboard shows a warning, the tax form shows a red banner and a "Draft — incomplete" state, and copying PIT-38 values is disabled until a recalculation succeeds. A missing rate on a buy is carried on its FIFO lot to every sell that consumes it (`costRateUnavailable`). There is no "last known rate" fallback.
+4. **Cache semantics**: a day without a rate is cached as `rate: null` only when it is strictly before the day it was fetched (`fetchedAt > date`), i.e. a real weekend or holiday. Today and future days are never cached as missing, and `null` records without a later `fetchedAt` (legacy) are refetched. DB v15 dropped all previously cached `null` entries.
 
 ### Why?
 
-1. **Pragmatic**: You can't trade on weekends anyway (market closed)
-2. **Conservative**: Uses older rate (usually better for tax planning)
-3. **Transparent**: User sees "rate unavailable" flag and can verify
+1. **Legally correct**: a missing table for today means "not yet known", not a holiday. Using the previous day's rate would silently misstate PLN amounts.
+2. **Safe direction**: a sell with rate 0 has 0 PLN proceeds, which understates tax. Blocking export makes sure such results are not filed.
+3. **Self-healing**: recalculating after publication picks up the correct rate without clearing the cache.
 
 ---
 

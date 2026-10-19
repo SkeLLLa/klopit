@@ -1,4 +1,9 @@
-import { fetchRates, type NbpRate, type NbpRateMap } from '../../core/nbp.js';
+import {
+  fetchRates,
+  NbpRateNotYetPublishedError,
+  type NbpRate,
+  type NbpRateMap,
+} from '../../core/nbp.js';
 import { db, type NbpRateRecord } from '../db.js';
 import { createLogger } from '../state/logger.svelte.js';
 
@@ -6,6 +11,7 @@ const log = createLogger('rates');
 
 const PREFETCH_DAYS_BEFORE = 14;
 const PREFETCH_DAYS_AFTER = 78; // 14 + 78 + 1 = 93 (max NBP range)
+const PREFETCH_WINDOW_DAYS = PREFETCH_DAYS_BEFORE + PREFETCH_DAYS_AFTER + 1;
 const MAX_WALK_BACK_DAYS = 14;
 const TRADE_SETTLEMENT_BUSINESS_DAYS = 2;
 
@@ -59,6 +65,20 @@ function eachDay(start: Date, end: Date): string[] {
   return days;
 }
 
+/**
+ * Current calendar day in Poland (YYYY-MM-DD). NBP publishes table A on
+ * business days around midday Warsaw time; the API rejects (400) any range
+ * ending after this day and answers 404 for today until publication.
+ */
+export function todayInWarsaw(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Warsaw',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
 function makeRecordId(args: { currency: string; date: string }): string {
   return `${args.currency}:${args.date}`;
 }
@@ -66,6 +86,19 @@ function makeRecordId(args: { currency: string; date: string }): string {
 // ---------------------------------------------------------------------------
 // Cache layer
 // ---------------------------------------------------------------------------
+
+/**
+ * Whether a cached record can be trusted without refetching. Real rates are
+ * always final. A `null` (no table that day) is final only if it was fetched on
+ * a later Warsaw day than the date it describes; otherwise it may be a "not
+ * published yet" answer (or a legacy record without `fetchedAt`).
+ */
+function isAuthoritative(rec: NbpRateRecord): boolean {
+  return (
+    rec.rate !== null ||
+    (rec.fetchedAt !== undefined && rec.fetchedAt > rec.date)
+  );
+}
 
 async function loadCachedRecords(args: {
   currency: string;
@@ -77,29 +110,40 @@ async function loadCachedRecords(args: {
   const records = await db.nbpRates.bulkGet(ids);
   const map = new Map<string, NbpRateRecord>();
   for (const rec of records) {
-    if (rec) {
+    if (rec && isAuthoritative(rec)) {
       map.set(rec.date, rec);
     }
   }
   return map;
 }
 
+/**
+ * Store the rates of a fetched span. A missing rate is stored as `null` only
+ * for days strictly before `today` (a real weekend/holiday, since NBP publishes
+ * the same day); today and later stay uncached ("not yet known"). Returns the
+ * stored records.
+ */
 async function storeRates(args: {
   currency: string;
   dates: string[];
   rateMap: NbpRateMap;
-}): Promise<void> {
-  const records: NbpRateRecord[] = args.dates.map((date) => {
+  today: string;
+}): Promise<NbpRateRecord[]> {
+  const records: NbpRateRecord[] = [];
+  for (const date of args.dates) {
     const rate = args.rateMap.get(date);
-    return {
+    if (rate === undefined && date >= args.today) continue;
+    records.push({
       id: makeRecordId({ currency: args.currency, date }),
       currency: args.currency,
       date,
       rate: rate?.rate ?? null,
       table: rate?.table ?? '',
-    };
-  });
+      fetchedAt: args.today,
+    });
+  }
   await db.nbpRates.bulkPut(records);
+  return records;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,13 +198,17 @@ export async function getCachedRates(args: {
     return result;
   }
 
+  const today = todayInWarsaw();
   const allDates = eachDay(parseDate(args.startDate), parseDate(args.endDate));
   const cached = await loadCachedRecords({
     currency: upperCurrency,
     dates: allDates,
   });
 
-  const uncachedSpans = findUncachedSpans({ dates: allDates, cached });
+  // NBP rejects ranges ending after today (400), so dates after today are
+  // never fetched or stored; they resolve to `undefined` below.
+  const fetchableDates = allDates.filter((date) => date <= today);
+  const uncachedSpans = findUncachedSpans({ dates: fetchableDates, cached });
 
   if (uncachedSpans.length > 0) {
     log.debug(
@@ -180,24 +228,18 @@ export async function getCachedRates(args: {
       endDate: span.end,
     });
 
-    const spanDates = eachDay(parseDate(span.start), parseDate(span.end));
     // oxlint-disable-next-line eslint/no-await-in-loop -- persist each span before fetching the next
-    await storeRates({
+    const stored = await storeRates({
       currency: upperCurrency,
-      dates: spanDates,
+      dates: eachDay(parseDate(span.start), parseDate(span.end)),
       rateMap: fetched,
+      today,
     });
 
-    // Merge into cached map so subsequent logic sees them
-    for (const date of spanDates) {
-      const rate = fetched.get(date);
-      cached.set(date, {
-        id: makeRecordId({ currency: upperCurrency, date }),
-        currency: upperCurrency,
-        date,
-        rate: rate?.rate ?? null,
-        table: rate?.table ?? '',
-      });
+    // Merge into cached map so subsequent logic sees them (provisional
+    // dates were not stored and stay absent, i.e. `undefined`)
+    for (const rec of stored) {
+      cached.set(rec.date, rec);
     }
   }
 
@@ -227,6 +269,10 @@ export async function getCachedRates(args: {
  * BEFORE the reference date. Walks backwards skipping weekends and confirmed
  * holidays (cached as `rate: null`). If a date has no cache entry (gap),
  * triggers a prefetch before continuing.
+ *
+ * Throws `NbpRateNotYetPublishedError` when the required business day is today
+ * (before publication) or in the future, instead of walking back to an older,
+ * legally wrong rate.
  */
 export async function getFixingRate(args: {
   currency: string;
@@ -244,6 +290,7 @@ export async function getFixingRate(args: {
       ? parseDate(args.date)
       : addBusinessDays(parseDate(args.date), args.settlementBusinessDays);
   const referenceDateStr = toDateString(referenceDate);
+  const today = todayInWarsaw();
   let candidate = addDays(referenceDate, -1);
 
   for (let i = 0; i < MAX_WALK_BACK_DAYS; i++) {
@@ -260,7 +307,7 @@ export async function getFixingRate(args: {
     // oxlint-disable-next-line eslint/no-await-in-loop -- walk-back is inherently sequential (stops at first business day with a rate)
     const record = await db.nbpRates.get(recordId);
 
-    if (record !== undefined) {
+    if (record !== undefined && isAuthoritative(record)) {
       // Cache hit — either a real rate or confirmed holiday (null)
       if (record.rate !== null) {
         return {
@@ -275,11 +322,25 @@ export async function getFixingRate(args: {
       continue;
     }
 
-    // Cache miss — gap detected, prefetch a range around this date
-    const prefetchStart = toDateString(
-      addDays(candidate, -PREFETCH_DAYS_BEFORE),
-    );
-    const prefetchEnd = toDateString(addDays(candidate, PREFETCH_DAYS_AFTER));
+    if (dateStr > today) {
+      // The required table cannot exist yet; never request it (NBP: 400).
+      throw new NbpRateNotYetPublishedError({
+        currency: upperCurrency,
+        date: dateStr,
+      });
+    }
+
+    // Cache miss — gap detected, prefetch a range around this date. The end
+    // is clamped to today; the start then moves back to keep the full
+    // 93-day window (still a single NBP request).
+    let prefetchStart = toDateString(addDays(candidate, -PREFETCH_DAYS_BEFORE));
+    let prefetchEnd = toDateString(addDays(candidate, PREFETCH_DAYS_AFTER));
+    if (prefetchEnd > today) {
+      prefetchEnd = today;
+      prefetchStart = toDateString(
+        addDays(parseDate(today), -(PREFETCH_WINDOW_DAYS - 1)),
+      );
+    }
 
     // oxlint-disable-next-line eslint/no-await-in-loop -- walk-back is inherently sequential
     await getCachedRates({
@@ -299,6 +360,14 @@ export async function getFixingRate(args: {
         currency: freshRecord.currency,
         table: freshRecord.table,
       };
+    }
+
+    if (dateStr === today) {
+      // Today's table is not out yet (published around midday Warsaw time).
+      throw new NbpRateNotYetPublishedError({
+        currency: upperCurrency,
+        date: dateStr,
+      });
     }
 
     // Still null (holiday) or somehow missing — walk back
@@ -388,18 +457,32 @@ export async function fetchRatesForSession(args: {
     TRADE_SETTLEMENT_BUSINESS_DAYS,
   );
 
+  const today = todayInWarsaw();
   const startDate = toDateString(earliest);
-  const endDate = toDateString(latest);
+  const latestStr = toDateString(latest);
+  // Never request past today (NBP: 400); getCachedRates clamps as well.
+  const endDate = latestStr > today ? today : latestStr;
+  if (startDate > endDate) return;
 
-  // Prefetch rates for each currency in parallel
+  // Prefetch rates for each currency in parallel. This is only an
+  // optimisation (per-row lookups retry), so it never throws.
+  const currencyList = [...currencies];
   log.info(
-    `fetchRatesForSession: prefetching ${[...currencies].join(',')} from ${startDate} to ${endDate}`,
+    `fetchRatesForSession: prefetching ${currencyList.join(',')} from ${startDate} to ${endDate}`,
   );
-  await Promise.all(
-    [...currencies].map((currency) =>
+  const results = await Promise.allSettled(
+    currencyList.map((currency) =>
       getCachedRates({ currency, startDate, endDate }),
     ),
   );
+  results.forEach((res, i) => {
+    if (res.status === 'rejected') {
+      log.warn(
+        `fetchRatesForSession: prefetch failed for ${currencyList[i]}`,
+        res.reason,
+      );
+    }
+  });
 }
 
 /** Clear the NBP rate cache */

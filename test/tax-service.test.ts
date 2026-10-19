@@ -2,6 +2,8 @@ import 'fake-indexeddb/auto';
 import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
 
+import { fakeNbp } from './helpers/fake-nbp.js';
+
 (globalThis as unknown as { $state: <T>(value: T) => T }).$state = (value) =>
   value;
 
@@ -85,5 +87,116 @@ void describe('tax service', () => {
         taxRateMissWarnings.map((args) => args.map(String)),
       )}`,
     );
+  });
+});
+
+void describe('tax service near "today" (NBP publication)', () => {
+  // Wed 2026-10-14, 10:00 Warsaw: today's NBP table is not published yet.
+  const TODAY = '2026-10-14';
+
+  afterEach(async () => {
+    mock.timers.reset();
+    mock.restoreAll();
+    loggerState.setLevel('error');
+    await clearRateCache();
+    await db.sessions.clear();
+    await db.trades.clear();
+    await db.tradeResults.clear();
+    await db.taxSummaries.clear();
+  });
+
+  void it('calculateSessionTaxes completes when NBP returns 400 for future dates', async () => {
+    mock.timers.enable({
+      apis: ['Date'],
+      now: new Date('2026-10-14T08:00:00Z'),
+    });
+    const session = await createSession({ year: 2026 });
+    await updateSession({
+      id: session.id,
+      changes: { useSettlementDateForTradeRates: true },
+    });
+    const trade = {
+      sessionId: session.id,
+      symbol: 'AAPL',
+      currency: 'USD',
+      quantity: 1,
+      price: 100,
+      commission: 0,
+      commissionCurrency: 'USD',
+    };
+    // Buy: T+2 = Mon 10-05 -> rate of Fri 10-02 (published).
+    await db.trades.add({
+      ...trade,
+      datetime: new Date(2026, 9, 1, 10, 0, 0),
+      proceeds: 0,
+      type: 'buy',
+    });
+    // Sell yesterday: T+2 = Thu 10-15 -> needs today's (unpublished) table.
+    await db.trades.add({
+      ...trade,
+      datetime: new Date(2026, 9, 13, 10, 0, 0),
+      proceeds: 120,
+      type: 'sell',
+    });
+    const requests: string[] = [];
+    mock.method(
+      globalThis,
+      'fetch',
+      fakeNbp({
+        today: TODAY,
+        rates: { '2026-10-02': 3.9, '2026-10-12': 4.0, '2026-10-13': 4.05 },
+        requests,
+      }),
+    );
+
+    await calculateSessionTaxes({ sessionId: session.id });
+
+    for (const url of requests) {
+      const dates = url.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
+      assert.ok(dates[dates.length - 1] <= TODAY, `past today: ${url}`);
+    }
+    const rows = await db.tradeResults
+      .where('sessionId')
+      .equals(session.id)
+      .toArray();
+    const buy = rows.find((r) => r.type === 'buy');
+    const sell = rows.find((r) => r.type === 'sell');
+    assert.equal(buy?.rateUnavailable, false);
+    assert.equal(buy.exchangeRate, 3.9);
+    // Not walked back to the 10-13 rate: flagged instead.
+    assert.equal(sell?.rateUnavailable, true);
+    assert.equal(sell.exchangeRate, 0);
+    const summary = await db.taxSummaries.get(session.id);
+    assert.equal(summary?.missingRateCount, 1);
+  });
+
+  void it('marks the summary complete when every rate is available', async () => {
+    mock.timers.enable({
+      apis: ['Date'],
+      now: new Date('2026-10-14T08:00:00Z'),
+    });
+    const session = await createSession({ year: 2026 });
+    await db.trades.add({
+      sessionId: session.id,
+      symbol: 'AAPL',
+      currency: 'USD',
+      datetime: new Date(2026, 9, 13, 10, 0, 0),
+      quantity: 1,
+      price: 100,
+      proceeds: 0,
+      commission: 0,
+      commissionCurrency: 'USD',
+      type: 'buy',
+    });
+    mock.method(
+      globalThis,
+      'fetch',
+      fakeNbp({ today: TODAY, rates: { '2026-10-12': 4.0 } }),
+    );
+
+    await calculateSessionTaxes({ sessionId: session.id });
+
+    const summary = await db.taxSummaries.get(session.id);
+    assert.equal(summary?.missingRateCount, 0);
   });
 });

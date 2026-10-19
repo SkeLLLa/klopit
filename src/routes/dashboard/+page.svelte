@@ -78,6 +78,7 @@
 
   // --- Rate unavailability warning ---
   const hasRateWarning = $derived(
+    (taxSummary?.missingRateCount ?? 0) > 0 ||
     tradeResults.some((t: TradeResultRecord) => t.rateUnavailable) ||
     dividendResults.some((d: DividendResultRecord) => d.rateUnavailable) ||
     creditInterestResults.some((r: CreditInterestResultRecord) => r.rateUnavailable),

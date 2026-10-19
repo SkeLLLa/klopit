@@ -17,6 +17,7 @@
   import { oppTaxDueBase } from '../../core/tax/opp.js';
   import OppDonation from './OppDonation.svelte';
   import DocumentSidebar from './DocumentSidebar.svelte';
+  import { setCopyDisabled } from './FormField.svelte';
   import PitZgView from './PitZgView.svelte';
   import SectionA from './SectionA.svelte';
   import SectionC from './SectionC.svelte';
@@ -47,6 +48,8 @@
   // Absent on summaries saved before the field existed: show nothing until
   // the next (re)calculation fills it in.
   const missingRateCount = $derived(taxSummary?.missingRateCount ?? 0);
+  // Incomplete results must not be filed: disable copying PIT-38 values.
+  setCopyDisabled(() => missingRateCount > 0);
   const stale = $derived(
     isSessionStale({
       calculatedAt: session?.calculatedAt,

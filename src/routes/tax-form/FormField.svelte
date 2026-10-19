@@ -1,3 +1,14 @@
+<script module lang="ts">
+  import { createContext } from 'svelte';
+
+  /**
+   * Set by the tax-form page: while it returns true (e.g. some NBP rates are
+   * unavailable, so results are incomplete) value copying is disabled.
+   */
+  export const [getCopyDisabled, setCopyDisabled] =
+    createContext<() => boolean>();
+</script>
+
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { Info } from 'lucide-svelte';
@@ -74,6 +85,15 @@
     return rawDecimalFormatter.format(normalizedValue);
   });
 
+  const isCopyDisabled = (() => {
+    try {
+      return getCopyDisabled();
+    } catch {
+      return () => false; // rendered outside the tax-form page
+    }
+  })();
+  const copyDisabled = $derived(isCopyDisabled());
+
   let copied = $state(false);
   let copiedResetTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -82,7 +102,7 @@
   });
 
   async function handleCopy() {
-    if (!globalThis.navigator?.clipboard) return;
+    if (copyDisabled || !globalThis.navigator?.clipboard) return;
 
     try {
       await navigator.clipboard.writeText(rawValue);
@@ -124,13 +144,18 @@
   <button
     type="button"
     onclick={() => void handleCopy()}
-    class="{typeof value === 'string' ? 'w-52 truncate text-left' : 'w-36 text-right'} shrink-0 rounded border px-3 py-1 font-mono text-sm tabular-nums transition
+    disabled={copyDisabled}
+    class="{typeof value === 'string' ? 'w-52 truncate text-left' : 'w-36 text-right'} shrink-0 rounded border px-3 py-1 font-mono text-sm tabular-nums transition disabled:cursor-not-allowed disabled:opacity-60
       {variant === 'placeholder'
       ? 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600 dark:hover:border-slate-700 dark:hover:bg-slate-800'
       : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-700'}
       {highlighted ? 'border-blue-300 bg-blue-50 font-semibold text-blue-900 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200 dark:hover:border-blue-600 dark:hover:bg-blue-900' : ''}
       {copied ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/50' : ''}"
-    title={copied ? m.tax_copy_value_done() : m.tax_copy_value_title()}
+    title={copyDisabled
+      ? m.tax_form_missing_rates_title()
+      : copied
+        ? m.tax_copy_value_done()
+        : m.tax_copy_value_title()}
     aria-label={copied ? m.tax_copy_value_done() : m.tax_copy_value_title()}
   >
     {formattedValue}

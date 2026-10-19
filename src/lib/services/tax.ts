@@ -1,3 +1,4 @@
+import { NbpRateNotYetPublishedError } from '../../core/nbp.js';
 import {
   calculateTaxes,
   type TaxCalculationResult,
@@ -51,6 +52,12 @@ async function tryGetFixingRate(args: {
     });
     return { rate: rate.rate, date: rate.date };
   } catch (e) {
+    if (e instanceof NbpRateNotYetPublishedError) {
+      log.warn(
+        `tryGetFixingRate(${args.scope}): NBP rate for ${args.currency} on ${e.date} is not yet published (event ${args.date}); recalculate later`,
+      );
+      return undefined;
+    }
     const message = e instanceof Error ? e.message : String(e);
     log.warn(
       `tryGetFixingRate(${args.scope}): no rate for ${args.currency} on ${args.date}: ${message}`,
@@ -118,7 +125,12 @@ export async function calculateSessionTaxes(args: {
   // 4. Prefetch and cache NBP rates
   log.info('calculateSessionTaxes: prefetching NBP rates');
   const ratesStart = performance.now();
-  await fetchRatesForSession({ sessionId: args.sessionId });
+  try {
+    await fetchRatesForSession({ sessionId: args.sessionId });
+  } catch (e) {
+    // Prefetch is an optimisation; per-row lookups below retry.
+    log.warn('calculateSessionTaxes: NBP prefetch failed', e);
+  }
   log.debug(
     `calculateSessionTaxes: NBP prefetch done in ${String(Math.round(performance.now() - ratesStart))}ms`,
   );

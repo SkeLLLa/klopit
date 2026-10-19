@@ -97,6 +97,31 @@ void describe('nbp', () => {
     });
   });
 
+  void describe('fetchRates errors', () => {
+    void it('surfaces 400 as NbpFetchError with status 400 and the body text', async () => {
+      fetchMock.mock.mockImplementation(
+        async () =>
+          new Response(
+            '400 BadRequest - Błędny zakres dat / Invalid date range',
+            { status: 400 },
+          ),
+      );
+
+      await assert.rejects(
+        () =>
+          fetchRates({
+            currency: 'USD',
+            startDate: '2026-10-10',
+            endDate: '2026-10-20',
+          }),
+        (e) =>
+          e instanceof NbpFetchError &&
+          e.status === 400 &&
+          e.message.includes('Invalid date range'),
+      );
+    });
+  });
+
   void describe('fetchRates', () => {
     void it('returns rates for a short range', async () => {
       fetchMock.mock.mockImplementation(async () =>
@@ -135,6 +160,25 @@ void describe('nbp', () => {
       });
 
       assert.equal(fetchMock.mock.callCount(), 2);
+    });
+
+    void it('splits a 94-day range into 93 + 1 day chunks', async () => {
+      fetchMock.mock.resetCalls();
+      fetchMock.mock.mockImplementation(async () =>
+        mockResponse(nbpResponse('USD', [])),
+      );
+
+      // 2025-01-01 + 93 days = 2025-04-04 (94 days inclusive)
+      await fetchRates({
+        currency: 'USD',
+        startDate: '2025-01-01',
+        endDate: '2025-04-04',
+      });
+
+      const urls = fetchMock.mock.calls.map((c) => c.arguments[0] as string);
+      assert.equal(urls.length, 2);
+      assert.match(urls[0], /\/USD\/2025-01-01\/2025-04-03\/\?format=json$/);
+      assert.match(urls[1], /\/USD\/2025-04-04\/\?format=json$/);
     });
 
     void it('handles exactly 93 days in a single request', async () => {

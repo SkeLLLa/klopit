@@ -165,17 +165,12 @@
               >
               <td class="px-3 py-2">
                 {#if trade.rateUnavailable}
-                  {#if trade.costRateUnavailable}
-                    <span
-                      class="cursor-help"
-                      title={m.dash_rate_missing_cost()}
-                      aria-label={m.dash_rate_missing_cost()}
-                    >
-                      <AlertTriangle size={14} class="text-amber-500" />
-                    </span>
-                  {:else}
+                  {@const rateHint = trade.costRateUnavailable
+                    ? m.dash_rate_missing_cost()
+                    : m.dash_rate_unavailable()}
+                  <span class="cursor-help" title={rateHint} aria-label={rateHint}>
                     <AlertTriangle size={14} class="text-amber-500" />
-                  {/if}
+                  </span>
                 {/if}
               </td>
             </tr>
@@ -268,17 +263,12 @@
               >
               <td class="px-3 py-2">
                 {#if trade.rateUnavailable}
-                  {#if trade.costRateUnavailable}
-                    <span
-                      class="cursor-help"
-                      title={m.dash_rate_missing_cost()}
-                      aria-label={m.dash_rate_missing_cost()}
-                    >
-                      <AlertTriangle size={14} class="text-amber-500" />
-                    </span>
-                  {:else}
+                  {@const rateHint = trade.costRateUnavailable
+                    ? m.dash_rate_missing_cost()
+                    : m.dash_rate_unavailable()}
+                  <span class="cursor-help" title={rateHint} aria-label={rateHint}>
                     <AlertTriangle size={14} class="text-amber-500" />
-                  {/if}
+                  </span>
                 {/if}
               </td>
             </tr>
@@ -439,7 +429,13 @@
               </td>
               <td class="px-3 py-2">
                 {#if div.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  <span
+                    class="cursor-help"
+                    title={m.dash_rate_unavailable()}
+                    aria-label={m.dash_rate_unavailable()}
+                  >
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
                 {/if}
               </td>
             </tr>
@@ -538,7 +534,13 @@
               >
               <td class="px-3 py-2">
                 {#if row.rateUnavailable}
-                  <AlertTriangle size={14} class="text-amber-500" />
+                  <span
+                    class="cursor-help"
+                    title={m.dash_rate_unavailable()}
+                    aria-label={m.dash_rate_unavailable()}
+                  >
+                    <AlertTriangle size={14} class="text-amber-500" />
+                  </span>
                 {/if}
               </td>
             </tr>

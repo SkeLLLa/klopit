@@ -167,6 +167,12 @@ export interface NbpRateRecord {
   date: string;
   rate: number | null;
   table: string;
+  /**
+   * Warsaw calendar day (YYYY-MM-DD) the record was fetched. A `null` rate is
+   * trusted as a weekend/holiday only when `fetchedAt > date`; legacy records
+   * without it are revalidated.
+   */
+  fetchedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -335,6 +341,25 @@ export class KlopitDB extends Dexie {
           session.status = 'draft';
           session.calculatedAt = undefined;
           session.dataUpdatedAt = new Date();
+        });
+    });
+    // v15 (v14 is reserved for Plan 03): cached `rate: null` NBP entries
+    // could be "not yet published" days stored as holidays, which made later
+    // lookups walk back to an older rate. Drop all cached nulls (cheap to
+    // refetch; real rates are kept) and flag calculated sessions as stale so
+    // the recalculation prompt appears. Source and result tables are kept.
+    this.version(15).upgrade(async (tx) => {
+      await tx
+        .table<NbpRateRecord>('nbpRates')
+        .filter((r) => r.rate === null)
+        .delete();
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          if (session.status === 'calculated') {
+            session.dataUpdatedAt = new Date();
+          }
         });
     });
   }
