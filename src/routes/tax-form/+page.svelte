@@ -154,7 +154,7 @@
       {m.tax_error_no_session()}
     </p>
     <a
-      href="/data"
+      href={localizeHref('/data')}
       class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
     >
       {m.tax_go_to_data()} <ArrowRight size={14} />
@@ -179,7 +179,7 @@
       {m.tax_error_no_data()}
     </p>
     <a
-      href="/data"
+      href={localizeHref('/data')}
       class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
     >
       {m.tax_go_to_data()} <ArrowRight size={14} />

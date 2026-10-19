@@ -1,5 +1,6 @@
 <script lang="ts">
   import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
   import {
     FileText,
     Folder,
@@ -118,7 +119,7 @@
   <!-- Country mapping link -->
   <div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-600">
     <a
-      href="/data"
+      href={localizeHref('/data')}
       class="flex items-center gap-1.5 px-2 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
     >
       <MapPin size={12} />

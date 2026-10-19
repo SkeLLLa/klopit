@@ -1,6 +1,7 @@
 <script lang="ts">
   import { AlertCircle, ArrowRight, Info } from '@lucide/svelte';
   import { m } from '#lib/paraglide/messages.js';
+  import { localizeHref } from '#lib/paraglide/runtime.js';
   import { pageTitle } from '#lib/state/page-title.svelte.js';
   import { useSessionBootstrap } from '#lib/utils/use-session-bootstrap.svelte.js';
   import PriorLossTable from '#lib/components/PriorLossTable.svelte';
@@ -41,7 +42,7 @@
         {m.prior_losses_no_session()}
       </p>
       <a
-        href="/data"
+        href={localizeHref('/data')}
         class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
       >
         {m.tax_go_to_data()} <ArrowRight size={14} />
