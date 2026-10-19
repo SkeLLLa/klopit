@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
-import { roundedDividendTax } from '../src/core/tax/aggregates.js';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
 import type {
   EnrichedCorporateAction,
@@ -677,7 +676,7 @@ void describe('calculateTaxes — IBKR dividend reversal fixture', () => {
     });
 
     assert.equal(result.dividends.length, 1);
-    assert.equal(result.pit38[47], roundedDividendTax({ totalIncomePln: 400 }));
+    assert.equal(result.pit38[47], 76); // 400 * 0.19
     // Net WHT is 15 USD x 4.0 = 60 PLN (not 45 x 4.0 per row).
     assert.equal(result.pit38[48], 60);
   });

@@ -11,9 +11,7 @@ import {
   paymentSummaryAmount,
   roundedCapitalGainsBase,
   roundedCapitalGainsTaxDue,
-  roundedDividendCredit,
-  roundedDividendDifference,
-  roundedDividendTax,
+  sectionGForeignFlatTax,
   sumCost,
   sumCreditInterestForeignTax,
   sumCreditInterestIncome,
@@ -147,15 +145,15 @@ export function buildPit38(args: BuildPit38Args): Pit38Fields {
 
   // Section G — Payment summary
   f[46] = 0; // No flat-rate tax
-  f[47] = roundedDividendTax({
-    totalIncomePln: totalDividendsPln + totalCreditInterestPln,
+  const sectionG = sectionGForeignFlatTax({
+    dividendIncomePln: totalDividendsPln,
+    dividendDeductiblePln: totalDeductibleWithholdingPln,
+    interestIncomePln: totalCreditInterestPln,
+    interestForeignTaxPln: totalCreditInterestForeignTaxPln,
   });
-  f[48] = roundedDividendCredit({
-    deductiblePln:
-      totalDeductibleWithholdingPln + totalCreditInterestForeignTaxPln,
-    dividendTax: f[47],
-  });
-  f[49] = roundedDividendDifference({ dividendTax: f[47], credit: f[48] });
+  f[47] = sectionG.poz47;
+  f[48] = sectionG.poz48;
+  f[49] = sectionG.poz49;
   f[50] = 0; // No advance payments
   const totalTax = f[35] + f[45] + f[46] + f[49];
   f[51] = paymentSummaryAmount({ amountPln: totalTax - f[50] });

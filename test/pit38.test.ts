@@ -639,4 +639,33 @@ void describe('buildPit38', () => {
     assert.equal(result[30], 12.34);
     assert.equal(result[31], roundToFullPln({ amount: 20000 - 12.34 }));
   });
+
+  void it('poz. 51 = poz. 35 + poz. 49 with per-component rounding', () => {
+    const result = buildPit38({
+      trades: [
+        makeSellResult({
+          proceedsPln: 10000,
+          costPln: 5000,
+          gainLossPln: 5000,
+        }),
+      ],
+      dividends: [
+        makeDivResult({
+          amountPln: 1000,
+          withholdingTaxPln: 149.5,
+          deductibleWithholdingPln: 149.5,
+        }),
+      ],
+      creditInterests: [makeCreditInterestResult({ amountPln: 33.33 })],
+      summary: makeSummary(),
+      priorLosses: [],
+    });
+
+    assert.equal(result[35], 950);
+    assert.equal(result[47], 196.34);
+    assert.equal(result[48], 149.5);
+    assert.equal(result[49], 47.34);
+    assert.equal(result[51], 997.34);
+    assert.equal(result[51], result[35] + result[49]);
+  });
 });

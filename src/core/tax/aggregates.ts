@@ -4,7 +4,7 @@ import {
   type DividendResult,
   type TradeResult,
 } from '../types.js';
-import { roundToFullPln, roundToGroszUp } from './rounding.js';
+import { roundToFullPln, roundToGrosz, roundToGroszUp } from './rounding.js';
 
 // ---------------------------------------------------------------------------
 // Per-collection raw sums
@@ -103,27 +103,57 @@ export function groupByCountry<T extends { country: string }>(args: {
 // Form-rule aggregations (raw -> rounded)
 // ---------------------------------------------------------------------------
 
-/** Round dividend tax (19% of gross income), grosze-up. PIT-38(18) poz 47. */
-export function roundedDividendTax(args: { totalIncomePln: number }): number {
-  return roundToGroszUp({ amount: args.totalIncomePln * TAX_RATE });
+/** Per-part and total amounts for PIT-38(18) section G poz. 47-49. */
+export interface SectionGForeignFlatTax {
+  /** Poz. 47: dividend tax plus interest tax. */
+  poz47: number;
+  /** Poz. 48: foreign tax credit (each part capped at its own tax). */
+  poz48: number;
+  /** Poz. 49: tax due, each part rounded under its own rule. */
+  poz49: number;
+  dividend: { tax: number; credit: number; due: number };
+  interest: { tax: number; credit: number; due: number };
 }
 
-/** Capped foreign withholding credit (<=rounded dividend tax). PIT-38(18) poz 48. */
-export function roundedDividendCredit(args: {
-  deductiblePln: number;
-  dividendTax: number;
-}): number {
-  return Math.round(Math.min(args.deductiblePln, args.dividendTax) * 100) / 100;
-}
-
-/** Difference (tax minus credit), grosze-up. PIT-38(18) poz 49. */
-export function roundedDividendDifference(args: {
-  dividendTax: number;
-  credit: number;
-}): number {
-  return roundToGroszUp({
-    amount: Math.max(args.dividendTax - args.credit, 0),
+/**
+ * Section G (poz. 47-49) computed per component.
+ *
+ * - Dividends (art. 30a ust. 1 pkt 4): tax due is rounded to full PLN under art.
+ *   63 § 1 OP (below 50 gr dropped, 50 gr and over rounded up).
+ * - Interest (art. 30a ust. 1 pkt 3): base and tax are rounded up to the grosz
+ *   under art. 63 § 1a OP, which covers only pkt 1-3.
+ * - Each foreign-tax credit is capped at its own part (art. 30a ust. 9).
+ */
+export function sectionGForeignFlatTax(args: {
+  dividendIncomePln: number;
+  dividendDeductiblePln: number;
+  interestIncomePln: number;
+  interestForeignTaxPln: number;
+}): SectionGForeignFlatTax {
+  const divTax = roundToGrosz({ amount: args.dividendIncomePln * TAX_RATE });
+  const divCredit = roundToGrosz({
+    amount: Math.min(args.dividendDeductiblePln, divTax),
   });
+  const divDue = roundToFullPln({
+    amount: roundToGrosz({ amount: Math.max(divTax - divCredit, 0) }),
+  });
+
+  const intBase = roundToGroszUp({ amount: args.interestIncomePln });
+  const intTax = roundToGroszUp({ amount: intBase * TAX_RATE });
+  const intCredit = roundToGrosz({
+    amount: Math.min(args.interestForeignTaxPln, intTax),
+  });
+  const intDue = roundToGroszUp({
+    amount: Math.max(intTax - intCredit, 0),
+  });
+
+  return {
+    poz47: roundToGrosz({ amount: divTax + intTax }),
+    poz48: roundToGrosz({ amount: divCredit + intCredit }),
+    poz49: roundToGrosz({ amount: divDue + intDue }),
+    dividend: { tax: divTax, credit: divCredit, due: divDue },
+    interest: { tax: intTax, credit: intCredit, due: intDue },
+  };
 }
 
 /** Payment summary amount, kept in grosze. PIT-38(18) poz 51/52. */
@@ -141,9 +171,12 @@ export function roundedCapitalGainsBase(args: {
   return roundToFullPln({ amount: Math.max(args.gainPostLcfPln, 0) });
 }
 
-/** Capital-gains tax (19% of the already-rounded base). PIT-38(18) poz 33. */
+/**
+ * Capital-gains tax (19% of the already-rounded base), to the grosz. PIT-38(18)
+ * poz 33.
+ */
 export function capitalGainsTax(args: { base: number }): number {
-  return args.base * TAX_RATE;
+  return roundToGrosz({ amount: args.base * TAX_RATE });
 }
 
 /**

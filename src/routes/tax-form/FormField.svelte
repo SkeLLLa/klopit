@@ -23,7 +23,6 @@
   import { Info } from 'lucide-svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
-  import { roundToFullPln, roundToGroszUp } from '../../core/tax/rounding.js';
 
   let {
     label,
@@ -49,49 +48,27 @@
     maximumFractionDigits: 2,
   });
 
+  // Whole-złote fields: copied as integers (core already rounds them).
   const fullPlnPositions = new Set([
     31, 35, 41, 45, 46, 50, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
     65,
   ]);
 
-  const groszUpPositions = new Set([47, 49]);
-
-  function roundToNearestGrosz(amount: number): number {
-    return Math.round((amount + Number.EPSILON) * 100) / 100;
-  }
-
-  const normalizedValue = $derived.by(() => {
-    if (typeof value === 'string') return value;
-    if (suffix === '%') return value;
-
-    if (poz != null) {
-      if (groszUpPositions.has(poz)) {
-        return roundToGroszUp({ amount: value });
-      }
-      if (fullPlnPositions.has(poz)) {
-        return roundToFullPln({ amount: value });
-      }
-      return roundToNearestGrosz(value);
-    }
-
-    return roundToNearestGrosz(value);
-  });
-
   const formattedValue = $derived(
-    typeof normalizedValue === 'string'
-      ? normalizedValue
+    typeof value === 'string'
+      ? value
       : suffix === '%'
-      ? `${String(normalizedValue)}%`
-      : `${formatPlnValue(normalizedValue)} ${suffix}`,
+        ? `${String(value)}%`
+        : `${formatPlnValue(value)} ${suffix}`,
   );
 
   const rawValue = $derived.by(() => {
-    if (typeof normalizedValue === 'string') return normalizedValue;
-    if (suffix === '%') return String(normalizedValue);
-    if (poz != null && fullPlnPositions.has(poz)) {
-      return String(normalizedValue);
+    if (typeof value === 'string') return value;
+    if (suffix === '%') return String(value);
+    if (poz != null && fullPlnPositions.has(poz) && Number.isInteger(value)) {
+      return String(value);
     }
-    return rawDecimalFormatter.format(normalizedValue);
+    return rawDecimalFormatter.format(value);
   });
 
   const isCopyDisabled = useCopyDisabled();

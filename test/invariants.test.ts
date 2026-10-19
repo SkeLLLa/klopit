@@ -4,8 +4,7 @@ import { describe, it } from 'node:test';
 import {
   capitalGainsTax,
   roundedCapitalGainsBase,
-  roundedDividendCredit,
-  roundedDividendTax,
+  sectionGForeignFlatTax,
   sumCost,
   sumDeductibleWithholding,
   sumDividendIncome,
@@ -182,14 +181,18 @@ void describe('summary <-> per-row invariants', () => {
       rows: result.dividends,
     });
 
-    const expectedPoz47 = roundedDividendTax({ totalIncomePln: divIncome });
-    const expectedPoz48 = roundedDividendCredit({
-      deductiblePln: divDeductible,
-      dividendTax: expectedPoz47,
+    const expected = sectionGForeignFlatTax({
+      dividendIncomePln: divIncome,
+      dividendDeductiblePln: divDeductible,
+      interestIncomePln: 0,
+      interestForeignTaxPln: 0,
     });
+    const expectedPoz47 = expected.poz47;
+    const expectedPoz48 = expected.poz48;
 
     assert.equal(result.pit38[47], expectedPoz47);
     assert.equal(result.pit38[48], expectedPoz48);
+    assert.equal(result.pit38[49], expected.poz49);
   });
 
   void it('PIT-38 capital gains positions match aggregate helpers', () => {
