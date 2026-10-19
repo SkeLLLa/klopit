@@ -49,6 +49,7 @@ export default defineConfig(({ command }) => {
           pages: 'build',
           assets: 'build',
           precompress: false,
+          fallback: '404.html',
           strict: true,
         }),
         // Hosting (GitHub Pages) cannot set headers, so Kit emits the policy as
