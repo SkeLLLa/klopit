@@ -35,6 +35,8 @@ void test('every prerendered page has exactly one <h1>', (t) => {
 
   const failures: string[] = [];
   for (const file of files) {
+    // SPA fallback shell (404.html) is empty by design; the client renders it
+    if (file === join(buildDir, '404.html')) continue;
     const html = readFileSync(file, 'utf8');
     if (isRedirectStub(html)) continue;
 

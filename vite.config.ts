@@ -7,6 +7,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { svelteSitemap } from 'svelte-sitemap/vite';
 import { defineConfig } from 'vite';
 
+import { transform } from './scripts/sitemap-transform.ts';
+
 const pkg: unknown = JSON.parse(readFileSync('package.json', 'utf-8'));
 if (
   typeof pkg !== 'object' ||
@@ -90,32 +92,11 @@ export default defineConfig(({ command }) => {
       svelteSitemap({
         domain: 'https://klopit.co.pl',
         trailingSlashes: true,
-        ignore: [
-          'data/**',
-          'dashboard/**',
-          'tax-form/**',
-          'settings/**',
-          'prior-losses/**',
-          'rates/**',
-          'docs/brokerzy/**',
-          'docs/dywidendy/**',
-          'pl/data/**',
-          'pl/dashboard/**',
-          'pl/tax-form/**',
-          'pl/settings/**',
-          'pl/prior-losses/**',
-          'pl/rates/**',
-          'pl/docs/brokerzy/**',
-          'pl/docs/dywidendy/**',
-          'uk/data/**',
-          'uk/dashboard/**',
-          'uk/tax-form/**',
-          'uk/settings/**',
-          'uk/prior-losses/**',
-          'uk/rates/**',
-          'uk/docs/brokerzy/**',
-          'uk/docs/dywidendy/**',
-        ],
+        // The SPA fallback shell has no robots meta; other exclusions (noindex
+        // pages, redirect stubs) are decided by transform from the built page
+        ignore: ['404.html'],
+        attribution: false,
+        transform,
       }),
     ],
   };
