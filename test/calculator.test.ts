@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import { ibkrDefinition } from '../src/core/parsers/ibkr/index.js';
 import { calculateTaxes } from '../src/core/tax/calculator.js';
+import { buildSymbolCountryMaps } from '../src/core/tax/symbol-country.js';
 import type {
   EnrichedCorporateAction,
   EnrichedCreditInterest,
@@ -836,5 +837,58 @@ void describe('calculateTaxes — inconsistentCarryInCount', () => {
     });
     assert.equal(result.summary.inconsistentCarryInCount, 1);
     assert.equal(result.summary.missingCostCount, 1);
+  });
+});
+
+void describe('ADR country scope', () => {
+  void it('attributes the TSM dividend to TW but its gains to US', () => {
+    const maps = buildSymbolCountryMaps({
+      trades: [{ symbol: 'TSM', isin: 'US8740391003' }],
+      dividends: [{ symbol: 'TSM', isin: 'US8740391003', adrCountry: 'TW' }],
+    });
+    const result = calculateTaxes({
+      trades: [
+        makeTrade({
+          symbol: 'TSM',
+          datetime: new Date(2024, 0, 15),
+          quantity: 10,
+          price: 100,
+          type: 'buy',
+        }),
+        makeTrade({
+          symbol: 'TSM',
+          datetime: new Date(2024, 6, 15),
+          quantity: 10,
+          price: 120,
+          proceeds: 1200,
+          type: 'sell',
+        }),
+      ],
+      dividends: [makeDiv({ symbol: 'TSM', isAdr: true, amount: 10 })],
+      creditInterests: [],
+      withholdingTaxes: [makeTax({ symbol: 'TSM', amount: -1 })],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      showDividendsInPitZg: true,
+      symbolCountryMap: maps.gains,
+      dividendSymbolCountryMap: maps.dividends,
+    });
+
+    assert.equal(result.dividends[0].country, 'TW');
+    assert.equal(result.dividends[0].creditCapRate, 0.1);
+    assert.equal(
+      result.dividends[0].warnings?.some((w) => w.kind === 'wht-lapse') ??
+        false,
+      false,
+    );
+    for (const trade of result.trades) assert.equal(trade.country, 'US');
+    const zg = result.pitZg.find((row) => row.country === 'US');
+    assert.ok((zg?.proceedsPln ?? 0) > 0);
+    assert.equal(zg?.dividendIncomePln, undefined);
+    assert.ok(
+      (result.pitZg.find((row) => row.country === 'TW')?.dividendIncomePln ??
+        0) > 0,
+    );
   });
 });

@@ -108,7 +108,14 @@ export interface RawDividend {
    * only.
    */
   adrCountry?: string;
+  /**
+   * 'payment-in-lieu' for substitute payments on lent shares; absent =
+   * ordinary.
+   */
+  kind?: PaymentKind;
 }
+
+export type PaymentKind = 'dividend' | 'payment-in-lieu';
 
 /** Raw withholding tax on dividends */
 export interface RawWithholdingTax {
@@ -118,6 +125,9 @@ export interface RawWithholdingTax {
   date: Date;
   /** Signed amount: negative = tax withheld, positive = refund/reversal. */
   amount: number;
+  kind?: PaymentKind;
+  /** Source state (ISO alpha-2) from the broker's "- XX Tax" description suffix. */
+  taxCountry?: string;
 }
 
 /** Corporate action */
@@ -343,6 +353,14 @@ export type DividendWarning =
     }
   | {
       kind: 'unknown-country';
+    }
+  | {
+      /** Payment in lieu: withholding above the treaty rate is not credited. */
+      kind: 'pil-excess-not-credited';
+    }
+  | {
+      /** Payment in lieu is a substitute payment, not an issuer dividend. */
+      kind: 'pil-substitute';
     }
   | {
       /** ADR rows disagree on the issuer country; ISIN country used instead. */

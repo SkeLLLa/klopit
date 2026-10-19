@@ -697,5 +697,11 @@
   "faq_13_question": "Jaki jest koszt moich akcji RSU lub ESPP przy sprzedaży?",
   "faq_13_answer": "Zależy to od tego, jak akcje zostały opodatkowane przy otrzymaniu, a kloPIT tego nie wie, więc reżim wybierasz dla każdego pakietu na stronie Dane. Program kwalifikowany (art. 24 ust. 11–12b updof): brak przychodu przy nabyciu, kosztem jest zapłacona cena (0 dla RSU). Opodatkowane przy nabyciu (np. w PIT-11): kosztem jest zapłacona cena plus już opodatkowany przychód. Do czasu wyboru koszt jest oznaczony jako brakujący, a formularz podatkowy pozostaje wersją roboczą. Sprawdź PIT-11 i warunki programu u pracodawcy.",
   "import_warning_sell_to_cover_item": "{symbol}, nabycie {date}: {shares} akcji sprzedanych lub zatrzymanych",
-  "dividend_warning_adr_country_conflict_description": "Zaimportowane wiersze tego ADR wskazują różne kraje emitenta, więc użyto kraju z ISIN. Ustaw kraj emitenta na stronie mapowania krajów."
+  "dividend_warning_adr_country_conflict_description": "Zaimportowane wiersze tego ADR wskazują różne kraje emitenta, więc użyto kraju z ISIN. Ustaw kraj emitenta na stronie mapowania krajów.",
+  "dividend_warning_pil_excess_description": "Płatność w zastępstwie dywidendy: podatek u źródła przekracza stawkę z umowy, więc nadwyżka nie jest zaliczana.",
+  "dividend_warning_pil_substitute_description": "Płatność w zastępstwie dywidendy jest płatnością zastępczą, a nie dywidendą od emitenta. Jest tu wykazana razem z dywidendami — sprawdź jej opodatkowanie.",
+  "data_country_scope_label": "Zakres nadpisania",
+  "data_country_scope_both": "Oba",
+  "data_country_scope_dividends": "Dywidendy",
+  "data_country_scope_gains": "Zyski"
 }

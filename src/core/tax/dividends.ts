@@ -4,6 +4,7 @@ import {
   type DividendWarning,
   type EnrichedRawDividend,
   type EnrichedWithholdingTax,
+  type PaymentKind,
   type TaxPeriod,
   type TransactionFee,
 } from '../types.js';
@@ -19,6 +20,11 @@ export interface CalculateDividendsArgs {
   symbolCountryMap?: Map<string, string>;
   /** ADR symbols whose rows disagree on the issuer country (no user override). */
   adrCountryConflicts?: ReadonlySet<string>;
+  /**
+   * Symbol → country by ISIN prefix (no ADR issuer country). Fallback for a
+   * payment-in-lieu event that has no withholding row to name its country.
+   */
+  isinCountryMap?: Map<string, string>;
 }
 
 function toDateString(args: { date: Date }): string {
@@ -33,9 +39,11 @@ function matchKey(args: {
   symbol: string;
   currency: string;
   date: Date;
+  kind?: PaymentKind;
 }): string {
   const id = (args.isin ?? args.symbol).toUpperCase();
-  return `${toDateString({ date: args.date })}:${id}:${args.currency.toUpperCase()}`;
+  // An ordinary dividend and a payment in lieu on the same day are separate events.
+  return `${toDateString({ date: args.date })}:${id}:${args.currency.toUpperCase()}:${args.kind ?? 'dividend'}`;
 }
 
 function feeMatchKey(args: {
@@ -162,7 +170,15 @@ export function calculateDividends(
       divRows.some((row) => row.rateUnavailable) ||
       matchedTaxes.some((tax) => tax.rateUnavailable);
 
-    const country = symbolCountryMap.get(div.symbol) ?? 'XX';
+    const isPil = div.kind === 'payment-in-lieu';
+    // A payment in lieu is taxed where it was withheld (e.g. US on lent ADRs),
+    // regardless of the ADR issuer country.
+    const country = isPil
+      ? (matchedTaxes.find((tax) => tax.taxCountry)?.taxCountry ??
+        args.isinCountryMap?.get(div.symbol) ??
+        symbolCountryMap.get(div.symbol) ??
+        'XX')
+      : (symbolCountryMap.get(div.symbol) ?? 'XX');
     const warnings: DividendWarning[] = [];
 
     if (country === 'XX') {
@@ -181,23 +197,25 @@ export function calculateDividends(
       warnings.push({ kind: 'wht-net-refund' });
     }
 
-    // Check for W-8BEN lapse: withheld rate exceeds treaty rate
-    // W-8BEN is a US form: it cannot lapse for an ADR whose issuer is not US.
+    // W-8BEN lapse (withheld rate above treaty rate). W-8BEN is a US form, so it
+    // cannot lapse for an ADR whose issuer is not US.
     const isNonUsAdr = divRows.some((row) => row.isAdr) && country !== 'US';
-    if (
-      !isNonUsAdr &&
-      taxableAmountOriginal > 0 &&
-      withholdingTaxOriginal > 0
-    ) {
+    if (taxableAmountOriginal > 0 && withholdingTaxOriginal > 0) {
       const withheldRate = withholdingTaxOriginal / taxableAmountOriginal;
       const treatyRate = getDividendCreditCapRate({ country });
       const tolerance = 0.005; // ±0.5% tolerance for rounding
 
       if (withheldRate > treatyRate + tolerance) {
-        warnings.push({
-          kind: 'wht-lapse',
-        });
+        if (isPil) {
+          warnings.push({ kind: 'pil-excess-not-credited' });
+        } else if (!isNonUsAdr) {
+          warnings.push({ kind: 'wht-lapse' });
+        }
       }
+    }
+
+    if (isPil) {
+      warnings.push({ kind: 'pil-substitute' });
     }
 
     const creditCapRate = getDividendCreditCapRate({ country });

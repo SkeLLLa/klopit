@@ -45,13 +45,32 @@ function setDetectedCountry(args: {
   }
 }
 
+export type OverrideScope = 'dividends' | 'gains' | 'both';
+
+export interface SymbolCountryOverrideInput {
+  symbol: string;
+  country: string;
+  /** Missing = 'both' (overrides saved before scopes existed). */
+  scope?: OverrideScope;
+}
+
+/**
+ * Builds one symbol → country map for one purpose. `gains` (default) is the
+ * ISIN-prefix country: capital gains and PIT/ZG are attributed to the state of
+ * the issuer's listing code. `dividends` additionally applies the ADR issuer
+ * country (art. 30a ust. 9 updof: the treaty with the dividend's source state).
+ * Overrides apply to a map when their scope is that purpose or 'both', and
+ * always beat the derived country.
+ */
 export function buildSymbolCountryMap(args: {
   trades: SymbolCountrySource[];
   dividends: SymbolCountrySource[];
-  overrides?: { symbol: string; country: string }[];
-  /** From `resolveAdrCountries`; beats the ISIN country, loses to overrides. */
+  overrides?: SymbolCountryOverrideInput[];
+  /** From `resolveAdrCountries`; used for `scope: 'dividends'` only. */
   adrCountries?: ReadonlyMap<string, string>;
+  scope?: 'dividends' | 'gains';
 }): Map<string, string> {
+  const scope = args.scope ?? 'gains';
   const symbolCountryMap = new Map<string, string>();
 
   for (const trade of args.trades) {
@@ -70,14 +89,41 @@ export function buildSymbolCountryMap(args: {
     });
   }
 
-  // Derived ADR issuer country beats the ISIN (US for ADRs), but never a user override.
-  for (const [symbol, country] of args.adrCountries ?? []) {
-    symbolCountryMap.set(symbol, country);
+  if (scope === 'dividends') {
+    for (const [symbol, country] of args.adrCountries ?? []) {
+      symbolCountryMap.set(symbol, country);
+    }
   }
 
   for (const override of args.overrides ?? []) {
-    symbolCountryMap.set(override.symbol, override.country);
+    const overrideScope = override.scope ?? 'both';
+    if (overrideScope === 'both' || overrideScope === scope) {
+      symbolCountryMap.set(override.symbol, override.country);
+    }
   }
 
   return symbolCountryMap;
+}
+
+/** The two maps the tax calculation needs; see `buildSymbolCountryMap`. */
+export function buildSymbolCountryMaps(args: {
+  trades: SymbolCountrySource[];
+  dividends: (SymbolCountrySource & AdrCountrySource)[];
+  overrides?: SymbolCountryOverrideInput[];
+}): {
+  gains: Map<string, string>;
+  dividends: Map<string, string>;
+  /** ADR symbols whose rows disagree on the issuer country. */
+  adrConflicts: Set<string>;
+} {
+  const adr = resolveAdrCountries({ dividends: args.dividends });
+  return {
+    gains: buildSymbolCountryMap({ ...args, scope: 'gains' }),
+    dividends: buildSymbolCountryMap({
+      ...args,
+      scope: 'dividends',
+      adrCountries: adr.countries,
+    }),
+    adrConflicts: adr.conflicts,
+  };
 }

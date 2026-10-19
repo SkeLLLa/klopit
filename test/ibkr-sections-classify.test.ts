@@ -85,4 +85,11 @@ void describe('classifySection', () => {
     assert.equal(classifySection({ section: '' }), 'unknown');
     assert.equal(classifySection({ section: 'Unknown Section' }), 'unknown');
   });
+
+  void it('ignores the Payment In Lieu Of Dividends summary section', () => {
+    assert.equal(
+      classifySection({ section: 'Payment In Lieu Of Dividends' }),
+      'ignorable',
+    );
+  });
 });

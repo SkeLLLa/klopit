@@ -1,6 +1,6 @@
 import { isinToCountry } from '../../tax/country.js';
 import { BrokerId } from '../../types.js';
-import type { ParsedStatement, RawDividend } from '../../types.js';
+import type { ParsedStatement, PaymentKind, RawDividend } from '../../types.js';
 import { CsvStatementParser } from '../shared/csv-parser.js';
 import {
   cleanField,
@@ -15,10 +15,10 @@ import { classifySection } from './sections.js';
 const WHT_COUNTRY_RE = /\s-\s([A-Z]{2})\s+Tax\s*$/;
 
 /**
- * Payment-in-lieu rows (lent shares) carry the borrower's tax, not the
- * issuer's, so their suffix says nothing about the ADR issuer country.
+ * Payment-in-lieu rows (lent shares) are substitute payments: their withholding
+ * suffix says nothing about the ADR issuer country, so they never feed it.
  */
-const PAYMENT_IN_LIEU_RE = /payment in lieu/i;
+const PAYMENT_IN_LIEU_RE = /payment in lieu of dividend/i;
 
 /**
  * Regex to extract symbol and ISIN from dividend/tax descriptions:
@@ -277,7 +277,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
       div.isAdr = true;
       const countries = this.whtCountriesBySymbol.get(div.symbol);
       if (countries?.size === 1) {
-        div.adrCountry = [...countries][0];
+        if (div.kind !== 'payment-in-lieu') div.adrCountry = [...countries][0];
         continue;
       }
       if (warned.has(div.symbol)) continue;
@@ -288,7 +288,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
           message: `ADR ${div.symbol} has conflicting withholding countries (${[...countries].toSorted().join(', ')}) — set the issuer country on the country mapping page`,
         });
       } else if (this.whtSymbols.has(div.symbol)) {
-        // Only warn when withholding exists: without it the country affects no credit.
+        // Only warn when withholding exists: without it no credit depends on the country.
         warned.add(div.symbol);
         const isin = div.isin ?? this.symbolToIsin.get(div.symbol);
         this.addWarning({
@@ -537,7 +537,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
     rowLabel: string;
     fields: string[];
     rawLine: string;
-    push: (record: RawDividend) => void;
+    push: (record: RawDividend & { taxCountry?: string }) => void;
   }): void {
     const { section, rowLabel, fields, rawLine, push } = args;
     if (
@@ -560,16 +560,20 @@ class InteractiveBrokersParser extends CsvStatementParser {
     const rawDate = this.field(fields, ix('Date'));
     const description = this.field(fields, ix('Description'));
     const match = SYMBOL_ISIN_RE.exec(description);
+    const kind: PaymentKind = PAYMENT_IN_LIEU_RE.test(description)
+      ? 'payment-in-lieu'
+      : 'dividend';
+    const taxCountry =
+      section === 'Withholding Tax'
+        ? WHT_COUNTRY_RE.exec(description)?.[1]
+        : undefined;
     if (section === 'Withholding Tax' && match) {
-      if (!PAYMENT_IN_LIEU_RE.test(description)) {
-        this.whtSymbols.add(match[1]);
-        const whtCountry = WHT_COUNTRY_RE.exec(description)?.[1];
-        if (whtCountry) {
-          const countries =
-            this.whtCountriesBySymbol.get(match[1]) ?? new Set<string>();
-          countries.add(whtCountry);
-          this.whtCountriesBySymbol.set(match[1], countries);
-        }
+      this.whtSymbols.add(match[1]);
+      if (taxCountry && kind === 'dividend') {
+        const countries =
+          this.whtCountriesBySymbol.get(match[1]) ?? new Set<string>();
+        countries.add(taxCountry);
+        this.whtCountriesBySymbol.set(match[1], countries);
       }
     }
     const failure = {
@@ -599,6 +603,8 @@ class InteractiveBrokersParser extends CsvStatementParser {
         currency,
         date,
         amount,
+        kind,
+        ...(taxCountry ? { taxCountry } : {}),
       });
     } catch {
       this.reportParseFailure({

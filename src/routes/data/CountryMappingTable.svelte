@@ -6,8 +6,8 @@
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import { isinToCountry } from '../../core/tax/country.js';
   import {
-    buildSymbolCountryMap,
-    resolveAdrCountries,
+    buildSymbolCountryMaps,
+    type OverrideScope,
   } from '../../core/tax/symbol-country.js';
   import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
@@ -101,8 +101,12 @@
   interface SymbolEntry {
     symbol: string;
     isin: string | undefined;
+    /** ISIN-prefix country: capital gains and PIT/ZG. */
     detected: string;
+    /** Country used for dividends (differs from `detected` for ADRs). */
+    detectedDividends: string;
     override: string;
+    overrideScope: OverrideScope;
   }
 
   function shouldUseIsin(existing: { isin?: string } | undefined, isin?: string) {
@@ -121,13 +125,16 @@
     const dividendSymbols = keysToSymbols(dividendSymbolsQuery.current ?? []);
     const overrides = overridesQuery.current ?? [];
 
-    const overrideMap = new Map(overrides.map((o) => [o.symbol, o.country]));
-    const detectedMap = buildSymbolCountryMap({
+    const overrideMap = new Map(overrides.map((o) => [o.symbol, o]));
+    const detectedMaps = buildSymbolCountryMaps({
       trades: tradeSymbolIsins,
-      dividends: dividendSymbolIsins,
-      adrCountries: resolveAdrCountries({
-        dividends: adrDividendsQuery.current ?? [],
-      }).countries,
+      dividends: [
+        ...dividendSymbolIsins,
+        ...(adrDividendsQuery.current ?? []).map((d) => ({
+          symbol: d.symbol,
+          adrCountry: d.adrCountry,
+        })),
+      ],
     });
     const symbolMap = new Map<string, { isin?: string }>();
 
@@ -162,15 +169,24 @@
       result.push({
         symbol,
         isin: info.isin,
-        detected: detectedMap.get(symbol) ?? isinToCountry({ isin: info.isin }),
-        override: overrideMap.get(symbol) ?? '',
+        detected:
+          detectedMaps.gains.get(symbol) ?? isinToCountry({ isin: info.isin }),
+        detectedDividends:
+          detectedMaps.dividends.get(symbol) ??
+          isinToCountry({ isin: info.isin }),
+        override: overrideMap.get(symbol)?.country ?? '',
+        overrideScope: overrideMap.get(symbol)?.scope ?? 'both',
       });
     }
 
     return result.toSorted((a, b) => a.symbol.localeCompare(b.symbol));
   });
 
-  async function handleOverrideChange(symbol: string, value: string) {
+  async function saveOverride(
+    symbol: string,
+    value: string,
+    scope: OverrideScope,
+  ) {
     const trimmed = value.trim().toUpperCase();
 
     // Delete existing override for this symbol
@@ -182,8 +198,22 @@
         sessionId,
         symbol,
         country: trimmed,
+        scope,
       });
     }
+  }
+
+  function scopeLabel(scope: OverrideScope): string {
+    if (scope === 'dividends') return m.data_country_scope_dividends();
+    if (scope === 'gains') return m.data_country_scope_gains();
+    return m.data_country_scope_both();
+  }
+
+  /** Country the dividend treaty cap is looked up for. */
+  function dividendCountry(entry: SymbolEntry): string {
+    return entry.override && entry.overrideScope !== 'gains'
+      ? entry.override
+      : entry.detectedDividends;
   }
 </script>
 
@@ -209,8 +239,7 @@
         </thead>
         <tbody>
           {#each entries as entry (entry.symbol)}
-            {@const effectiveCountry = entry.override || entry.detected}
-            {@const dttRate = getDividendCreditCapRate({ country: effectiveCountry })}
+            {@const dttRate = getDividendCreditCapRate({ country: dividendCountry(entry) })}
             <tr class="border-b border-slate-100 dark:border-slate-700">
               <td class="px-3 py-2 font-medium text-slate-900 dark:text-slate-100"
                 >{entry.symbol}</td
@@ -225,7 +254,11 @@
                   </div>
                 {/if}
               </td>
-              <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{entry.detected}</td>
+              <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{entry.detected}{#if entry.detectedDividends !== entry.detected}
+                  <span class="block text-xs text-slate-500 dark:text-slate-400"
+                    >{m.data_country_scope_dividends()}: {entry.detectedDividends}</span
+                  >
+                {/if}</td>
               <td class="px-3 py-2">
                 <input
                   type="text"
@@ -234,8 +267,19 @@
                   class="w-16 rounded border border-slate-300 px-2 py-1 text-xs uppercase dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                   placeholder={m.data_country_override_placeholder()}
                   value={entry.override}
-                  onchange={(e) => void handleOverrideChange(entry.symbol, e.currentTarget.value)}
+                  onchange={(e) => void saveOverride(entry.symbol, e.currentTarget.value, entry.overrideScope)}
                 />
+                <select
+                  aria-label={m.data_country_scope_label()}
+                  class="ml-1 rounded border border-slate-300 px-1 py-1 text-xs dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                  value={entry.overrideScope}
+                  disabled={!entry.override}
+                  onchange={(e) => void saveOverride(entry.symbol, entry.override, e.currentTarget.value as OverrideScope)}
+                >
+                  {#each ['both', 'dividends', 'gains'] as const as scope (scope)}
+                    <option value={scope}>{scopeLabel(scope)}</option>
+                  {/each}
+                </select>
               </td>
               <td
                 class="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300"

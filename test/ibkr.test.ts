@@ -862,6 +862,46 @@ void describe('IBKR ADR detection', () => {
     assert.match(r.warnings[0].message, /country assumed US from ISIN/);
   });
 
+  void it('records kind and taxCountry on dividend and withholding rows', () => {
+    const r = parseLines([
+      period,
+      divHeader,
+      tsmDiv,
+      'Dividends,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend),5',
+      whtHeader,
+      tsmWht('2024-06-15', 'TW Tax'),
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend) - US Tax,-0.75,',
+      'Withholding Tax,Data,USD,2024-06-17,TSM(US8740391003) Cash Dividend USD 0.5 per Share,-1,',
+    ]);
+    assert.deepEqual(
+      r.dividends.map((d) => d.kind),
+      ['dividend', 'payment-in-lieu'],
+    );
+    assert.deepEqual(
+      r.withholdingTaxes.map((w) => [w.kind, w.taxCountry]),
+      [
+        ['dividend', 'TW'],
+        ['payment-in-lieu', 'US'],
+        ['dividend', undefined],
+      ],
+    );
+  });
+
+  void it('warns in a PIL-only ADR year and stamps no issuer country', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      'Dividends,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend),5',
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend) - US Tax,-0.75,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.equal(r.warnings.length, 1);
+    assert.match(r.warnings[0].message, /country assumed US from ISIN/);
+  });
+
   void it('does not mark non-ADR stocks', () => {
     const r = parseLines([
       period,

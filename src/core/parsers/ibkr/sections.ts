@@ -46,6 +46,9 @@ export const IGNORABLE_SECTIONS: ReadonlySet<string> = new Set([
   'Realized & Unrealized Performance Summary',
   // Statement-level P/L summary row — redundant.
   'Total P/L for Statement Period',
+  // Summary of payments in lieu; the taxable rows are in Dividends and
+  // Withholding Tax, so this is a redundant view.
+  'Payment In Lieu Of Dividends',
 ]);
 
 export const KNOWN_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set([

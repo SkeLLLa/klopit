@@ -123,6 +123,8 @@ export interface SymbolCountryOverrideRecord {
   sessionId: string;
   symbol: string;
   country: string;
+  /** Which attribution the override applies to. Missing = 'both'. */
+  scope?: 'dividends' | 'gains' | 'both';
 }
 
 export interface TradeResultRecord extends TradeResult {

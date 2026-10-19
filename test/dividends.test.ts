@@ -683,3 +683,74 @@ void describe('calculateDividends ADR country conflict', () => {
     assert.equal(r.warnings, undefined);
   });
 });
+
+const kinds = (r: DividendResult) => r.warnings?.map((w) => w.kind) ?? [];
+
+void describe('calculateDividends payment in lieu', () => {
+  const ordinary = makeDiv({ symbol: 'TSM', isAdr: true, amount: 10 });
+  const pil = makeDiv({
+    symbol: 'TSM',
+    isAdr: true,
+    amount: 10,
+    kind: 'payment-in-lieu',
+  });
+  const dividendsMap = new Map([['TSM', 'TW']]);
+  const isinMap = new Map([['TSM', 'US']]);
+
+  void it('keeps same-day ordinary and PIL events separate with their own caps', () => {
+    const results = calculateDividends({
+      dividends: [ordinary, pil],
+      withholdingTaxes: [
+        makeTax({ symbol: 'TSM', amount: -1, taxCountry: 'TW' }),
+        makeTax({
+          symbol: 'TSM',
+          amount: -1.5,
+          kind: 'payment-in-lieu',
+          taxCountry: 'US',
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: dividendsMap,
+      isinCountryMap: isinMap,
+    });
+    assert.equal(results.length, 2);
+    const ord = results.find((r) => r.country === 'TW');
+    const lieu = results.find((r) => r.country === 'US');
+    assert.ok(ord && lieu);
+    assert.equal(ord.creditCapRate, 0.1);
+    assert.equal(ord.withholdingTaxOriginal, 1);
+    assert.equal(lieu.creditCapRate, 0.15);
+    assert.equal(lieu.withholdingTaxOriginal, 1.5);
+    assert.deepEqual(kinds(ord), []);
+    assert.deepEqual(kinds(lieu), ['pil-substitute']);
+  });
+
+  void it('warns that PIL excess is not credited instead of a W-8BEN lapse', () => {
+    const [r] = calculateDividends({
+      dividends: [pil],
+      withholdingTaxes: [
+        makeTax({
+          symbol: 'TSM',
+          amount: -3,
+          kind: 'payment-in-lieu',
+          taxCountry: 'US',
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: dividendsMap,
+      isinCountryMap: isinMap,
+    });
+    assert.deepEqual(kinds(r), ['pil-excess-not-credited', 'pil-substitute']);
+  });
+
+  void it('falls back to the ISIN country for a PIL without withholding', () => {
+    const [r] = calculateDividends({
+      dividends: [pil],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: dividendsMap,
+      isinCountryMap: isinMap,
+    });
+    assert.equal(r.country, 'US');
+  });
+});
