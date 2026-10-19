@@ -139,7 +139,10 @@ const ROW_SPECS: Record<(typeof INPUT_TABLES)[number], RowSpec> = {
     },
   },
   dividends: { dates: { req: ['date'] }, numbers: { req: ['amount'] } },
-  withholdingTaxes: { dates: { req: ['date'] }, numbers: { req: ['amount'] } },
+  withholdingTaxes: {
+    dates: { req: ['date'] },
+    numbers: { req: ['amount'], opt: ['dividendId'] },
+  },
   carryInPositions: {
     dates: { opt: ['acquisitionDate'] },
     numbers: { req: ['quantity', 'year'], opt: ['costBasis', 'costBasisPln'] },
@@ -256,6 +259,32 @@ function validateRows(tables: BackupTables): void {
           `Table "${name}": a row references a session that is not in the backup.`,
         );
       }
+    }
+  }
+  dropDanglingDividendLinks(tables);
+}
+
+/**
+ * A withholding row's `dividendId` must point to a dividend of the same session
+ * in the backup. Otherwise the link is dropped (the row imports as a
+ * free-standing withholding, so the credit is kept and a later dividend can
+ * never adopt a stale id).
+ */
+function dropDanglingDividendLinks(tables: BackupTables): void {
+  const dividendSession = new Map<number, unknown>();
+  for (const row of tables['dividends'] ?? []) {
+    if (isRecord(row) && typeof row['id'] === 'number') {
+      dividendSession.set(row['id'], row['sessionId']);
+    }
+  }
+  for (const row of tables['withholdingTaxes'] ?? []) {
+    if (!isRecord(row) || row['dividendId'] === undefined) continue;
+    const id = row['dividendId'];
+    if (
+      typeof id !== 'number' ||
+      dividendSession.get(id) !== row['sessionId']
+    ) {
+      delete row['dividendId'];
     }
   }
 }

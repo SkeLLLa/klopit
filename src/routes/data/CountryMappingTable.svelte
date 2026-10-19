@@ -9,6 +9,7 @@
     buildSymbolCountryMaps,
     type OverrideScope,
   } from '../../core/tax/symbol-country.js';
+  import { setSymbolCountryOverride } from '#lib/services/country-overrides.js';
   import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
   let { sessionId }: { sessionId: string } = $props();
@@ -200,20 +201,7 @@
     value: string,
     scope: OverrideScope,
   ) {
-    const trimmed = value.trim().toUpperCase();
-
-    // Delete existing override for this symbol
-    await db.symbolCountryOverrides.where({ sessionId, symbol }).delete();
-
-    // Add new override if non-empty
-    if (trimmed.length > 0) {
-      await db.symbolCountryOverrides.add({
-        sessionId,
-        symbol,
-        country: trimmed,
-        scope,
-      });
-    }
+    await setSymbolCountryOverride({ sessionId, symbol, country: value, scope });
   }
 
   function scopeLabel(scope: OverrideScope): string {

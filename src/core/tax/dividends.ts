@@ -68,6 +68,20 @@ function matchKey(args: {
   });
 }
 
+/**
+ * The calculator's grouping key: a withholding row with the same key joins the
+ * dividend event directly. Public so the UI and services use the exact key.
+ */
+export function dividendMatchKey(row: {
+  isin?: string | undefined;
+  symbol: string;
+  currency: string;
+  date: Date;
+  kind?: PaymentKind | undefined;
+}): string {
+  return matchKey(row);
+}
+
 /** Whole days since the epoch for the local calendar day of `date`. */
 function dayNumber(date: Date): number {
   return Math.round(

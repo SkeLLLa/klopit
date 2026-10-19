@@ -485,3 +485,80 @@ void describe('backup export / import', () => {
     );
   });
 });
+
+const wht = (id: number, dividendId: unknown) => ({
+  sessionId,
+  symbol: 'AAPL',
+  currency: 'USD',
+  date: { $date: '2025-05-01T00:00:00.000Z' },
+  amount: -1,
+  dividendId,
+  id,
+});
+
+async function roundTrip(
+  mutate: (tables: Record<string, object[]>) => void,
+): Promise<{ dividendId?: unknown }[]> {
+  await seed(database);
+  const file = JSON.parse(
+    await exportBackup({ appVersion: 't', database }),
+  ) as BackupFile;
+  mutate(file.tables as Record<string, object[]>);
+  await clearAll(database);
+  await importBackup({
+    backup: parseBackup(JSON.stringify(file), database.verno),
+    database,
+  });
+  return database.withholdingTaxes.toArray();
+}
+
+void describe('backup withholding dividend links (plan 14)', () => {
+  void it('keeps a valid dividendId through export and import', async () => {
+    const [div] = await (async () => {
+      await seed(database);
+      return database.dividends.toArray();
+    })();
+    await database.withholdingTaxes.update(1, { dividendId: div.id });
+    const text = await exportBackup({ appVersion: 't', database });
+    await clearAll(database);
+    await importBackup({ backup: parseBackup(text, database.verno), database });
+    const [row] = await database.withholdingTaxes.toArray();
+    assert.equal(row.dividendId, div.id);
+  });
+
+  void it('drops a dangling dividendId', async () => {
+    const rows = await roundTrip((t) => {
+      t['withholdingTaxes'] = [wht(1, 999)];
+    });
+    assert.equal(rows.length, 1);
+    assert.equal('dividendId' in rows[0], false);
+  });
+
+  void it("drops a dividendId pointing to another session's dividend", async () => {
+    const rows = await roundTrip((t) => {
+      t['dividends'].push({
+        sessionId: 's2',
+        symbol: 'AAPL',
+        date: { $date: '2025-05-01T00:00:00.000Z' },
+        amount: 5,
+        withholdingTax: 0,
+        id: 50,
+      });
+      t['withholdingTaxes'] = [wht(1, 50)];
+    });
+    assert.equal('dividendId' in rows[0], false);
+  });
+
+  void it('rejects a non-numeric dividendId and imports old backups unchanged', async () => {
+    await seed(database);
+    const file = JSON.parse(
+      await exportBackup({ appVersion: 't', database }),
+    ) as BackupFile;
+    assert.equal(
+      'dividendId' in (file.tables['withholdingTaxes'][0] as object),
+      false,
+    );
+    file.tables['withholdingTaxes'] = [wht(1, 'x')];
+    assert.equal(await importCode(JSON.stringify(file)), 'invalid');
+  });
+});

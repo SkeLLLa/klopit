@@ -423,3 +423,58 @@ void describe('tax service near "today" (NBP publication)', () => {
     assert.equal(summary?.missingRateCount, 0);
   });
 });
+
+void describe('tax service: manual dividend with withholding (plan 14)', () => {
+  afterEach(async () => {
+    mock.restoreAll();
+    await clearRateCache();
+    await Promise.all([
+      db.sessions.clear(),
+      db.dividends.clear(),
+      db.withholdingTaxes.clear(),
+      db.symbolCountryOverrides.clear(),
+      db.dividendResults.clear(),
+      db.taxSummaries.clear(),
+    ]);
+  });
+
+  void it('credits the entered withholding at the treaty cap, with no fallback warnings', async () => {
+    const { saveDividend } = await import('../src/lib/services/data.js');
+    mock.method(
+      globalThis,
+      'fetch',
+      fakeNbp({
+        today: '2026-10-14',
+        rates: { '2024-03-14': 4.0, '2024-03-15': 4.2 },
+      }),
+    );
+    const session = await createSession({ year: 2024 });
+    await saveDividend({
+      sessionId: session.id,
+      dividend: {
+        symbol: 'XYZ',
+        currency: 'USD',
+        date: new Date(2024, 2, 15),
+        amount: 100,
+      },
+      withholding: 15,
+      country: 'US',
+    });
+    await calculateSessionTaxes({ sessionId: session.id });
+    const rows = await db.dividendResults
+      .where('sessionId')
+      .equals(session.id)
+      .toArray();
+    assert.equal(rows.length, 1);
+    const [row] = rows;
+    assert.equal(row.withholdingTaxOriginal, 15);
+    assert.equal(row.country, 'US');
+    assert.equal(row.creditCapRate, 0.15);
+    assert.ok(Math.abs(row.deductibleWithholdingPln - 60) < 0.01);
+    const kinds = new Set((row.warnings ?? []).map((w) => w.kind));
+    assert.ok(!kinds.has('wht-matched-by-symbol'));
+    assert.ok(!kinds.has('unknown-country'));
+    const summary = await db.taxSummaries.get(session.id);
+    assert.ok((summary?.totalDeductibleWithholdingPln ?? 0) > 0);
+  });
+});

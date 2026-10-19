@@ -10,6 +10,7 @@ import {
 } from '../src/core/tax/aggregates.js';
 import {
   calculateDividends,
+  dividendMatchKey,
   pairReversals,
 } from '../src/core/tax/dividends.js';
 import { buildSymbolCountryMaps } from '../src/core/tax/symbol-country.js';
@@ -1521,5 +1522,71 @@ void describe('dividendBreakdown', () => {
     near(y2025.income, 0);
     near(y2025.net + y2025.withholding + y2025.taxOwed, 0);
     near(y2025.addBack, 60.75);
+  });
+});
+
+void describe('manual withholding matching (plan 14)', () => {
+  const day = d(2024, 3, 15);
+
+  void it('a manual pair with the same symbol, no ISIN and date matches directly', () => {
+    const rows = run({
+      divs: [makeDiv({ date: day, amount: 100, exchangeRate: 4 })],
+      taxes: [makeTax({ date: day, amount: -15, exchangeRate: 4 })],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].deductibleWithholdingPln, 60);
+    assert.ok(!kinds(rows[0]).includes('wht-matched-by-symbol'));
+  });
+
+  void it('a manual pair with the same ISIN on both rows matches', () => {
+    const isin = 'US0378331005';
+    const rows = run({
+      divs: [makeDiv({ date: day, amount: 100, exchangeRate: 4, isin })],
+      taxes: [makeTax({ date: day, amount: -15, exchangeRate: 4, isin })],
+    });
+    assert.equal(rows.length, 1);
+    near(rows[0].deductibleWithholdingPln, 60);
+    assert.ok(!kinds(rows[0]).includes('wht-matched-by-symbol'));
+  });
+
+  void it('dividend with ISIN and WHT without does not match directly', () => {
+    const rows = run({
+      divs: [
+        makeDiv({
+          date: day,
+          amount: 100,
+          exchangeRate: 4,
+          isin: 'US0378331005',
+        }),
+      ],
+      taxes: [makeTax({ date: day, amount: -15, exchangeRate: 4 })],
+    });
+    // The ISIN-keyed event and the symbol-keyed WHT do not join: no credit.
+    assert.equal(rows.length, 2);
+    near(rows[0].deductibleWithholdingPln, 0);
+    assert.ok(kinds(rows[1]).includes('wht-unmatched'));
+  });
+
+  void it('dividendMatchKey equals the grouping key the calculator uses', () => {
+    const cases = [
+      { symbol: 'AAPL', isin: undefined, date: d(2024, 3, 15) },
+      { symbol: 'AAPL', isin: 'US0378331005', date: d(2024, 12, 31) },
+      { symbol: 'KO', isin: 'US1912161007', date: d(2024, 1, 1) },
+    ];
+    for (const c of cases) {
+      const div = makeDiv({ ...c, amount: 10, exchangeRate: 4 });
+      const tax = makeTax({ ...c, amount: -1.5, exchangeRate: 4 });
+      assert.equal(dividendMatchKey({ ...div }), dividendMatchKey({ ...tax }));
+      const rows = run({ divs: [div], taxes: [tax] });
+      assert.ok(!kinds(rows[0]).includes('wht-matched-by-symbol'));
+      assert.notEqual(
+        dividendMatchKey({ ...div }),
+        dividendMatchKey({ ...div, currency: 'EUR' }),
+      );
+      assert.notEqual(
+        dividendMatchKey({ ...div }),
+        dividendMatchKey({ ...div, kind: 'payment-in-lieu' }),
+      );
+    }
   });
 });

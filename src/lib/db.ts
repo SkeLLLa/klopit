@@ -98,6 +98,11 @@ export interface DividendRecord extends RawDividend {
 export interface WithholdingTaxRecord extends RawWithholdingTax {
   id?: number | undefined;
   sessionId: string;
+  /**
+   * Set on the one withholding row entered with a manual dividend; the service
+   * keeps its key fields equal to the dividend's (plan 14). Not indexed.
+   */
+  dividendId?: number | undefined;
 }
 
 export interface CarryInPositionRecord extends CarryInPosition {
