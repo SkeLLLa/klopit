@@ -11,12 +11,19 @@ import type { CsvParserDefinition, StatementParser } from '../types.js';
 import { ibkrEntityToCountry } from './entity-country.js';
 import { classifySection } from './sections.js';
 
+/** Source-state suffix IBKR appends to withholding descriptions: "... - TW Tax". */
+const WHT_COUNTRY_RE = /\s-\s([A-Z]{2})\s+Tax\s*$/;
+
+/**
+ * Payment-in-lieu rows (lent shares) carry the borrower's tax, not the
+ * issuer's, so their suffix says nothing about the ADR issuer country.
+ */
+const PAYMENT_IN_LIEU_RE = /payment in lieu/i;
+
 /**
  * Regex to extract symbol and ISIN from dividend/tax descriptions:
  * "AAPL(US0378331005) ..."
  */
-/** Source-state suffix IBKR appends to withholding descriptions: "... - TW Tax". */
-const WHT_COUNTRY_RE = /\s-\s([A-Z]{2})\s+Tax\s*$/;
 const SYMBOL_ISIN_RE = /^\s*(\S+)\s*\(([^)]+)\)/;
 
 /**
@@ -53,8 +60,13 @@ class InteractiveBrokersParser extends CsvStatementParser {
   private trimmedHeaders = new WeakMap<string[], string[]>();
   /** Symbols the Financial Instrument Information `Type` column marks as ADR. */
   private adrSymbols = new Set<string>();
-  /** Source country parsed from the "- XX Tax" withholding description suffix. */
-  private whtCountryBySymbol = new Map<string, string>();
+  /**
+   * Source countries parsed from the "- XX Tax" suffix of non-PIL withholding
+   * rows.
+   */
+  private whtCountriesBySymbol = new Map<string, Set<string>>();
+  /** Symbols with a non-PIL withholding row (with or without a usable suffix). */
+  private whtSymbols = new Set<string>();
 
   protected getBrokerId(): string {
     return 'ibkr';
@@ -263,10 +275,20 @@ class InteractiveBrokersParser extends CsvStatementParser {
     for (const div of this.dividends) {
       if (!this.adrSymbols.has(div.symbol)) continue;
       div.isAdr = true;
-      const country = this.whtCountryBySymbol.get(div.symbol);
-      if (country) {
-        div.adrCountry = country;
-      } else if (!warned.has(div.symbol)) {
+      const countries = this.whtCountriesBySymbol.get(div.symbol);
+      if (countries?.size === 1) {
+        div.adrCountry = [...countries][0];
+        continue;
+      }
+      if (warned.has(div.symbol)) continue;
+      if (countries && countries.size > 1) {
+        warned.add(div.symbol);
+        this.addWarning({
+          section: 'Dividends',
+          message: `ADR ${div.symbol} has conflicting withholding countries (${[...countries].toSorted().join(', ')}) — set the issuer country on the country mapping page`,
+        });
+      } else if (this.whtSymbols.has(div.symbol)) {
+        // Only warn when withholding exists: without it the country affects no credit.
         warned.add(div.symbol);
         const isin = div.isin ?? this.symbolToIsin.get(div.symbol);
         this.addWarning({
@@ -539,8 +561,16 @@ class InteractiveBrokersParser extends CsvStatementParser {
     const description = this.field(fields, ix('Description'));
     const match = SYMBOL_ISIN_RE.exec(description);
     if (section === 'Withholding Tax' && match) {
-      const whtCountry = WHT_COUNTRY_RE.exec(description)?.[1];
-      if (whtCountry) this.whtCountryBySymbol.set(match[1], whtCountry);
+      if (!PAYMENT_IN_LIEU_RE.test(description)) {
+        this.whtSymbols.add(match[1]);
+        const whtCountry = WHT_COUNTRY_RE.exec(description)?.[1];
+        if (whtCountry) {
+          const countries =
+            this.whtCountriesBySymbol.get(match[1]) ?? new Set<string>();
+          countries.add(whtCountry);
+          this.whtCountriesBySymbol.set(match[1], countries);
+        }
+      }
     }
     const failure = {
       section,

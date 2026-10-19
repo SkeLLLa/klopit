@@ -656,3 +656,30 @@ void describe('calculateDividends ADR country', () => {
     );
   });
 });
+
+void describe('calculateDividends ADR country conflict', () => {
+  void it('flags a conflicting ADR symbol', () => {
+    const [r] = calculateDividends({
+      dividends: [makeDiv({ symbol: 'TSM', isAdr: true, amount: 10 })],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['TSM', 'US']]),
+      adrCountryConflicts: new Set(['TSM']),
+    });
+    assert.equal(
+      r.warnings?.some((w) => w.kind === 'adr-country-conflict'),
+      true,
+    );
+  });
+
+  void it('does not flag other symbols', () => {
+    const [r] = calculateDividends({
+      dividends: [makeDiv({ symbol: 'AAPL', amount: 10 })],
+      withholdingTaxes: [],
+      taxPeriod: taxPeriod2024,
+      symbolCountryMap: new Map([['AAPL', 'US']]),
+      adrCountryConflicts: new Set(['TSM']),
+    });
+    assert.equal(r.warnings, undefined);
+  });
+});

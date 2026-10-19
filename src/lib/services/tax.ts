@@ -4,7 +4,10 @@ import {
   type TaxCalculationResult,
 } from '../../core/tax/calculator.js';
 import { isIncentiveBuy } from '../../core/tax/incentive.js';
-import { buildSymbolCountryMap } from '../../core/tax/symbol-country.js';
+import {
+  buildSymbolCountryMap,
+  resolveAdrCountries,
+} from '../../core/tax/symbol-country.js';
 import type {
   EnrichedCorporateAction,
   EnrichedCreditInterest,
@@ -24,6 +27,12 @@ import {
 import { updateSession } from './session.js';
 
 const log = createLogger('tax');
+
+/**
+ * Where the ADR issuer country applies: only to dividends, or to every
+ * country-attributed row (capital gains, PIT/ZG) too.
+ */
+const ADR_COUNTRY_SCOPE = 'all' as 'all' | 'dividends';
 
 /** Format a Date as YYYY-MM-DD for rate lookups */
 function toDateString(d: Date): string {
@@ -118,11 +127,26 @@ export async function calculateSessionTaxes(args: {
     .equals(args.sessionId)
     .toArray();
 
+  const adr = resolveAdrCountries({ dividends });
+  const overriddenSymbols = new Set(overrides.map((o) => o.symbol));
+  const adrCountryConflicts = new Set(
+    [...adr.conflicts].filter((symbol) => !overriddenSymbols.has(symbol)),
+  );
   const symbolCountryMap = buildSymbolCountryMap({
     trades,
     dividends,
     overrides,
+    adrCountries: ADR_COUNTRY_SCOPE === 'all' ? adr.countries : undefined,
   });
+  const dividendSymbolCountryMap =
+    ADR_COUNTRY_SCOPE === 'all'
+      ? undefined
+      : buildSymbolCountryMap({
+          trades,
+          dividends,
+          overrides,
+          adrCountries: adr.countries,
+        });
 
   // 4. Prefetch and cache NBP rates
   log.info('calculateSessionTaxes: prefetching NBP rates');
@@ -297,6 +321,8 @@ export async function calculateSessionTaxes(args: {
       })),
       taxPeriod,
       symbolCountryMap,
+      dividendSymbolCountryMap,
+      adrCountryConflicts,
       showDividendsInPitZg: session.showDividendsInPitZg ?? false,
       reduceAdrFeesFromDividends: session.reduceAdrFeesFromDividends ?? false,
     });

@@ -5,7 +5,10 @@
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import { isinToCountry } from '../../core/tax/country.js';
-  import { buildSymbolCountryMap } from '../../core/tax/symbol-country.js';
+  import {
+    buildSymbolCountryMap,
+    resolveAdrCountries,
+  } from '../../core/tax/symbol-country.js';
   import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
 
   let { sessionId }: { sessionId: string } = $props();
@@ -121,13 +124,10 @@
     const overrideMap = new Map(overrides.map((o) => [o.symbol, o.country]));
     const detectedMap = buildSymbolCountryMap({
       trades: tradeSymbolIsins,
-      dividends: [
-        ...dividendSymbolIsins,
-        ...(adrDividendsQuery.current ?? []).map((d) => ({
-          symbol: d.symbol,
-          adrCountry: d.adrCountry,
-        })),
-      ],
+      dividends: dividendSymbolIsins,
+      adrCountries: resolveAdrCountries({
+        dividends: adrDividendsQuery.current ?? [],
+      }).countries,
     });
     const symbolMap = new Map<string, { isin?: string }>();
 

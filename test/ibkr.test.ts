@@ -742,6 +742,9 @@ void describe('InteractiveBrokersParser', () => {
   });
 });
 
+const tsmWht = (date: string, suffix: string) =>
+  `Withholding Tax,Data,USD,${date},TSM(US8740391003) Cash Dividend USD 0.5 per Share - ${suffix},-1.05,`;
+
 void describe('IBKR ADR detection', () => {
   const header =
     'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Listing Exch,Multiplier,Type,Code';
@@ -772,7 +775,15 @@ void describe('IBKR ADR detection', () => {
   });
 
   void it('warns and keeps the ISIN country when the ADR has no suffix', () => {
-    const r = parseLines([period, header, tsmFii, divHeader, tsmDiv]);
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share,-1.05,',
+    ]);
     assert.equal(r.dividends[0].isAdr, true);
     assert.equal(r.dividends[0].adrCountry, undefined);
     assert.equal(r.warnings.length, 1);
@@ -794,6 +805,61 @@ void describe('IBKR ADR detection', () => {
       'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Cash Dividend USD 0.5 per Share - TWN Tax,-1.05,',
     ]);
     assert.equal(r.dividends[0].adrCountry, undefined);
+  });
+
+  void it('does not stamp a country when suffixes conflict, and warns', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      tsmWht('2024-06-15', 'TW Tax'),
+      tsmWht('2024-09-15', 'US Tax'),
+    ]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.equal(r.warnings.length, 1);
+    assert.match(
+      r.warnings[0].message,
+      /conflicting withholding countries \(TW, US\)/,
+    );
+  });
+
+  void it('ignores payment-in-lieu withholding rows', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      tsmWht('2024-06-15', 'TW Tax'),
+      'Withholding Tax,Data,USD,2024-06-16,TSM(US8740391003) Payment in Lieu of Dividend (Ordinary Dividend) - US Tax,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, 'TW');
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('does not warn about the ISIN country when the ADR has no withholding', () => {
+    const r = parseLines([period, header, tsmFii, divHeader, tsmDiv]);
+    assert.equal(r.dividends[0].isAdr, true);
+    assert.equal(r.warnings.length, 0);
+  });
+
+  void it('warns when withholding exists but has no usable suffix', () => {
+    const r = parseLines([
+      period,
+      header,
+      tsmFii,
+      divHeader,
+      tsmDiv,
+      whtHeader,
+      'Withholding Tax,Data,USD,2024-06-15,TSM(US8740391003) Cash Dividend USD 0.5 per Share,-1.05,',
+    ]);
+    assert.equal(r.dividends[0].adrCountry, undefined);
+    assert.match(r.warnings[0].message, /country assumed US from ISIN/);
   });
 
   void it('does not mark non-ADR stocks', () => {

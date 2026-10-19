@@ -48,6 +48,12 @@ export interface CalculateTaxesArgs {
   priorLosses?: PriorYearLoss[];
   taxPeriod: TaxPeriod;
   symbolCountryMap?: Map<string, string>;
+  /**
+   * Overrides `symbolCountryMap` for dividends only (e.g. to scope ADR
+   * countries).
+   */
+  dividendSymbolCountryMap?: Map<string, string>;
+  adrCountryConflicts?: ReadonlySet<string>;
   showDividendsInPitZg?: boolean;
   reduceAdrFeesFromDividends?: boolean;
 }
@@ -99,7 +105,8 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     transactionFees,
     reduceAdrFeesFromDividends: reduceAdrFeesFromDividends ?? false,
     taxPeriod,
-    symbolCountryMap: countryMap,
+    symbolCountryMap: args.dividendSymbolCountryMap ?? countryMap,
+    adrCountryConflicts: args.adrCountryConflicts,
   });
   const creditInterestResults = calculateCreditInterest({
     creditInterests,

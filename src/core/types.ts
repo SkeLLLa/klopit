@@ -345,6 +345,10 @@ export type DividendWarning =
       kind: 'unknown-country';
     }
   | {
+      /** ADR rows disagree on the issuer country; ISIN country used instead. */
+      kind: 'adr-country-conflict';
+    }
+  | {
       /** Dividend rows for one event net below 0; amount floored to 0. */
       kind: 'net-negative';
     }

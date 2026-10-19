@@ -17,6 +17,8 @@ export interface CalculateDividendsArgs {
   reduceAdrFeesFromDividends?: boolean;
   taxPeriod: TaxPeriod;
   symbolCountryMap?: Map<string, string>;
+  /** ADR symbols whose rows disagree on the issuer country (no user override). */
+  adrCountryConflicts?: ReadonlySet<string>;
 }
 
 function toDateString(args: { date: Date }): string {
@@ -165,6 +167,10 @@ export function calculateDividends(
 
     if (country === 'XX') {
       warnings.push({ kind: 'unknown-country' });
+    }
+
+    if (args.adrCountryConflicts?.has(div.symbol)) {
+      warnings.push({ kind: 'adr-country-conflict' });
     }
 
     if (grossOriginal < 0) {

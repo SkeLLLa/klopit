@@ -354,6 +354,9 @@
             {@const hasUnknownCountry =
               div.warnings?.some((w) => w.kind === 'unknown-country') ??
               div.country === 'XX'}
+            {@const hasAdrConflict =
+              div.warnings?.some((w) => w.kind === 'adr-country-conflict') ??
+              false}
             {@const hasNetNegative =
               div.warnings?.some((w) => w.kind === 'net-negative') ?? false}
             {@const hasWhtNetRefund =
@@ -362,9 +365,11 @@
               ? m.dividend_warning_wht_lapse_description()
               : hasWhtNetRefund
                 ? m.dividend_warning_wht_net_refund_description()
-                : hasUnknownCountry
-                  ? m.dividend_warning_unknown_country_description()
-                  : undefined}
+                : hasAdrConflict
+                  ? m.dividend_warning_adr_country_conflict_description()
+                  : hasUnknownCountry
+                    ? m.dividend_warning_unknown_country_description()
+                    : undefined}
             {@const effectiveWithholdingPct = div.amountPln > 0 ? (div.withholdingTaxPln / div.amountPln) * 100 : 0}
             {@const effectiveDeductiblePct = div.amountPln > 0 ? (deductible / div.amountPln) * 100 : 0}
             {@const effectiveToPayPct = div.amountPln > 0 ? (taxToPay / div.amountPln) * 100 : 0}

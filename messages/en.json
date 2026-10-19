@@ -702,5 +702,6 @@
   "import_warning_sell_to_cover": "{count} vests had shares sold or withheld for taxes (sell-to-cover). Only the net shares are imported; check the income taxed at vest in your PIT-11.",
   "faq_13_question": "What is the cost of my RSU or ESPP shares when I sell them?",
   "faq_13_answer": "It depends on how the shares were taxed when you received them, and kloPIT cannot know that, so you choose a regime per lot on the Data page. Qualifying programme (art. 24 ust. 11–12b updof): no income at acquisition, the cost is the price you paid (0 for RSU). Taxed at acquisition (e.g. on your PIT-11): the cost is the price paid plus the income already taxed. Until you choose, the cost is flagged as missing and the tax form stays a draft. Check your PIT-11 and your employer's programme terms.",
-  "import_warning_sell_to_cover_item": "{symbol}, vest {date}: {shares} shares sold or withheld"
+  "import_warning_sell_to_cover_item": "{symbol}, vest {date}: {shares} shares sold or withheld",
+  "dividend_warning_adr_country_conflict_description": "Imported rows for this ADR name different issuer countries, so the ISIN country is used. Set the issuer country on the country mapping page."
 }
