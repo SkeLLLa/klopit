@@ -71,6 +71,7 @@ kloPIT calculates Polish PIT-38 and PIT/ZG values from foreign-broker trades, di
 
 ## AI discovery endpoints
 
+- [Full documentation as one Markdown file](https://klopit.co.pl/llms-full.txt) (every docs page also has a Markdown mirror at its URL + `index.md`)
 - [AI summary](https://klopit.co.pl/ai/summary.json)
 - [AI FAQ](https://klopit.co.pl/ai/faq.json)
 - [AI service description](https://klopit.co.pl/ai/service.json)

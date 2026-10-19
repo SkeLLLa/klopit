@@ -36,9 +36,10 @@
   },
   "scripts": {
     "build": "pnpm run build:app",
-    "build:app": "pnpm run generate:ai && vite build",
+    "build:app": "pnpm run generate:ai && vite build && pnpm run generate:llms-full",
     "build:clean": "rm -rf build",
     "dev": "vite dev",
+    "generate:llms-full": "node --import @oxc-node/core/register scripts/generate-llms-full.ts",
     "generate:ai": "node --import @oxc-node/core/register scripts/generate-ai-metadata.ts",
     "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations",
     "lint": "pnpm run lint:types && pnpm run lint:codestyle && pnpm run format:check",
