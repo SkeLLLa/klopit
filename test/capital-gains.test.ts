@@ -728,10 +728,13 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
    * must still seed the FIFO queue with the correct PLN cost basis. The sell
    * result must reflect that prior-year cost.
    *
-   * Buy: 100 shares, price 150 USD, rate 4.0 PLN/USD, no commission → costPln =
-   * 60 000 Sell: 100 shares, price 180 USD, rate 4.2 PLN/USD, no commission
-   * proceedsPln = 100 * 180 * 4.2 = 75 600 gainLossPln = 75 600 - 60 000 = 15
-   * 600 taxPln = 15 600 * 0.19 = 2 964
+   * ```text
+   * Buy:  100 shares, price 150 USD, rate 4.0 PLN/USD, no commission → costPln = 60 000
+   * Sell: 100 shares, price 180 USD, rate 4.2 PLN/USD, no commission
+   *       proceedsPln = 100 * 180 * 4.2 = 75 600
+   *       gainLossPln = 75 600 - 60 000 = 15 600
+   *       taxPln      = 15 600 * 0.19   =  2 964
+   * ```
    */
   void it('sell in year N uses cost basis from buy in year N-1', () => {
     const buyPriorYear = makeTrade({

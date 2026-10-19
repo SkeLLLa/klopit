@@ -16,13 +16,18 @@ import {
  * This document format differs from the "Sale Of Stock Activity Statement" in
  * field names and layout:
  *
- * Activity Statement field → Confirmation of Sale field
- * ───────────────────────────────────────────────────── Grant Date → Exercise
- * Date (actual purchase date) Execution Date → Sale Date Price For Tax →
- * Exercise Period Price (85% of lower) Company: <TICKER> → <Name>.com Ltd. in
- * the document title Order Number → (absent — synthetic lot id from period)
- * Total Amount Due to Order → Total Consideration Total Fees (…) USD … → Total
- * Fees: … Sale Price from order row → Sale Price* $… inline on the same row
+ * ```text
+ * Activity Statement field  →  Confirmation of Sale field
+ * ─────────────────────────────────────────────────────
+ * Grant Date                →  Exercise Date   (actual purchase date)
+ * Execution Date            →  Sale Date
+ * Price For Tax             →  Exercise Period Price (85% of lower)
+ * Company: <TICKER>         →  <Name>.com Ltd. in the document title
+ * Order Number              →  (absent — synthetic lot id from period)
+ * Total Amount Due to Order →  Total Consideration
+ * Total Fees (…) USD …      →  Total Fees: …
+ * Sale Price from order row →  Sale Price* $… inline on the same row
+ * ```
  */
 const ENTRY_DATE_RE = /Entry Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;
 const EXERCISE_DATE_RE = /Exercise Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/;

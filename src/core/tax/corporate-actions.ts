@@ -21,8 +21,8 @@ export interface MergerResult {
  * Apply a stock split to all lots for a symbol. Returns a new array — does not
  * mutate the input.
  *
- * Forward split (e.g. 10:1): numerator=10, denominator=1 → factor=10 Reverse
- * split (e.g. 1:3): numerator=1, denominator=3 → factor=1/3
+ * - Forward split (e.g. 10:1): numerator=10, denominator=1 → factor=10
+ * - Reverse split (e.g. 1:3): numerator=1, denominator=3 → factor=1/3
  */
 export function applyStockSplit(args: {
   lots: FifoLot[];

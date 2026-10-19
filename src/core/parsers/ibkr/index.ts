@@ -36,8 +36,10 @@ const SPLIT_RE =
 /**
  * Regex to match cash-and-stock merger descriptions: "MAG(CA55903Q1046) Cash
  * and Stock Merger (Acquisition) CA6979001089 58844257 for 100000000 and USD
- * 4.52847757 (...)" Groups: 1=source symbol, 2=source ISIN, 3=target ISIN,
- * 4=numerator, 5=denominator, 6=cash currency, 7=cash per share
+ * 4.52847757 (...)"
+ *
+ * Groups: 1=source symbol, 2=source ISIN, 3=target ISIN, 4=numerator,
+ * 5=denominator, 6=cash currency, 7=cash per share
  */
 const MERGER_RE =
   /^\s*(\S+)\s*\(([^)]+)\)\s+Cash and Stock Merger\s+\(Acquisition\)\s+(\S+)\s+(\d+(?:\.\d+)?)\s+for\s+(\d+(?:\.\d+)?)\s+and\s+(\S+)\s+(\d+(?:\.\d+)?)/;

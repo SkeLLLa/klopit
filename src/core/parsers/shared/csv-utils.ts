@@ -119,7 +119,9 @@ export function parseDecimalLocale(args: {
  *
  * 1. "yyyy-MM-dd, HH:mm:ss" (quoted datetime with comma)
  * 2. "yyyy-MM-dd HH:mm:ss" (space separator)
- * 3. "yyyy-MM-dd" (date-only) Returns undefined on failure.
+ * 3. "yyyy-MM-dd" (date-only)
+ *
+ * Returns undefined on failure.
  *
  * This helper is IBKR-specific. New brokers using different formats (e.g.
  * "dd.MM.yyyy") must provide their own parser.
