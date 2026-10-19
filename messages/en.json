@@ -681,5 +681,8 @@
   "taxform_see_dividends": "See dividends →",
   "taxform_see_trades": "See transactions →",
   "taxform_transparency_banner_body": "Every number below is computed from your imported transactions.",
-  "taxform_transparency_banner_cta": "See full breakdown on the Dashboard"
+  "taxform_transparency_banner_cta": "See full breakdown on the Dashboard",
+  "data_account": "Account",
+  "data_account_new": "New account…",
+  "data_account_label": "Account label"
 }

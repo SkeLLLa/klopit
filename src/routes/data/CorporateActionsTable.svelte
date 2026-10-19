@@ -12,6 +12,9 @@
   import { fromDatetimeLocal } from '$lib/utils/date-input.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
+  import { listSessionAccounts } from '$lib/services/accounts.js';
+  import { formatAccount } from '$lib/utils/account.js';
+  import AccountField from './AccountField.svelte';
   import EmptyState from './EmptyState.svelte';
 
   let { sessionId }: { sessionId: string } = $props();
@@ -22,6 +25,10 @@
       .equals(sessionId)
       .sortBy('datetime'),
   );
+
+  const accounts = useLiveQuery(() => listSessionAccounts({ sessionId }));
+
+  const showAccount = $derived((accounts.current?.length ?? 0) > 1);
 
   function formatCashProceeds(row: CorporateActionRecord): string {
     if (row.cashTotalProceeds !== undefined && row.cashTotalProceeds > 0) {
@@ -42,6 +49,7 @@
   let editConversionRatio = $state('');
   let editCashPerShare = $state('');
   let editCashCurrency = $state('');
+  let editAccount: string | undefined = $state(undefined);
   let deleteTarget: CorporateActionRecord | null = $state(null);
 
   function startEdit(row: CorporateActionRecord) {
@@ -57,6 +65,7 @@
     editConversionRatio = String(row.conversionRatio ?? '');
     editCashPerShare = String(row.cashPerShare ?? '');
     editCashCurrency = row.cashCurrency ?? '';
+    editAccount = row.account;
   }
 
   async function saveEdit() {
@@ -77,6 +86,7 @@
         conversionRatio: parseFloat(editConversionRatio) || undefined,
         cashPerShare: parseFloat(editCashPerShare) || undefined,
         cashCurrency: editCashCurrency.trim().toUpperCase() || undefined,
+        account: editAccount,
       },
     });
     editingId = null;
@@ -106,6 +116,7 @@
             <th class="px-3 py-2">{m.data_symbol()}</th>
             <th class="px-3 py-2">{m.data_isin()}</th>
             <th class="px-3 py-2">{m.data_datetime()}</th>
+            {#if showAccount}<th class="px-3 py-2">{m.data_account()}</th>{/if}
             <th class="px-3 py-2">{m.data_details()}</th>
             <th class="px-3 py-2 text-right">{m.data_cash_proceeds()}</th>
             <th class="px-3 py-2">{m.data_actions()}</th>
@@ -124,6 +135,9 @@
                 <td class="px-3 py-2"><input type="text" aria-label={m.data_symbol()} bind:value={editSymbol} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 <td class="px-3 py-2"><input type="text" aria-label={m.data_isin()} bind:value={editIsin} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 <td class="px-3 py-2"><input type="datetime-local" aria-label={m.data_datetime()} bind:value={editDatetime} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
+                {#if showAccount}
+                  <td class="px-3 py-2"><AccountField id="ca-account" accounts={accounts.current ?? []} bind:value={editAccount} compact /></td>
+                {/if}
                 <td class="px-3 py-2">
                   {#if editType === 'stock-split'}
                     <div class="flex items-center gap-1">
@@ -171,6 +185,9 @@
                   {/if}
                 </td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{formatDatetime(row.datetime)}</td>
+                {#if showAccount}
+                  <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{row.account ? formatAccount(row.account) : ''}</td>
+                {/if}
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">
                   {#if row.type === 'stock-split'}
                     <span class="tabular-nums">{row.numerator} for {row.denominator}</span>

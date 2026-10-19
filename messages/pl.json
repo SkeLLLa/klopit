@@ -675,5 +675,8 @@
   "taxform_see_dividends": "Zobacz dywidendy →",
   "taxform_see_trades": "Zobacz transakcje →",
   "taxform_transparency_banner_body": "Każda liczba poniżej jest wyliczona z zaimportowanych transakcji.",
-  "taxform_transparency_banner_cta": "Zobacz pełny podział na Dashboardzie"
+  "taxform_transparency_banner_cta": "Zobacz pełny podział na Dashboardzie",
+  "data_account": "Rachunek",
+  "data_account_new": "Nowy rachunek…",
+  "data_account_label": "Nazwa rachunku"
 }

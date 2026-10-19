@@ -9,6 +9,7 @@
     datetimePlaceholder,
   } from '$lib/utils/format-date.js';
   import type { Trade } from '../../core/types.js';
+  import AccountField from './AccountField.svelte';
 
   const PICKER_FORMAT = 'yyyy-mm-dd hh:ii';
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -28,11 +29,14 @@
   let {
     initial,
     defaultYear,
+    accounts = [],
     onsave,
     oncancel,
   }: {
     initial?: Partial<Trade>;
     defaultYear?: number;
+    /** Distinct accounts in the session; the field shows when there are several. */
+    accounts?: string[];
     onsave: (trade: Trade) => void;
     oncancel: () => void;
   } = $props();
@@ -56,6 +60,7 @@
   let commission = $state(seed?.commission?.toString() ?? '0');
   let commissionCurrency = $state(seed?.commissionCurrency ?? '');
   let currency = $state(seed?.currency ?? 'USD');
+  let account: string | undefined = $state(seed?.account);
   let errors: Record<string, string> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.
@@ -157,6 +162,7 @@
       commission: comm,
       commissionCurrency: (commissionCurrency.trim() || currency.trim()).toUpperCase(),
       type,
+      account: account ?? (accounts.length === 1 ? accounts[0] : undefined),
     });
   }
 </script>
@@ -218,6 +224,12 @@
       <label for="trade-comm-currency" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_commission_currency()}</label>
       <input id="trade-comm-currency" type="text" bind:value={commissionCurrency} placeholder={currency} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
     </div>
+    {#if accounts.length > 1}
+      <div>
+        <label for="trade-account" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_account()}</label>
+        <AccountField id="trade-account" {accounts} bind:value={account} />
+      </div>
+    {/if}
   </div>
   <div class="flex justify-end gap-2">
     <button type="button" onclick={oncancel} class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700">

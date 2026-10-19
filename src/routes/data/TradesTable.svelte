@@ -4,6 +4,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { listSessionAccounts } from '$lib/services/accounts.js';
   import { addTrade, updateTrade, deleteTrade } from '$lib/services/data.js';
   import type { Trade } from '../../core/types.js';
   import type { TradeRecord } from '$lib/db.js';
@@ -18,6 +19,8 @@
   const trades = useLiveQuery(() =>
     db.trades.where('sessionId').equals(sessionId).sortBy('datetime'),
   );
+
+  const accounts = useLiveQuery(() => listSessionAccounts({ sessionId }));
 
   let showAddForm = $state(false);
   let editingId: number | null = $state(null);
@@ -56,7 +59,7 @@
     </div>
   {:else}
     <div class="mb-3">
-      <TradeForm defaultYear={sessionYear} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
+      <TradeForm defaultYear={sessionYear} accounts={accounts.current ?? []} onsave={handleAdd} oncancel={() => (showAddForm = false)} />
     </div>
   {/if}
 
@@ -87,6 +90,7 @@
                   {#key editingId}
                     <TradeForm
                       initial={trade}
+                      accounts={accounts.current ?? []}
                       onsave={(t) => handleUpdate(trade.id as number, t)}
                       oncancel={() => (editingId = null)}
                     />
