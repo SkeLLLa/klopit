@@ -41,12 +41,6 @@ function enrichCarryIns(statement: ReturnType<typeof parseLines>) {
   }));
 }
 
-function parseLines(lines: string[]) {
-  const parser = ibkrDefinition.createParser();
-  for (const line of lines) parser.feed({ line });
-  return parser.finish();
-}
-
 void describe('InteractiveBrokersParser', () => {
   void describe('Statement year extraction', () => {
     void it('extracts year from Period field', () => {

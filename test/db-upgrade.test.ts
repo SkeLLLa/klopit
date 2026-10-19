@@ -323,6 +323,8 @@ void describe('KlopitDB v15 upgrade (NBP null-rate purge)', () => {
       dividends:
         '++id, sessionId, symbol, date, [sessionId+symbol], [sessionId+symbol+isin]',
     });
+    // Start at v14 so only the v15 upgrade runs (v14 clears derived tables).
+    legacy.version(14).stores({});
     await legacy.open();
     const calculatedAt = new Date('2026-10-14T08:00:00.000Z');
     await legacy.table('sessions').add({
