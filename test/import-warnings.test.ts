@@ -117,3 +117,18 @@ void describe('mergeImportWarnings', () => {
     assert.deepEqual(mergeImportWarnings({ warnings: input }), input);
   });
 });
+
+void describe('unknown kind (persisted by another app version)', () => {
+  void it('does not throw when building a warning message', () => {
+    const futureKind = 'from-the-future' as SkippedRow['kind'];
+    const warnings = mergeImportWarnings({
+      warnings: [
+        { section: 'Interest', kind: futureKind, rowCount: 2, message: '' },
+      ],
+    });
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0]?.kind, futureKind);
+    assert.equal(warnings[0]?.rowCount, 2);
+    assert.equal(warnings[0]?.message, undefined);
+  });
+});

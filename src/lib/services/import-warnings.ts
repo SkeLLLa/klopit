@@ -84,8 +84,9 @@ function formatImportWarningMessage(args: {
   kind: SkippedRow['kind'];
   rowCount: number;
 }): string {
-  return importWarningFormatters[args.kind](
-    args.section,
-    String(args.rowCount),
-  );
+  // `kind` may come from a warning persisted by another app version.
+  const format = importWarningFormatters[args.kind] as
+    | ((section: string, count: string) => string)
+    | undefined;
+  return format?.(args.section, String(args.rowCount)) as string;
 }
