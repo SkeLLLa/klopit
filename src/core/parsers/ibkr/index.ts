@@ -45,6 +45,8 @@ const MERGER_RE =
   /^\s*(\S+)\s*\(([^)]+)\)\s+Cash and Stock Merger\s+\(Acquisition\)\s+(\S+)\s+(\d+(?:\.\d+)?)\s+for\s+(\d+(?:\.\d+)?)\s+and\s+(\S+)\s+(\d+(?:\.\d+)?)/;
 
 class InteractiveBrokersParser extends CsvStatementParser {
+  private warnedHeaders = new Set<string>();
+
   protected getBrokerId(): string {
     return 'ibkr';
   }
@@ -73,7 +75,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
             this.parseStatement(fields);
             break;
           case 'Financial Instrument Information':
-            this.parseFinancialInstrument(fields);
+            this.parseFinancialInstrument({ fields, rawLine });
             break;
           case 'Trades':
             this.parseTrade({ fields, rawLine });
@@ -112,6 +114,60 @@ class InteractiveBrokersParser extends CsvStatementParser {
     }
   }
 
+  /**
+   * Resolves a column index by header name. Header indices line up with Data
+   * row fields (both include the section name and Header/Data columns). Falls
+   * back to the historical fixed index when no header was captured, and returns
+   * -1 when a header exists but lacks every candidate name.
+   */
+  private col(args: {
+    section: string;
+    names: string[];
+    fallbackIdx: number;
+  }): number {
+    const header = this.getSectionHeader(args.section);
+    if (!header) return args.fallbackIdx;
+    return header.findIndex((name) => args.names.includes(name.trim()));
+  }
+
+  private field(fields: string[], idx: number): string {
+    return cleanField({ value: fields[idx] ?? '' });
+  }
+
+  /**
+   * Returns true (and records a parse-failure skipped row) when the section
+   * header exists but lacks a required column. Warns once per distinct header.
+   */
+  private rejectMissingColumns(args: {
+    section: string;
+    required: string[];
+    fields: string[];
+    rawLine: string;
+  }): boolean {
+    const { section, required, fields, rawLine } = args;
+    const header = this.getSectionHeader(section);
+    if (!header) return false;
+    const names = new Set(header.map((name) => name.trim()));
+    const missing = required.filter((name) => !names.has(name));
+    if (missing.length === 0) return false;
+
+    const key = `${section}\u0000${header.join('\u0000')}`;
+    if (!this.warnedHeaders.has(key)) {
+      this.warnedHeaders.add(key);
+      this.addWarning({
+        section,
+        message: `${section} section is missing required column(s): ${missing.join(', ')} — rows skipped`,
+      });
+    }
+    this.addSkippedRow({
+      section,
+      kind: 'parse-failure',
+      rawLine,
+      ...this.extractBestEffortSkippedFields({ section, fields }),
+    });
+    return true;
+  }
+
   private parseStatement(fields: string[]): void {
     const fieldName = cleanField({ value: fields[2] ?? '' });
     if (fieldName === 'BrokerName') {
@@ -140,12 +196,36 @@ class InteractiveBrokersParser extends CsvStatementParser {
     }
   }
 
-  private parseFinancialInstrument(fields: string[]): void {
-    const assetCategory = cleanField({ value: fields[2] ?? '' });
+  private parseFinancialInstrument(args: {
+    fields: string[];
+    rawLine: string;
+  }): void {
+    const { fields, rawLine } = args;
+    const section = 'Financial Instrument Information';
+    const assetCategory = this.field(
+      fields,
+      this.col({ section, names: ['Asset Category'], fallbackIdx: 2 }),
+    );
     if (assetCategory !== 'Stocks') return;
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Symbol', 'Security ID'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
 
-    const symbol = cleanField({ value: fields[3] ?? '' });
-    const securityId = cleanField({ value: fields[6] ?? '' });
+    const symbol = this.field(
+      fields,
+      this.col({ section, names: ['Symbol'], fallbackIdx: 3 }),
+    );
+    const securityId = this.field(
+      fields,
+      this.col({ section, names: ['Security ID'], fallbackIdx: 6 }),
+    );
     if (symbol && securityId) {
       this.symbolToIsin.set(symbol, securityId);
     }
@@ -153,34 +233,59 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
   private parseTrade(args: { fields: string[]; rawLine: string }): void {
     const { fields, rawLine } = args;
-    const discriminator = cleanField({ value: fields[2] ?? '' });
+    const section = 'Trades';
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const discriminator = this.field(fields, c(['DataDiscriminator'], 2));
     // Only process Order and Trade rows (Total rows are filtered upstream in processRow).
     if (discriminator !== 'Order' && discriminator !== 'Trade') return;
 
-    const assetCategory = cleanField({ value: fields[3] ?? '' });
+    const assetCategory = this.field(fields, c(['Asset Category'], 3));
     if (assetCategory !== 'Stocks') return;
 
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Date/Time', 'Symbol', 'Quantity', 'Proceeds', 'Currency'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+
+    const currencyIdx = c(['Currency'], 4);
+    const symbolIdx = c(['Symbol'], 5);
+    const datetimeIdx = c(['Date/Time'], 6);
+    const quantityIdx = c(['Quantity'], 7);
+
     try {
-      const currency = cleanField({ value: fields[4] ?? '' });
-      const symbol = cleanField({ value: fields[5] ?? '' });
+      const currency = this.field(fields, currencyIdx);
+      const symbol = this.field(fields, symbolIdx);
       const datetime = parseDateTime({
-        value: cleanField({ value: fields[6] ?? '' }),
+        value: this.field(fields, datetimeIdx),
       });
-      const rawQuantity = parseDecimal({ value: fields[7] ?? '' });
-      const price = parseDecimal({ value: fields[8] ?? '' });
-      const rawProceeds = parseDecimal({ value: fields[10] ?? '' });
-      const rawCommission = parseDecimal({ value: fields[11] ?? '' });
+      const rawQuantity = parseDecimal({ value: fields[quantityIdx] ?? '' });
+      const price = parseDecimal({
+        value: fields[c(['T. Price'], 8)] ?? '',
+      });
+      const rawProceeds = parseDecimal({
+        value: fields[c(['Proceeds'], 10)] ?? '',
+      });
+      const rawCommission = parseDecimal({
+        value: fields[c(['Comm/Fee', 'Comm in USD'], 11)] ?? '',
+      });
 
       if (!datetime || rawQuantity === undefined || price === undefined) {
         this.reportParseFailure({
-          section: 'Trades',
+          section,
           rawLine,
           message: `Could not parse trade row for ${symbol}: missing datetime, quantity, or price`,
           assetCategory,
           currency: currency || undefined,
           symbol: symbol || undefined,
-          datetime: cleanField({ value: fields[6] ?? '' }) || undefined,
-          description: this.joinTail(fields, 7),
+          datetime: this.field(fields, datetimeIdx) || undefined,
+          description: this.joinTail(fields, quantityIdx),
         });
         return;
       }
@@ -204,28 +309,43 @@ class InteractiveBrokersParser extends CsvStatementParser {
       });
     } catch {
       this.reportParseFailure({
-        section: 'Trades',
+        section,
         rawLine,
         message: `Failed to parse trade row: ${rawLine}`,
-        assetCategory: cleanField({ value: fields[3] ?? '' }) || undefined,
-        currency: cleanField({ value: fields[4] ?? '' }) || undefined,
-        symbol: cleanField({ value: fields[5] ?? '' }) || undefined,
-        datetime: cleanField({ value: fields[6] ?? '' }) || undefined,
-        description: this.joinTail(fields, 7),
+        assetCategory,
+        currency: this.field(fields, currencyIdx) || undefined,
+        symbol: this.field(fields, symbolIdx) || undefined,
+        datetime: this.field(fields, datetimeIdx) || undefined,
+        description: this.joinTail(fields, quantityIdx),
       });
     }
   }
 
   private parseDividend(args: { fields: string[]; rawLine: string }): void {
     const { fields, rawLine } = args;
-    const currency = cleanField({ value: fields[2] ?? '' });
+    const section = 'Dividends';
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Currency', 'Date', 'Description', 'Amount'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const dateIdx = c(['Date'], 3);
+    const descriptionIdx = c(['Description'], 4);
+    const currency = this.field(fields, c(['Currency'], 2));
 
     try {
       const date = parseDateTime({
-        value: cleanField({ value: fields[3] ?? '' }),
+        value: cleanField({ value: fields[dateIdx] ?? '' }),
       });
-      const description = cleanField({ value: fields[4] ?? '' });
-      const amount = parseDecimal({ value: fields[5] ?? '' });
+      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
+      const amount = parseDecimal({ value: fields[c(['Amount'], 5)] ?? '' });
 
       if (!date || amount === undefined) {
         const match = SYMBOL_ISIN_RE.exec(description);
@@ -235,7 +355,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
           message: `Could not parse dividend row: missing date or amount`,
           currency: currency || undefined,
           symbol: match?.[1] ?? undefined,
-          datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+          datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
           description: description || undefined,
         });
         return;
@@ -247,7 +367,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
       this.dividends.push({ symbol, isin, currency, date, amount });
     } catch {
-      const description = cleanField({ value: fields[4] ?? '' });
+      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
       const match = SYMBOL_ISIN_RE.exec(description);
       this.reportParseFailure({
         section: 'Dividends',
@@ -255,7 +375,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         message: `Failed to parse dividend row: ${rawLine}`,
         currency: currency || undefined,
         symbol: match?.[1] ?? undefined,
-        datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+        datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
         description: description || undefined,
       });
     }
@@ -266,14 +386,29 @@ class InteractiveBrokersParser extends CsvStatementParser {
     rawLine: string;
   }): void {
     const { fields, rawLine } = args;
-    const currency = cleanField({ value: fields[2] ?? '' });
+    const section = 'Withholding Tax';
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Currency', 'Date', 'Description', 'Amount'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const dateIdx = c(['Date'], 3);
+    const descriptionIdx = c(['Description'], 4);
+    const currency = this.field(fields, c(['Currency'], 2));
 
     try {
       const date = parseDateTime({
-        value: cleanField({ value: fields[3] ?? '' }),
+        value: cleanField({ value: fields[dateIdx] ?? '' }),
       });
-      const description = cleanField({ value: fields[4] ?? '' });
-      const amount = parseDecimal({ value: fields[5] ?? '' });
+      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
+      const amount = parseDecimal({ value: fields[c(['Amount'], 5)] ?? '' });
 
       if (!date || amount === undefined) {
         const match = SYMBOL_ISIN_RE.exec(description);
@@ -283,7 +418,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
           message: `Could not parse withholding tax row: missing date or amount`,
           currency: currency || undefined,
           symbol: match?.[1] ?? undefined,
-          datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+          datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
           description: description || undefined,
         });
         return;
@@ -296,7 +431,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
       // Amount is negative in the CSV — keep as-is
       this.withholdingTaxes.push({ symbol, isin, currency, date, amount });
     } catch {
-      const description = cleanField({ value: fields[4] ?? '' });
+      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
       const match = SYMBOL_ISIN_RE.exec(description);
       this.reportParseFailure({
         section: 'Withholding Tax',
@@ -304,7 +439,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         message: `Failed to parse withholding tax row: ${rawLine}`,
         currency: currency || undefined,
         symbol: match?.[1] ?? undefined,
-        datetime: cleanField({ value: fields[3] ?? '' }) || undefined,
+        datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
         description: description || undefined,
       });
     }
@@ -315,14 +450,20 @@ class InteractiveBrokersParser extends CsvStatementParser {
     rawLine: string;
   }): void {
     const { fields, rawLine } = args;
-    const assetCategory = cleanField({ value: fields[2] ?? '' });
+    const section = 'Corporate Actions';
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const currencyIdx = c(['Currency'], 3);
+    const datetimeIdx = c(['Date/Time'], 5);
+    const descriptionIdx = c(['Description'], 6);
+    const assetCategory = this.field(fields, c(['Asset Category'], 2));
     let description = '';
 
     try {
       const datetime = parseDateTime({
-        value: cleanField({ value: fields[5] ?? '' }),
+        value: cleanField({ value: fields[datetimeIdx] ?? '' }),
       });
-      description = cleanField({ value: fields[6] ?? '' });
+      description = cleanField({ value: fields[descriptionIdx] ?? '' });
 
       if (!datetime) {
         this.reportParseFailure({
@@ -330,8 +471,10 @@ class InteractiveBrokersParser extends CsvStatementParser {
           rawLine,
           message: `Could not parse corporate action: missing datetime`,
           assetCategory: assetCategory || undefined,
-          currency: cleanField({ value: fields[3] ?? '' }) || undefined,
-          datetime: cleanField({ value: fields[5] ?? '' }) || undefined,
+          currency:
+            cleanField({ value: fields[currencyIdx] ?? '' }) || undefined,
+          datetime:
+            cleanField({ value: fields[datetimeIdx] ?? '' }) || undefined,
           description: description || undefined,
         });
         return;
@@ -357,14 +500,16 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
       const mergerMatch = MERGER_RE.exec(description);
       if (mergerMatch) {
-        const quantity = parseDecimal({ value: fields[7] ?? '' });
+        const quantity = parseDecimal({
+          value: fields[c(['Quantity'], 7)] ?? '',
+        });
         const targetIsin = mergerMatch[3];
 
         // IB produces two rows per merger: negative qty (source removed) and positive qty (target received).
         // Negative-qty row: create the corporate action.
         // Positive-qty row: extract new shares FMV (Value column) and attach to the last merger.
         if (quantity !== undefined && quantity >= 0) {
-          const value = parseDecimal({ value: fields[9] ?? '' });
+          const value = parseDecimal({ value: fields[c(['Value'], 9)] ?? '' });
           if (value !== undefined && value > 0) {
             const lastCA = this.corporateActions.at(-1);
             if (lastCA?.type === 'merger' && lastCA.targetIsin === targetIsin) {
@@ -380,7 +525,9 @@ class InteractiveBrokersParser extends CsvStatementParser {
         const denominator = Number(mergerMatch[5]);
         const cashCurrency = mergerMatch[6];
         const cashPerShare = Number(mergerMatch[7]);
-        const proceeds = parseDecimal({ value: fields[8] ?? '' });
+        const proceeds = parseDecimal({
+          value: fields[c(['Proceeds'], 8)] ?? '',
+        });
 
         // Reverse-lookup target symbol from symbolToIsin map
         let targetSymbol: string | undefined;
@@ -415,8 +562,8 @@ class InteractiveBrokersParser extends CsvStatementParser {
         rawLine,
         message: `Unsupported corporate action: ${description}`,
         assetCategory: assetCategory || undefined,
-        currency: cleanField({ value: fields[3] ?? '' }) || undefined,
-        datetime: cleanField({ value: fields[5] ?? '' }) || undefined,
+        currency: cleanField({ value: fields[currencyIdx] ?? '' }) || undefined,
+        datetime: cleanField({ value: fields[datetimeIdx] ?? '' }) || undefined,
         description: description || undefined,
       });
     } catch {
@@ -425,9 +572,9 @@ class InteractiveBrokersParser extends CsvStatementParser {
         rawLine,
         message: `Failed to parse corporate action row: ${rawLine}`,
         assetCategory: assetCategory || undefined,
-        currency: cleanField({ value: fields[3] ?? '' }) || undefined,
+        currency: cleanField({ value: fields[currencyIdx] ?? '' }) || undefined,
         symbol: this.extractSymbolFromDescription(description),
-        datetime: cleanField({ value: fields[5] ?? '' }) || undefined,
+        datetime: cleanField({ value: fields[datetimeIdx] ?? '' }) || undefined,
         description: description || undefined,
       });
     }
@@ -438,14 +585,21 @@ class InteractiveBrokersParser extends CsvStatementParser {
     rawLine: string;
   }): void {
     const { fields, rawLine } = args;
-    const assetCategory = cleanField({ value: fields[2] ?? '' });
+    const section = 'Mark-to-Market Performance Summary';
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const symbolIdx = c(['Symbol'], 3);
+    const priorQuantityIdx = c(['Prior Quantity'], 4);
+    const assetCategory = this.field(fields, c(['Asset Category'], 2));
 
     // Only process Stocks (Total rows are filtered upstream in processRow).
     if (assetCategory !== 'Stocks') return;
 
     try {
-      const symbol = cleanField({ value: fields[3] ?? '' });
-      const priorQuantity = parseDecimal({ value: fields[4] ?? '' });
+      const symbol = cleanField({ value: fields[symbolIdx] ?? '' });
+      const priorQuantity = parseDecimal({
+        value: fields[priorQuantityIdx] ?? '',
+      });
 
       if (priorQuantity === undefined || priorQuantity <= 0) return;
 
@@ -460,17 +614,30 @@ class InteractiveBrokersParser extends CsvStatementParser {
         rawLine,
         message: `Failed to parse carry-in position: ${rawLine}`,
         assetCategory,
-        symbol: cleanField({ value: fields[3] ?? '' }) || undefined,
-        description: this.joinTail(fields, 4),
+        symbol: cleanField({ value: fields[symbolIdx] ?? '' }) || undefined,
+        description: this.joinTail(fields, priorQuantityIdx),
       });
     }
   }
 
   private parseInterest(args: { fields: string[]; rawLine: string }): void {
     const { fields, rawLine } = args;
-    const currency = cleanField({ value: fields[2] ?? '' });
-    const rawDate = cleanField({ value: fields[3] ?? '' });
-    const description = cleanField({ value: fields[4] ?? '' });
+    const section = 'Interest';
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Currency', 'Date', 'Description', 'Amount'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const currency = this.field(fields, c(['Currency'], 2));
+    const rawDate = this.field(fields, c(['Date'], 3));
+    const description = this.field(fields, c(['Description'], 4));
 
     // Check description-based skips before attempting date/amount parse
     if (description.startsWith('Purchase Accrued Interest')) {
@@ -487,7 +654,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
     try {
       const date = parseDateTime({ value: rawDate });
-      const amount = parseDecimal({ value: fields[5] ?? '' });
+      const amount = parseDecimal({ value: fields[c(['Amount'], 5)] ?? '' });
 
       if (!date || amount === undefined) {
         this.reportParseFailure({
@@ -536,12 +703,15 @@ class InteractiveBrokersParser extends CsvStatementParser {
     rawLine: string;
   }): void {
     const { fields, rawLine } = args;
-    const assetCategory = cleanField({ value: fields[2] ?? '' });
-    const currency = cleanField({ value: fields[3] ?? '' });
-    const symbol = cleanField({ value: fields[4] ?? '' });
-    const rawDate = cleanField({ value: fields[5] ?? '' });
-    const rawPayDate = cleanField({ value: fields[7] ?? '' });
-    const code = cleanField({ value: fields[14] ?? '' });
+    const section = 'Change in Dividend Accruals';
+    const c = (names: string[], fallbackIdx: number) =>
+      this.col({ section, names, fallbackIdx });
+    const assetCategory = this.field(fields, c(['Asset Category'], 2));
+    const currency = this.field(fields, c(['Currency'], 3));
+    const symbol = this.field(fields, c(['Symbol'], 4));
+    const rawDate = this.field(fields, c(['Date'], 5));
+    const rawPayDate = this.field(fields, c(['Pay Date'], 7));
+    const code = this.field(fields, c(['Code'], 14));
 
     if (assetCategory !== 'Stocks' || !code.split(';').includes('ADR')) {
       this.addSkippedRow({
@@ -557,7 +727,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
       return;
     }
 
-    const fee = parseDecimal({ value: fields[10] ?? '' });
+    const fee = parseDecimal({ value: fields[c(['Fee'], 10)] ?? '' });
     const datetime = parseDateTime({ value: rawPayDate || rawDate });
 
     if (!datetime || fee === undefined || fee <= 0) {

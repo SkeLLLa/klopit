@@ -16,6 +16,12 @@ function parseFixture(filename: string) {
   return parser.finish();
 }
 
+function parseLines(lines: string[]) {
+  const parser = ibkrDefinition.createParser();
+  for (const line of lines) parser.feed({ line });
+  return parser.finish();
+}
+
 void describe('InteractiveBrokersParser', () => {
   void describe('Statement year extraction', () => {
     void it('extracts year from Period field', () => {
@@ -468,6 +474,70 @@ void describe('InteractiveBrokersParser', () => {
       });
       const result = parser.finish();
       assert.equal(result.dividends[0].isin, 'US0378331005');
+    });
+  });
+
+  void describe('Header-based column resolution', () => {
+    const stmt = [
+      'Statement,Data,Period,"January 1, 2024 - December 31, 2024"',
+      'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid,Security ID,Underlying,Listing Exch,Multiplier,Type,Code',
+      'Financial Instrument Information,Data,Stocks,AAPL,APPLE INC,265598,US0378331005,AAPL,NASDAQ,1,COMMON,',
+    ];
+    const standard = [
+      ...stmt,
+      'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis',
+      'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00,0',
+    ];
+
+    void it('produces identical results for shuffled columns', () => {
+      const shuffled = [
+        ...stmt,
+        'Trades,Header,Comm/Fee,Proceeds,Symbol,Asset Category,Quantity,DataDiscriminator,T. Price,Date/Time,Currency',
+        'Trades,Data,-1.00,1561.60,AAPL,Stocks,-8,Order,195.20,"2024-06-20, 14:15:00",USD',
+      ];
+      const a = parseLines(standard);
+      const b = parseLines(shuffled);
+      assert.equal(b.trades.length, 1);
+      assert.deepEqual(b.trades, a.trades);
+      assert.equal(b.warnings.length, 0);
+    });
+
+    void it('handles an extra Account column', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Account,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee',
+        'Trades,Data,Order,Stocks,USD,U123,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00',
+      ]);
+      assert.equal(result.trades.length, 1);
+      assert.equal(result.trades[0].symbol, 'AAPL');
+      assert.equal(result.trades[0].proceeds, 1561.6);
+      assert.equal(result.trades[0].commission, 1);
+    });
+
+    void it('accepts the Comm in USD alias', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm in USD',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-2.50',
+      ]);
+      assert.equal(result.trades.length, 1);
+      assert.equal(result.trades[0].commission, 2.5);
+    });
+
+    void it('fails loudly when a required column is missing', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Comm/Fee',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,-1.00',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-21, 14:15:00",-2,195.20,195.20,-1.00',
+      ]);
+      assert.equal(result.trades.length, 0);
+      assert.equal(result.warnings.length, 1);
+      assert.match(result.warnings[0].message, /Proceeds/);
+      const failures = result.skippedRows.filter(
+        (r) => r.kind === 'parse-failure' && r.section === 'Trades',
+      );
+      assert.equal(failures.length, 2);
     });
   });
 });
