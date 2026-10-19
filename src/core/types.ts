@@ -497,6 +497,12 @@ export interface TaxSummary {
    * holdings may contain shares that no longer exist.
    */
   inconsistentCarryInCount: number;
+  /**
+   * Instruments with rows that have no account while the session has several
+   * accounts and the instrument is also held in an assigned account: FIFO per
+   * account may be wrong.
+   */
+  unassignedOverlapCount: number;
 }
 
 /**

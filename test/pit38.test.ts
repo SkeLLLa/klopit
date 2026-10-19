@@ -29,6 +29,7 @@ function makeSummary(overrides: Partial<TaxSummary> = {}): TaxSummary {
     missingRateCount: 0,
     missingCostCount: 0,
     inconsistentCarryInCount: 0,
+    unassignedOverlapCount: 0,
     ...overrides,
   };
 }

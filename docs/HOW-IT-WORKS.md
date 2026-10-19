@@ -224,7 +224,7 @@ Splits dated after a carry-in's acquisition and up to December 31 of its year ar
 
 **Step 3 — Process events in chronological order.**
 
-FIFO queues are keyed by `ISIN` (preferred) or `symbol` (fallback), uppercased.
+FIFO queues are keyed by **account** and then by `ISIN` (preferred) or `symbol` (fallback), uppercased (plus the lot id for IBI lots sold by specific identification). See [FIFO per securities account](#fifo-per-securities-account) below.
 
 **For a BUY trade:**
 
@@ -258,7 +258,17 @@ totalCostPln += sellCommissionPln                    ← sell commission is a co
 gainLossPln = proceedsPln − totalCostPln
 ```
 
-If the queue is empty before all shares are consumed, the calculator throws an error (insufficient buy lots).
+If the queue is empty before all shares are consumed, the calculator does not stop: the missing shares get cost 0, the sell is flagged `costBasisMissing` (it counts in `missingCostCount`, so the form is a draft) and a warning explains the likely cause (see below).
+
+#### FIFO per securities account
+
+[Art. 24 ust. 10 updof](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/) applies FIFO "odrębnie dla każdego rachunku papierów wartościowych" — separately for each securities account. Every trade, carry-in and corporate action therefore carries an `account` (`<broker>:<id>`, e.g. `ibkr:U123`, `schwab:default`, `manual:<label>`) and the queue key is `account|ISIN-or-symbol`. A sell at one account never consumes lots of another, even when those are older. Inside an account a specific lot may still be identified (IBI `lotId`), as confirmed by the tax authority ruling KIS 0112-KDWL.4011.2.2025.1.TW.
+
+- **Rows without an account (legacy).** If the session's rows have at most one distinct account, unstamped rows join it and the results are the same as before accounts existed. With several accounts they are placed in an `unassigned` account and an `account-unassigned` warning is shown. That warning makes the form a draft only when the same instrument is also held in an assigned account (the overlap is where the split of FIFO can go wrong).
+- **Corporate actions.** An action with an account changes that account's queues only. An action without one (legacy, or manual "all accounts") applies to every account holding the instrument. The same split reported twice (e.g. by two brokers) is applied once per account.
+- **Carry-in snapshots** and their netting against imported trades run per (account, instrument), and the symbol → ISIN lookup is per account: a manual Schwab carry-in without an ISIN does not net against an IBKR ISIN queue.
+- **Shortfalls.** A sell larger than the account's holding no longer throws. The missing shares have cost 0 and the sell is flagged `costBasisMissing`. If another account held the instrument at that time the app shows `transfer-suggested` (move the shares from that account); otherwise `shortfall-add-carry-in` (a carry-in is missing). Nothing is moved automatically.
+- Each lot remembers its `acquiredAt` (buy date, or the carry-in placement date).
 
 **Only sells within the tax period** are recorded as results. Buys and sells outside the period still affect the FIFO queue state (they are "processed through" to maintain correct lot ordering).
 

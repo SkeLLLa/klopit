@@ -34,6 +34,7 @@ export type CarryInWarning =
       year: number;
       carryInQuantity: number;
       coveredQuantity: number;
+      account?: string;
     }
   | {
       /**
@@ -46,6 +47,7 @@ export type CarryInWarning =
       year: number;
       carryInQuantity: number;
       impliedQuantity: number;
+      account?: string;
     }
   | {
       /**
@@ -58,7 +60,49 @@ export type CarryInWarning =
       year: number;
       carryInQuantity: number;
       seededQuantity: number;
+      account?: string;
+    }
+  | {
+      /**
+       * Rows without an account were put into the `unassigned` account because
+       * the session has several accounts. `overlap`: the instrument is also
+       * held in an assigned account, so FIFO may be wrong (drafts the form).
+       */
+      kind: 'account-unassigned';
+      symbol: string;
+      isin?: string;
+      overlap: boolean;
+    }
+  | {
+      /**
+       * A sell exceeded the shares held in its account while another account
+       * held the instrument: the shares were probably transferred. Nothing is
+       * moved automatically; the missing shares have cost 0.
+       */
+      kind: 'transfer-suggested';
+      instrument: string;
+      isin?: string;
+      fromAccount: string;
+      toAccount: string;
+      quantity: number;
+      before: Date;
+    }
+  | {
+      /**
+       * A sell exceeded the shares held in its account and no other account
+       * holds the instrument: a carry-in is missing. The missing shares have
+       * cost 0.
+       */
+      kind: 'shortfall-add-carry-in';
+      instrument: string;
+      isin?: string;
+      account: string;
+      quantity: number;
+      before: Date;
     };
+
+/** Account of rows without one when the session has several accounts. */
+export const UNASSIGNED_ACCOUNT = 'unassigned';
 
 type TimelineEvent =
   | { kind: 'trade'; datetime: Date; trade: EnrichedTrade }
@@ -80,13 +124,119 @@ const KIND_ORDER: Record<TimelineEvent['kind'], number> = {
   'trade': 2,
 };
 
+function instrumentBase(args: { isin?: string; symbol: string }): string {
+  return (args.isin ?? args.symbol).toUpperCase();
+}
+
+/** FIFO queue key: art. 24 ust. 10 updof keeps one queue per account. */
+function queueKey(account: string, base: string, lotId?: string): string {
+  return `${account}|${lotId ? `${base}::${lotId}` : base}`;
+}
+
 function lotKey(args: {
+  account?: string;
   isin?: string;
   symbol: string;
   lotId?: string;
 }): string {
-  const base = (args.isin ?? args.symbol).toUpperCase();
-  return args.lotId ? `${base}::${args.lotId}` : base;
+  return queueKey(args.account ?? '', instrumentBase(args), args.lotId);
+}
+
+/** Warning payload field; omitted for sessions without accounts. */
+function accountField(account: string | undefined): { account?: string } {
+  return account ? { account } : {};
+}
+
+type IsinMapFor = (account: string) => Map<string, string>;
+
+/**
+ * Queues a corporate action touches. A scoped action hits its own account only;
+ * an unscoped one (legacy rows, manual "all accounts") hits every account.
+ */
+function actionTargets(
+  action: EnrichedCorporateAction,
+  accounts: readonly string[],
+): { account: string; key: string }[] {
+  const base = instrumentBase(action);
+  return (action.account ? [action.account] : accounts).map((account) => ({
+    account,
+    key: queueKey(account, base),
+  }));
+}
+
+/** Identifies one split on one queue, so a split reported twice applies once. */
+function splitSignature(key: string, action: EnrichedCorporateAction): string {
+  return `${key}|${String(action.datetime.getTime())}|${String(action.numerator)}/${String(action.denominator)}`;
+}
+
+/**
+ * Rows without an account join the only account of the session; with several
+ * accounts they go to `unassigned`.
+ */
+function assignAccounts(args: {
+  trades: EnrichedTrade[];
+  corporateActions: EnrichedCorporateAction[];
+  carryInPositions: EnrichedCarryInPosition[];
+}): {
+  trades: EnrichedTrade[];
+  carryInPositions: EnrichedCarryInPosition[];
+  accounts: string[];
+  multiAccount: boolean;
+} {
+  const distinct = new Set<string>();
+  for (const row of [
+    ...args.trades,
+    ...args.carryInPositions,
+    ...args.corporateActions,
+  ]) {
+    if (row.account) distinct.add(row.account);
+  }
+  const multiAccount = distinct.size > 1;
+  const fallback = multiAccount ? UNASSIGNED_ACCOUNT : ([...distinct][0] ?? '');
+  const trades = args.trades.map((t) => ({
+    ...t,
+    account: t.account ?? fallback,
+  }));
+  const carryInPositions = args.carryInPositions.map((c) => ({
+    ...c,
+    account: c.account ?? fallback,
+  }));
+  const accounts = [
+    ...new Set([
+      ...trades.map((t) => t.account),
+      ...carryInPositions.map((c) => c.account),
+    ]),
+  ].toSorted();
+  return { trades, carryInPositions, accounts, multiAccount };
+}
+
+/** `account-unassigned` findings: one per instrument with unassigned rows. */
+function unassignedWarnings(
+  rows: (EnrichedTrade | EnrichedCarryInPosition)[],
+): CarryInWarning[] {
+  const assignedNames = new Set<string>();
+  for (const row of rows) {
+    if (!row.account) continue;
+    assignedNames.add(row.symbol.toUpperCase());
+    if (row.isin) assignedNames.add(row.isin.toUpperCase());
+  }
+  const seen = new Set<string>();
+  const warnings: CarryInWarning[] = [];
+  for (const row of rows) {
+    if (row.account) continue;
+    const base = instrumentBase(row);
+    if (seen.has(base)) continue;
+    seen.add(base);
+    warnings.push({
+      kind: 'account-unassigned',
+      symbol: row.symbol,
+      isin: row.isin,
+      overlap:
+        assignedNames.has(row.symbol.toUpperCase()) ||
+        (row.isin !== undefined && assignedNames.has(row.isin.toUpperCase())),
+    });
+  }
+  return warnings;
 }
 
 function isInPeriod(args: { datetime: Date; taxPeriod: TaxPeriod }): boolean {
@@ -105,14 +255,28 @@ function getOrCreateLots(
   return lots;
 }
 
-/** FIFO-based capital gains calculator */
+/** FIFO-based capital gains calculator (one queue per account). */
 export function calculateCapitalGains(
   args: CalculateCapitalGainsArgs,
 ): TradeResult[] {
-  const { trades, corporateActions, carryInPositions, taxPeriod } = args;
+  const { corporateActions, taxPeriod } = args;
   const symbolCountryMap = args.symbolCountryMap ?? new Map<string, string>();
   const lotQueues = new Map<string, FifoLot[]>();
   const results: TradeResult[] = [];
+
+  const { trades, carryInPositions, accounts, multiAccount } = assignAccounts({
+    trades: args.trades,
+    corporateActions,
+    carryInPositions: args.carryInPositions,
+  });
+  if (multiAccount) {
+    for (const warning of unassignedWarnings([
+      ...args.trades,
+      ...args.carryInPositions,
+    ])) {
+      args.onWarning?.(warning);
+    }
+  }
 
   // Build unified timeline (carry-ins are added below, after reconciliation)
   const timeline: TimelineEvent[] = [
@@ -129,20 +293,40 @@ export function calculateCapitalGains(
   ];
   timeline.sort(compareEvents);
 
-  const symbolToIsin = buildSymbolIsinMap({ trades, corporateActions });
+  // Symbol -> ISIN per account: a manual carry-in without an ISIN must not
+  // join another account's ISIN queue.
+  const isinMaps = new Map<string, Map<string, string>>();
+  for (const account of accounts) {
+    isinMaps.set(
+      account,
+      buildSymbolIsinMap({
+        trades: trades.filter((t) => t.account === account),
+        corporateActions: corporateActions.filter(
+          (a) => !a.account || a.account === account,
+        ),
+      }),
+    );
+  }
+  const isinMapFor: IsinMapFor = (account) =>
+    isinMaps.get(account) ?? new Map<string, string>();
 
   // Carry-ins are lots like any other buy: seeded at their real acquisition
   // date so FIFO (art. 24 ust. 10 updof) orders them against imported buys.
   timeline.push(
     ...buildCarryInEvents({
       carryInPositions,
-      symbolToIsin,
+      isinMapFor,
+      accounts,
       events: [...timeline],
       taxPeriod,
       onWarning: args.onWarning,
     }),
   );
   timeline.sort(compareEvents);
+
+  const appliedSplits = new Set<string>();
+  const holdingsAt = (until: number) =>
+    simulateHoldings(timeline, until, isinMapFor, accounts).holdings;
 
   for (const event of timeline) {
     if (event.kind === 'carry-in') {
@@ -152,11 +336,14 @@ export function calculateCapitalGains(
         commissionPerSharePln: 0,
         rateUnavailable: event.rateUnavailable,
         ...(event.costMissing ? { costMissing: true } : {}),
+        acquiredAt: event.datetime,
       });
     } else if (event.kind === 'action') {
       processAction({
         action: event.action,
-        symbolToIsin,
+        isinMapFor,
+        accounts,
+        appliedSplits,
         lotQueues,
         results,
         taxPeriod,
@@ -169,6 +356,9 @@ export function calculateCapitalGains(
         results,
         taxPeriod,
         symbolCountryMap,
+        accounts,
+        holdingsAt,
+        onWarning: args.onWarning,
       });
     }
   }
@@ -199,18 +389,20 @@ function endOfYear(year: number): Date {
 }
 
 /**
- * FIFO key of a merger's target. Without a target ISIN the target symbol is
- * resolved through the symbol → ISIN map, so the new lots land under the same
- * key as the target's trades.
+ * FIFO key of a merger's target in `account`. Without a target ISIN the target
+ * symbol is resolved through the account's symbol → ISIN map, so the new lots
+ * land under the same key as the target's trades.
  */
 function mergerTargetKey(
   action: EnrichedCorporateAction,
+  account: string,
   symbolToIsin: Map<string, string>,
 ): string | undefined {
-  if (action.targetIsin) return action.targetIsin.toUpperCase();
+  if (action.targetIsin)
+    return queueKey(account, action.targetIsin.toUpperCase());
   if (!action.targetSymbol) return undefined;
   const symbol = action.targetSymbol.toUpperCase();
-  return (symbolToIsin.get(symbol) ?? symbol).toUpperCase();
+  return queueKey(account, (symbolToIsin.get(symbol) ?? symbol).toUpperCase());
 }
 
 interface Shortfall {
@@ -229,10 +421,12 @@ interface Shortfall {
 function simulateHoldings(
   events: TimelineEvent[],
   until: number,
-  symbolToIsin: Map<string, string>,
+  isinMapFor: IsinMapFor,
+  accounts: readonly string[],
 ): { holdings: Map<string, number>; shortfalls: Map<string, Shortfall> } {
   const net = new Map<string, number>();
   const shortfalls = new Map<string, Shortfall>();
+  const appliedSplits = new Set<string>();
   for (const event of events) {
     if (event.datetime.getTime() > until) break;
     if (event.kind === 'carry-in') {
@@ -247,19 +441,26 @@ function simulateHoldings(
       }
     } else {
       const { action } = event;
-      const key = lotKey(action);
-      const qty = net.get(key);
-      if (qty === undefined) continue;
-      if (action.type === 'stock-split') {
-        if (action.denominator !== 0) {
-          net.set(key, (qty * action.numerator) / action.denominator);
-        }
-      } else {
-        net.delete(key);
-        const targetKey = mergerTargetKey(action, symbolToIsin);
-        const ratio = action.conversionRatio ?? 0;
-        if (targetKey && ratio > 0) {
-          net.set(targetKey, (net.get(targetKey) ?? 0) + qty * ratio);
+      for (const { account, key } of actionTargets(action, accounts)) {
+        const qty = net.get(key);
+        if (qty === undefined) continue;
+        if (action.type === 'stock-split') {
+          const signature = splitSignature(key, action);
+          if (action.denominator !== 0 && !appliedSplits.has(signature)) {
+            appliedSplits.add(signature);
+            net.set(key, (qty * action.numerator) / action.denominator);
+          }
+        } else {
+          net.delete(key);
+          const targetKey = mergerTargetKey(
+            action,
+            account,
+            isinMapFor(account),
+          );
+          const ratio = action.conversionRatio ?? 0;
+          if (targetKey && ratio > 0) {
+            net.set(targetKey, (net.get(targetKey) ?? 0) + qty * ratio);
+          }
         }
       }
     }
@@ -305,14 +506,16 @@ interface SnapshotRow {
   seedQty: number;
 }
 
-/** Product of `key`'s split ratios effective in (`from`, `to`]. */
+/** Product of `key`'s split ratios effective in (`from`, `to`], each split once. */
 function splitFactor(
   events: TimelineEvent[],
   key: string,
   from: number,
   to: number,
+  accounts: readonly string[],
 ): number {
   let factor = 1;
+  const applied = new Set<string>();
   for (const event of events) {
     const t = event.datetime.getTime();
     if (
@@ -321,8 +524,11 @@ function splitFactor(
       event.action.denominator !== 0 &&
       t > from &&
       t <= to &&
-      lotKey(event.action) === key
+      actionTargets(event.action, accounts).some((target) => target.key === key)
     ) {
+      const signature = splitSignature(key, event.action);
+      if (applied.has(signature)) continue;
+      applied.add(signature);
       factor *= event.action.numerator / event.action.denominator;
     }
   }
@@ -359,13 +565,14 @@ function splitFactor(
  */
 function buildCarryInEvents(args: {
   carryInPositions: EnrichedCarryInPosition[];
-  symbolToIsin: Map<string, string>;
+  isinMapFor: IsinMapFor;
+  accounts: readonly string[];
   /** Sorted trades and corporate actions. */
   events: TimelineEvent[];
   taxPeriod: TaxPeriod;
   onWarning?: (warning: CarryInWarning) => void;
 }): TimelineEvent[] {
-  const { carryInPositions, events, taxPeriod, symbolToIsin } = args;
+  const { carryInPositions, events, taxPeriod, isinMapFor, accounts } = args;
   if (carryInPositions.length === 0) return [];
 
   const periodStart = taxPeriod.from.getTime();
@@ -375,7 +582,9 @@ function buildCarryInEvents(args: {
   for (const pos of carryInPositions) {
     if (!(pos.quantity > 0)) continue;
     const key = lotKey({
-      isin: pos.isin ?? symbolToIsin.get(pos.symbol.toUpperCase()),
+      account: pos.account,
+      isin:
+        pos.isin ?? isinMapFor(pos.account ?? '').get(pos.symbol.toUpperCase()),
       symbol: pos.symbol,
     });
     let byYear = snapshots.get(key);
@@ -406,7 +615,8 @@ function buildCarryInEvents(args: {
     simulateHoldings(
       [...events, ...seeded].toSorted(compareEvents),
       until,
-      symbolToIsin,
+      isinMapFor,
+      accounts,
     );
 
   for (const year of years) {
@@ -454,7 +664,7 @@ function buildCarryInEvents(args: {
       const implied = holdings.get(key) ?? 0;
       const eps = Math.max(snapshotQty, 1) * 1e-9;
       const start = historyStart.get(key) ?? yearEnd;
-      const startFactor = splitFactor(events, key, start, yearEnd);
+      const startFactor = splitFactor(events, key, start, yearEnd, accounts);
       // Shares the imported history does not explain (end-of-`year` units),
       // provisionally one lot older than every imported trade since the
       // previous snapshot, priced like the oldest row.
@@ -476,7 +686,8 @@ function buildCarryInEvents(args: {
             compareEvents,
           ),
           yearEnd,
-          symbolToIsin,
+          isinMapFor,
+          accounts,
         ).shortfalls.has(key);
       if (inconsistent) {
         args.onWarning?.({
@@ -486,6 +697,7 @@ function buildCarryInEvents(args: {
           year,
           carryInQuantity: snapshotQty,
           impliedQuantity: implied,
+          ...accountField(first.account),
         });
         continue;
       }
@@ -509,7 +721,8 @@ function buildCarryInEvents(args: {
             compareEvents,
           ),
           yearEnd,
-          symbolToIsin,
+          isinMapFor,
+          accounts,
         ).holdings.get(key) ?? 0;
       const survives = Math.min(Math.max(left, 0), unexplained);
       if (unexplained - survives > eps) {
@@ -538,6 +751,7 @@ function buildCarryInEvents(args: {
               year,
               carryInQuantity: row.pos.quantity,
               seededQuantity: row.seedQty,
+              ...accountField(row.pos.account),
             });
           }
         }
@@ -548,6 +762,7 @@ function buildCarryInEvents(args: {
           year,
           carryInQuantity: snapshotQty,
           coveredQuantity: covered,
+          ...accountField(first.account),
         });
       }
 
@@ -558,6 +773,7 @@ function buildCarryInEvents(args: {
           key,
           row.datetime.getTime(),
           yearEnd,
+          accounts,
         );
         const quantity = row.seedQty / factor;
         const costPln = (row.pos.costPln * row.seedQty) / row.pos.quantity;
@@ -578,19 +794,40 @@ function buildCarryInEvents(args: {
 
 function processAction(args: {
   action: EnrichedCorporateAction;
-  symbolToIsin: Map<string, string>;
+  isinMapFor: IsinMapFor;
+  accounts: readonly string[];
+  appliedSplits: Set<string>;
   lotQueues: Map<string, FifoLot[]>;
   results: TradeResult[];
   taxPeriod: TaxPeriod;
   symbolCountryMap: Map<string, string>;
 }): void {
-  const { action, lotQueues } = args;
-  const key = lotKey(action);
+  for (const target of actionTargets(args.action, args.accounts)) {
+    applyActionToQueue({ ...args, ...target });
+  }
+}
+
+function applyActionToQueue(args: {
+  action: EnrichedCorporateAction;
+  account: string;
+  key: string;
+  isinMapFor: IsinMapFor;
+  appliedSplits: Set<string>;
+  lotQueues: Map<string, FifoLot[]>;
+  results: TradeResult[];
+  taxPeriod: TaxPeriod;
+  symbolCountryMap: Map<string, string>;
+}): void {
+  const { action, lotQueues, key } = args;
   const lots = lotQueues.get(key);
 
   if (!lots || lots.length === 0) return;
 
   if (action.type === 'stock-split') {
+    // The same split reported by two sources applies once per queue.
+    const signature = splitSignature(key, action);
+    if (args.appliedSplits.has(signature)) return;
+    args.appliedSplits.add(signature);
     const newLots = applyStockSplit({
       lots,
       numerator: action.numerator,
@@ -612,7 +849,11 @@ function processAction(args: {
     lotQueues.delete(key);
 
     // Move new lots to target symbol
-    const targetKey = mergerTargetKey(action, args.symbolToIsin);
+    const targetKey = mergerTargetKey(
+      action,
+      args.account,
+      args.isinMapFor(args.account),
+    );
     if (mergerResult.newLots.length > 0 && targetKey) {
       const targetLots = getOrCreateLots(lotQueues, targetKey);
       targetLots.push(...mergerResult.newLots);
@@ -659,6 +900,10 @@ function processTrade(args: {
   results: TradeResult[];
   taxPeriod: TaxPeriod;
   symbolCountryMap: Map<string, string>;
+  accounts: readonly string[];
+  /** Holdings per queue key right after `until` (ms). */
+  holdingsAt: (until: number) => Map<string, number>;
+  onWarning?: (warning: CarryInWarning) => void;
 }): void {
   const { trade, lotQueues, results, taxPeriod } = args;
   const key = lotKey(trade);
@@ -684,6 +929,7 @@ function processTrade(args: {
       commissionPerSharePln,
       rateUnavailable: trade.rateUnavailable,
       ...(incentive?.costMissing ? { costMissing: true } : {}),
+      acquiredAt: trade.datetime,
     });
 
     if (isInPeriod({ datetime: trade.datetime, taxPeriod })) {
@@ -720,12 +966,6 @@ function processTrade(args: {
     let costRateUnavailable = false;
     let costMissing = false;
 
-    if (lots.length === 0) {
-      throw new Error(
-        `No buy lots available for ${trade.symbol} (${trade.isin ?? 'no ISIN'}) on ${trade.datetime.toISOString()}. Cannot sell ${String(trade.quantity)} shares.`,
-      );
-    }
-
     // Float subtraction leaves ~1e-15 residue (e.g. 0.1+0.2 != 0.3).
     // Compare against epsilon scaled to trade size, capped so a real
     // fractional shortfall cannot disappear on very large trades.
@@ -752,9 +992,10 @@ function processTrade(args: {
     }
 
     if (remainingQty > qtyEpsilon) {
-      throw new Error(
-        `Insufficient buy lots for ${trade.symbol} (${trade.isin ?? 'no ISIN'}) on ${trade.datetime.toISOString()}. Short ${String(remainingQty)} shares.`,
-      );
+      // The account sold shares its history does not explain: they cost 0 and
+      // the result is a draft. Nothing is moved between accounts.
+      costMissing = true;
+      reportShortfall({ ...args, missing: remainingQty });
     }
 
     totalCostPln += sellCommissionPln;
@@ -784,5 +1025,57 @@ function processTrade(args: {
         ...(costMissing ? { costBasisMissing: true } : {}),
       });
     }
+  }
+}
+
+/**
+ * Suggests where the missing shares of a sell came from: other accounts that
+ * held the instrument at that time (a transfer), else a missing carry-in.
+ */
+function reportShortfall(args: {
+  trade: EnrichedTrade;
+  accounts: readonly string[];
+  holdingsAt: (until: number) => Map<string, number>;
+  onWarning?: (warning: CarryInWarning) => void;
+  missing: number;
+}): void {
+  const { trade, onWarning } = args;
+  if (!onWarning) return;
+  const account = trade.account ?? '';
+  const base = instrumentBase(trade);
+  const holdings = args.holdingsAt(trade.datetime.getTime());
+  const donors = args.accounts
+    .filter((other) => other !== account)
+    .map((other) => ({
+      account: other,
+      held: holdings.get(queueKey(other, base, trade.lotId)) ?? 0,
+    }))
+    .filter((donor) => donor.held > 1e-9)
+    .toSorted((a, b) => b.held - a.held);
+
+  let missing = args.missing;
+  for (const donor of donors) {
+    if (missing <= 1e-9) break;
+    const quantity = Math.min(missing, donor.held);
+    missing -= quantity;
+    onWarning({
+      kind: 'transfer-suggested',
+      instrument: trade.symbol,
+      isin: trade.isin,
+      fromAccount: donor.account,
+      toAccount: account,
+      quantity,
+      before: trade.datetime,
+    });
+  }
+  if (missing > 1e-9) {
+    onWarning({
+      kind: 'shortfall-add-carry-in',
+      instrument: trade.symbol,
+      isin: trade.isin,
+      account,
+      quantity: missing,
+      before: trade.datetime,
+    });
   }
 }

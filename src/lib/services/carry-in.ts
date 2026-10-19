@@ -188,7 +188,11 @@ export function isCarryInIgnored(
   warnings: readonly CarryInWarning[],
 ): boolean {
   return warnings.some((w) => {
-    if (w.kind === 'carry-in-cost-prorated' || w.year !== row.year) {
+    if (
+      (w.kind !== 'carry-in-overlap' && w.kind !== 'carry-in-inconsistent') ||
+      w.year !== row.year ||
+      (w.account && row.account && w.account !== row.account)
+    ) {
       return false;
     }
     const sameInstrument =

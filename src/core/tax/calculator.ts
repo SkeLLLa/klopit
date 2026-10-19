@@ -216,5 +216,8 @@ function buildSummary(args: {
     inconsistentCarryInCount: args.carryInWarnings.filter(
       (w) => w.kind === 'carry-in-inconsistent',
     ).length,
+    unassignedOverlapCount: args.carryInWarnings.filter(
+      (w) => w.kind === 'account-unassigned' && w.overlap,
+    ).length,
   };
 }

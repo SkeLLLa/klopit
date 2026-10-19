@@ -166,6 +166,8 @@ export interface TaxSummaryRecord {
   missingCostCount?: number;
   /** See TaxSummary.inconsistentCarryInCount. Absent on older summaries. */
   inconsistentCarryInCount?: number;
+  /** See TaxSummary.unassignedOverlapCount. Absent on older summaries. */
+  unassignedOverlapCount?: number;
   pit38: Pit38Fields;
   pitZg: PitZgFields[];
   /**

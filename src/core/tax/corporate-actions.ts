@@ -7,6 +7,8 @@ export interface FifoLot {
   rateUnavailable?: boolean;
   /** Lot comes from a carry-in position with no known acquisition cost. */
   costMissing?: boolean;
+  /** Buy date, or the carry-in placement date. Kept through splits and mergers. */
+  acquiredAt?: Date;
 }
 
 /** Result of applying a merger to lots */
@@ -53,6 +55,7 @@ export function applyStockSplit(args: {
     commissionPerSharePln: lot.commissionPerSharePln / factor,
     rateUnavailable: lot.rateUnavailable,
     ...(lot.costMissing ? { costMissing: true } : {}),
+    ...(lot.acquiredAt ? { acquiredAt: lot.acquiredAt } : {}),
   }));
 }
 
@@ -135,6 +138,9 @@ export function applyMerger(args: {
         commissionPerSharePln: 0,
         rateUnavailable: costRateUnavailable,
         ...missingFlag,
+        ...(args.lots[0].acquiredAt
+          ? { acquiredAt: args.lots[0].acquiredAt }
+          : {}),
       },
     ],
     cashProceeds,

@@ -647,6 +647,22 @@ at 0.
 
 ---
 
+## Design Decision: Per-Account FIFO; Transfers Never Auto-Inferred
+
+### Decision
+
+FIFO queues are kept per securities account (`account|ISIN-or-symbol`), as art. 24 ust. 10 updof requires ("odrębnie dla każdego rachunku papierów wartościowych"). Specific identification inside an account (IBI lot id) is kept (KIS 0112-KDWL.4011.2.2025.1.TW).
+
+### Why not infer transfers
+
+When a sell exceeds an account's holding while another account held the instrument, a transfer is likely, but the app only _suggests_ it (`transfer-suggested`). A transfer changes which lots (and costs) a later sell consumes, so guessing it silently could understate or overstate tax. The missing shares cost 0, the result is a draft, and the user decides (a shortfall with no donor account suggests adding a carry-in).
+
+### Legacy rows
+
+Rows without an account join the only account of the session (identical results). With several accounts they go to `unassigned`; the form is a draft only if the instrument also sits in an assigned account.
+
+---
+
 ## Design Decision: Live Dashboard (Not Screenshots)
 
 ### Alternative: Static Report

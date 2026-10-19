@@ -450,37 +450,38 @@ void describe('calculateCapitalGains', () => {
   });
 
   void it('does not double count carry-in covered by imported prior-year trades', () => {
-    assert.throws(
-      () =>
-        calculateCapitalGains({
-          trades: [
-            makeTrade({
-              type: 'buy',
-              quantity: 10,
-              datetime: new Date(2023, 3, 1),
-            }),
-            makeTrade({
-              type: 'sell',
-              quantity: 15,
-              proceeds: 3000,
-              datetime: new Date(2024, 3, 1),
-            }),
-          ],
-          corporateActions: [],
-          carryInPositions: [
-            {
-              symbol: 'AAPL',
-              quantity: 10,
-              year: 2023,
-              costPln: 0,
-              rateUnavailable: false,
-              costMissing: true,
-            },
-          ],
-          taxPeriod: taxPeriod2024,
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        makeTrade({
+          type: 'buy',
+          quantity: 10,
+          datetime: new Date(2023, 3, 1),
         }),
-      /Insufficient buy lots .* Short 5/,
-    );
+        makeTrade({
+          type: 'sell',
+          quantity: 15,
+          proceeds: 3000,
+          datetime: new Date(2024, 3, 1),
+        }),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        {
+          symbol: 'AAPL',
+          quantity: 10,
+          year: 2023,
+          costPln: 0,
+          rateUnavailable: false,
+          costMissing: true,
+        },
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    const shortSell = result.find((r) => r.type === 'sell');
+    assert.equal(shortSell?.costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'shortfall-add-carry-in'));
   });
 
   void it('keeps cost 0 without flag when user confirmed zero cost (RSU)', () => {
@@ -646,7 +647,7 @@ void describe('calculateCapitalGains', () => {
     assert.equal(result[0].rateUnavailable, true);
   });
 
-  void it('throws when selling more shares than available', () => {
+  void it('flags a sell of more shares than available instead of throwing', () => {
     const sell = makeTrade({
       datetime: new Date(2024, 5, 10),
       quantity: 100,
@@ -655,16 +656,17 @@ void describe('calculateCapitalGains', () => {
       type: 'sell',
     });
 
-    assert.throws(
-      () =>
-        calculateCapitalGains({
-          trades: [sell],
-          corporateActions: [],
-          carryInPositions: [],
-          taxPeriod: taxPeriod2024,
-        }),
-      /No buy lots available/,
-    );
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    const shortSell = result.find((r) => r.type === 'sell');
+    assert.equal(shortSell?.costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'shortfall-add-carry-in'));
   });
 
   void it('uses ISIN as lot key when available', () => {
@@ -1110,7 +1112,7 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
     );
   });
 
-  void it('still throws when truly short beyond epsilon tolerance', () => {
+  void it('still flags a real shortfall beyond epsilon tolerance', () => {
     const buy = makeTrade({
       datetime: new Date(2024, 0, 10),
       quantity: 10,
@@ -1127,16 +1129,17 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
       commission: 0,
     });
 
-    assert.throws(
-      () =>
-        calculateCapitalGains({
-          trades: [buy, sell],
-          corporateActions: [],
-          carryInPositions: [],
-          taxPeriod: taxPeriod2024,
-        }),
-      /Insufficient buy lots/,
-    );
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    const shortSell = result.find((r) => r.type === 'sell');
+    assert.equal(shortSell?.costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'shortfall-add-carry-in'));
   });
 
   void it('handles IBKR fractional-share quantities (4 decimals)', () => {
@@ -1270,16 +1273,17 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
       commission: 0,
     });
 
-    assert.throws(
-      () =>
-        calculateCapitalGains({
-          trades: [buy, sell],
-          corporateActions: [],
-          carryInPositions: [],
-          taxPeriod: taxPeriod2024,
-        }),
-      /Insufficient buy lots/,
-    );
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    const shortSell = result.find((r) => r.type === 'sell');
+    assert.equal(shortSell?.costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'shortfall-add-carry-in'));
   });
 
   void it('detects tiny real shortfall on large share quantities', () => {
@@ -1301,16 +1305,17 @@ void describe('calculateCapitalGains — cross-year FIFO', () => {
       commission: 0,
     });
 
-    assert.throws(
-      () =>
-        calculateCapitalGains({
-          trades: [buy, sell],
-          corporateActions: [],
-          carryInPositions: [],
-          taxPeriod: taxPeriod2024,
-        }),
-      /Insufficient buy lots/,
-    );
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [buy, sell],
+      corporateActions: [],
+      carryInPositions: [],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    const shortSell = result.find((r) => r.type === 'sell');
+    assert.equal(shortSell?.costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'shortfall-add-carry-in'));
   });
 
   void it('treats lot remainder within epsilon as fully consumed', () => {
@@ -1710,14 +1715,15 @@ void describe('carry-in snapshots (regressions)', () => {
       datetime: new Date(2023, 5, 1),
     });
     // Holding is 15, not 10 + 5 + 15.
-    assert.throws(
-      () =>
-        calculateCapitalGains({
-          ...base,
-          trades: [buy, sell(20, new Date(2024, 2, 1))],
-        }),
-      /Short 5/,
-    );
+    const warnings: CarryInWarning[] = [];
+    const short = calculateCapitalGains({
+      ...base,
+      trades: [buy, sell(20, new Date(2024, 2, 1))],
+      onWarning: (w) => warnings.push(w),
+    });
+    const shortSell = short.find((r) => r.type === 'sell');
+    assert.equal(shortSell?.costBasisMissing, true);
+    assert.ok(warnings.some((w) => w.kind === 'shortfall-add-carry-in'));
     const result = calculateCapitalGains({
       ...base,
       trades: [buy, sell(15, new Date(2024, 2, 1))],

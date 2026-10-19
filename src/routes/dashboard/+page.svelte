@@ -17,6 +17,8 @@
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import { isSessionStale } from '$lib/utils/stale.js';
+  import { formatAccount } from '$lib/utils/account.js';
+  import { formatDate } from '$lib/utils/format-date.js';
   import {
     calculateSessionTaxes,
     clearSessionResults,
@@ -239,6 +241,27 @@
                   year: String(warning.year),
                   quantity: String(warning.carryInQuantity),
                   implied: String(warning.impliedQuantity),
+                })}
+              {:else if warning.kind === 'account-unassigned'}
+                {#if warning.overlap}
+                  {m.import_warning_account_unassigned_overlap({ symbol: warning.symbol })}
+                {:else}
+                  {m.import_warning_account_unassigned({ symbol: warning.symbol })}
+                {/if}
+              {:else if warning.kind === 'transfer-suggested'}
+                {m.import_warning_transfer_suggested({
+                  symbol: warning.instrument,
+                  from: formatAccount(warning.fromAccount),
+                  to: formatAccount(warning.toAccount),
+                  quantity: String(warning.quantity),
+                  date: formatDate(warning.before),
+                })}
+              {:else if warning.kind === 'shortfall-add-carry-in'}
+                {m.import_warning_shortfall_add_carry_in({
+                  symbol: warning.instrument,
+                  account: warning.account ? formatAccount(warning.account) : '—',
+                  quantity: String(warning.quantity),
+                  date: formatDate(warning.before),
                 })}
               {:else}
                 {m.import_warning_carry_in_cost_prorated({

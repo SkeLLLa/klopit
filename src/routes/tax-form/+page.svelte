@@ -54,8 +54,10 @@
   // Carry-in snapshots that contradict the imported history (skipped, so the
   // holdings may include shares that no longer exist).
   const inconsistentCarryInCount = $derived(taxSummary?.inconsistentCarryInCount ?? 0);
+  // Rows without an account of an instrument also held in an assigned account.
+  const unassignedOverlapCount = $derived(taxSummary?.unassignedOverlapCount ?? 0);
   const incomplete = $derived(
-    missingRateCount + missingCostCount + inconsistentCarryInCount > 0,
+    missingRateCount + missingCostCount + inconsistentCarryInCount + unassignedOverlapCount > 0,
   );
   // Incomplete results must not be filed: disable copying PIT-38 values.
   setCopyDisabled(() => incomplete);
@@ -287,6 +289,18 @@
                   class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
                 >
                   {m.data_tab_carry_in()}
+                </a>
+              </div>
+            {/if}
+            {#if unassignedOverlapCount > 0}
+              <div>
+                <p class="font-medium">{m.tax_form_unassigned_overlap_title()}</p>
+                <p>{m.tax_form_unassigned_overlap_body({ count: unassignedOverlapCount })}</p>
+                <a
+                  href={localizeHref('/data')}
+                  class="mt-1 inline-block text-xs font-medium text-red-700 hover:underline dark:text-red-300"
+                >
+                  {m.nav_data()}
                 </a>
               </div>
             {/if}
