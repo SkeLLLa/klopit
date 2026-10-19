@@ -477,6 +477,22 @@ export class KlopitDB extends Dexie {
           }
         });
     });
+    // v17: plan-13 calculation changes (cross-date dividend matching,
+    // unmatched withholding, art. 45 ust. 3a add-back, foreign tax on gains in
+    // PIT-38 poz. 34 and the art. 30b ust. 5a cap). `Trade.foreignTax` and
+    // `foreignTaxDate` are optional and unindexed, so no schema change and no
+    // row is rewritten. Calculated sessions are marked stale the v15 way
+    // (`calculatedAt` kept, `dataUpdatedAt` bumped).
+    this.version(17).upgrade(async (tx) => {
+      await tx
+        .table<SessionRecord>('sessions')
+        .toCollection()
+        .modify((session) => {
+          if (session.status === 'calculated') {
+            session.dataUpdatedAt = new Date();
+          }
+        });
+    });
   }
 }
 

@@ -763,3 +763,7 @@ The app runs on SvelteKit 3 with the static adapter. Internal imports use the `#
 ## DB v16: one bump for plan-10 changes
 
 All plan-10 data and calculation changes ship in a single Dexie version (v16). No index changes and no rows are rewritten (`account`, `incentive` and override `scope` are optional and unindexed). The upgrade marks calculated sessions stale the v15 way: `calculatedAt` is kept and `dataUpdatedAt` is bumped, so the stale banner and the PIT-38 header recalculate button appear (clearing `calculatedAt` would make `isSessionStale` false and silently show old numbers). Because FIFO now runs per account (art. 24 ust. 10 updof), results of sessions that mix several brokers or accounts can change. The upgrade flags those sessions with `perAccountFifoNoticePending` (decided once during the upgrade, so sessions created later never see it); the Data page shows a dismissible notice and dismissing clears the flag.
+
+## DB v17: stale bump for plan-13 calculation changes
+
+Cross-date dividend matching, unmatched withholding, the art. 45 ust. 3a add-back and foreign tax on gains (PIT-38 poz. 34, art. 30b ust. 5a cap) change results without changing any table. `Trade.foreignTax` and `Trade.foreignTaxDate` are optional and unindexed, so v17 has no schema change and rewrites no row. The upgrade marks calculated sessions stale the v15 way (`calculatedAt` kept, `dataUpdatedAt` bumped). Backups carry both new trade fields; import validates `foreignTax >= 0`, sells only.

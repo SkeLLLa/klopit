@@ -20,13 +20,12 @@ Open and partially done work, organized by priority tier. Finished items are rem
 
 Ready-to-file tax outputs and calculation refinements.
 
-| ID       | Feature                 | Brief Description                                                                                                                                                                                                                                       | Status |
-| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| **P1.1** | e-Deklaracje XML        | Schema-valid XML for PIT-38(18) + embedded PIT/ZG. Direct download → upload to e-Urząd Skarbowy. Build-time XSD validation.                                                                                                                             |        |
-| **P1.2** | PIT/ZG Export           | Printable PIT/ZG(8) cards per country + XML attachment. Verified `poz.` numbering and item 6/7 country display.                                                                                                                                         |        |
-| **P1.3** | Loss CF Consistency     | Audit all export formats (UI, PDF, CSV, XML) read from single `TaxSummary` source. No recalculation drift.                                                                                                                                              |        |
-| **P1.5** | Foreign tax on gains    | PIT/ZG is required only when the creditable foreign tax on gains is above 0, but no importer records foreign tax on gains (`foreignTaxPln` is always 0), so every gains row is informational today. Add a source (import or manual entry) for that tax. |        |
-| **P1.6** | Proportional credit cap | The Polish tax due is split across countries in proportion to their gains, which approximates the art. 30b ust. 5a limit. Refine the per-country cap.                                                                                                   |        |
+| ID       | Feature                       | Brief Description                                                                                                                         | Status |
+| -------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **P1.1** | e-Deklaracje XML              | Schema-valid XML for PIT-38(18) + embedded PIT/ZG. Direct download → upload to e-Urząd Skarbowy. Build-time XSD validation.               |        |
+| **P1.2** | PIT/ZG Export                 | Printable PIT/ZG(8) cards per country + XML attachment. Verified `poz.` numbering and item 6/7 country display.                           |        |
+| **P1.3** | Loss CF Consistency           | Audit all export formats (UI, PDF, CSV, XML) read from single `TaxSummary` source. No recalculation drift.                                |        |
+| **P1.7** | IBKR §1446(f) PTP withholding | Auto-import US §1446(f) withholding on PTP sales as foreign tax on gains (today entered by hand per sell). Blocked on a sample statement. |        |
 
 ---
 

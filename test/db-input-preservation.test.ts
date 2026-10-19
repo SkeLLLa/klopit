@@ -16,7 +16,7 @@ import { isSessionStale } from '../src/lib/utils/stale.js';
 const INPUT: readonly string[] = INPUT_TABLES;
 const DERIVED: readonly string[] = DERIVED_TABLES;
 
-const LATEST_VERSION = 16;
+const LATEST_VERSION = 17;
 
 /** Cumulative store definitions of every shipped version, up to `upTo`. */
 function declareVersions(db: Dexie, upTo: number): void {

@@ -44,7 +44,7 @@ klopit/
 │   │       └── ...
 │   │
 │   ├── lib/                      # Imported as `#lib/...` (package `imports`)
-│   │   ├── db.ts                 # Dexie database schema (current version v16) & initialization
+│   │   ├── db.ts                 # Dexie database schema (current version v17) & initialization
 │   │   ├── db-tables.ts          # INPUT_TABLES / DERIVED_TABLES classification
 │   │   ├── db-migrations.ts, db-hooks.ts
 │   │   ├── nav.ts                # Navigation & page metadata
