@@ -659,7 +659,7 @@ When a sell exceeds an account's holding while another account held the instrume
 
 ### Legacy rows
 
-Rows without an account join the only account of the session (identical results). With several accounts they go to `unassigned`; the form is a draft only if the instrument also sits in an assigned account.
+Rows without an account join the only account of the session (identical results). With several accounts they join the one account that holds the instrument; otherwise they go to `__unassigned__` (shown as "Unassigned"), and the form is a draft only if several accounts hold the instrument. A shortfall taints its queue: later sells are drafts too, so a pre-period gap cannot yield a silently final form.
 
 ---
 

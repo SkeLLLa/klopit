@@ -1,5 +1,6 @@
 <script lang="ts">
   import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from 'lucide-svelte';
+  import { isTaxFormIncomplete } from '$lib/utils/tax-form-status.js';
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
@@ -56,9 +57,7 @@
   const inconsistentCarryInCount = $derived(taxSummary?.inconsistentCarryInCount ?? 0);
   // Rows without an account of an instrument also held in an assigned account.
   const unassignedOverlapCount = $derived(taxSummary?.unassignedOverlapCount ?? 0);
-  const incomplete = $derived(
-    missingRateCount + missingCostCount + inconsistentCarryInCount + unassignedOverlapCount > 0,
-  );
+  const incomplete = $derived(isTaxFormIncomplete(taxSummary));
   // Incomplete results must not be filed: disable copying PIT-38 values.
   setCopyDisabled(() => incomplete);
   const stale = $derived(

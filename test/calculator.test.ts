@@ -892,3 +892,42 @@ void describe('ADR country scope', () => {
     );
   });
 });
+
+const tradeFor = (account: string | undefined, type: 'buy' | 'sell') =>
+  makeTrade({
+    account,
+    type,
+    symbol: type === 'buy' ? 'AAPL' : 'AAPL',
+    ...(type === 'sell'
+      ? { datetime: new Date(2024, 5, 1), proceeds: 100 }
+      : {}),
+  });
+const calc = (trades: EnrichedTrade[]) =>
+  calculateTaxes({
+    trades,
+    dividends: [],
+    creditInterests: [],
+    withholdingTaxes: [],
+    corporateActions: [],
+    carryInPositions: [],
+    taxPeriod: taxPeriod2024,
+  });
+
+void describe('calculateTaxes — unassignedOverlapCount', () => {
+  void it('counts unassigned instruments held by several accounts only', () => {
+    const overlap = calc([
+      tradeFor('ibkr:U1', 'buy'),
+      tradeFor('schwab:default', 'buy'),
+      tradeFor(undefined, 'buy'),
+    ]);
+    assert.equal(overlap.summary.unassignedOverlapCount, 1);
+
+    const disjoint = calc([
+      tradeFor('ibkr:U1', 'buy'),
+      makeTrade({ account: 'schwab:default', symbol: 'MSFT' }),
+      makeTrade({ symbol: 'NVDA' }),
+    ]);
+    assert.equal(disjoint.summary.unassignedOverlapCount, 0);
+    assert.equal(disjoint.carryInWarnings.length, 1);
+  });
+});

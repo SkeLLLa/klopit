@@ -354,3 +354,246 @@ void describe('per-account FIFO shortfall', () => {
     assert.deepEqual(warnings, []);
   });
 });
+
+void describe('per-account FIFO: unstamped rows', () => {
+  void it('an unstamped carry-in joins the only account that holds the instrument', () => {
+    const { results, warnings } = run({
+      trades: [
+        sell(10, new Date(2024, 3, 1), A),
+        trade({
+          account: B,
+          symbol: 'MSFT',
+          isin: 'US5949181045',
+          datetime: new Date(2024, 0, 2),
+        }),
+      ],
+      carryInPositions: [carryIn({ quantity: 10, costPln: 100 })],
+    });
+    const s = results.find((r) => r.type === 'sell');
+    assert.equal(s?.costPln, 100);
+    assert.equal(s.costBasisMissing, undefined);
+    assert.deepEqual(warnings, []);
+  });
+
+  void it('matches an unstamped symbol-only carry-in to the account keyed by ISIN', () => {
+    const { results } = run({
+      trades: [
+        trade({
+          account: A,
+          quantity: 5,
+          price: 10,
+          datetime: new Date(2023, 5, 1),
+        }),
+        trade({ account: B, symbol: 'MSFT', isin: 'US5949181045' }),
+        sell(10, new Date(2024, 3, 1), A),
+      ],
+      carryInPositions: [
+        carryIn({ isin: undefined, quantity: 10, year: 2022, costPln: 100 }),
+      ],
+    });
+    const s = results.find((r) => r.type === 'sell');
+    assert.equal(s?.costBasisMissing, undefined);
+  });
+
+  void it('goes to unassigned only when several accounts hold it', () => {
+    const { results, warnings } = run({
+      trades: [trade({ account: A }), trade({ account: B })],
+      carryInPositions: [carryIn({ quantity: 5 })],
+    });
+    assert.equal(results.length, 2);
+    assert.deepEqual(warnings, [
+      { kind: 'account-unassigned', symbol: 'AAPL', isin: ISIN, overlap: true },
+    ]);
+  });
+
+  void it('does not draw transfers into or out of the unassigned account', () => {
+    const { warnings } = run({
+      trades: [
+        trade({ account: A }),
+        trade({ account: B }),
+        sell(30, new Date(2024, 3, 1)),
+      ],
+    });
+    assert.deepEqual(
+      warnings.map((w) => w.kind),
+      ['account-unassigned'],
+    );
+  });
+});
+
+void describe('per-account FIFO: shortfall taint (F2)', () => {
+  void it('Q4a: a 2023 shortfall drafts the later 2024 sell', () => {
+    const { results } = run({
+      trades: [
+        trade({
+          account: A,
+          quantity: 5,
+          price: 40,
+          datetime: new Date(2023, 2, 1),
+        }),
+        sell(8, new Date(2023, 5, 1), A),
+        trade({
+          account: A,
+          quantity: 10,
+          price: 50,
+          datetime: new Date(2023, 8, 1),
+        }),
+        sell(7, new Date(2024, 3, 1), A),
+      ],
+    });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].costPln, 350);
+    assert.equal(results[0].costBasisMissing, true);
+  });
+
+  void it('Q4c: a 2023 cross-account shortfall drafts the later sell too', () => {
+    const { results, warnings } = run({
+      trades: [
+        trade({ account: B, quantity: 10, datetime: new Date(2023, 0, 1) }),
+        sell(5, new Date(2023, 5, 1), A),
+        trade({
+          account: A,
+          quantity: 10,
+          price: 50,
+          datetime: new Date(2023, 8, 1),
+        }),
+        sell(7, new Date(2024, 3, 1), A),
+      ],
+    });
+    assert.equal(results[0].costBasisMissing, true);
+    assert.equal(warnings[0].kind, 'transfer-suggested');
+  });
+
+  void it('does not taint other accounts or instruments', () => {
+    const { results } = run({
+      trades: [
+        sell(5, new Date(2023, 5, 1), A),
+        trade({ account: B, quantity: 10 }),
+        sell(7, new Date(2024, 3, 1), B),
+      ],
+    });
+    assert.equal(results[0].costBasisMissing, undefined);
+  });
+});
+
+void describe('per-account FIFO: donors across key styles (F3)', () => {
+  void it('IBKR (ISIN) buys, Schwab (symbol only) sells: transfer IBKR to Schwab', () => {
+    const { warnings } = run({
+      trades: [
+        trade({ account: A, quantity: 10, datetime: new Date(2024, 0, 1) }),
+        trade({
+          account: B,
+          isin: undefined,
+          type: 'sell',
+          quantity: 10,
+          price: 100,
+          proceeds: 1000,
+          datetime: new Date(2024, 2, 1),
+        }),
+      ],
+    });
+    assert.equal(warnings.length, 1);
+    assert.equal(
+      warnings[0].kind === 'transfer-suggested' && warnings[0].fromAccount,
+      A,
+    );
+  });
+
+  void it('reverse: Schwab buys by symbol, IBKR sells by ISIN', () => {
+    const { warnings } = run({
+      trades: [
+        trade({
+          account: B,
+          isin: undefined,
+          quantity: 10,
+          datetime: new Date(2024, 0, 1),
+        }),
+        trade({
+          account: A,
+          symbol: 'MSFT',
+          isin: 'US5949181045',
+          datetime: new Date(2023, 0, 1),
+        }),
+        sell(10, new Date(2024, 2, 1), A),
+      ],
+    });
+    assert.deepEqual(
+      warnings.map((w) => w.kind === 'transfer-suggested' && w.fromAccount),
+      [B],
+    );
+  });
+
+  void it('a carry-in without ISIN in an account with no trades is a donor', () => {
+    const { warnings } = run({
+      trades: [
+        trade({
+          account: B,
+          symbol: 'MSFT',
+          isin: 'US5949181045',
+          datetime: new Date(2023, 0, 1),
+        }),
+        sell(10, new Date(2024, 2, 1), B),
+      ],
+      carryInPositions: [
+        carryIn({ account: A, isin: undefined, quantity: 10 }),
+      ],
+    });
+    assert.deepEqual(
+      warnings.map((w) => w.kind === 'transfer-suggested' && w.fromAccount),
+      [A],
+    );
+  });
+});
+
+void describe('per-account FIFO: warning aggregation (R1)', () => {
+  void it('merges many short sells into one warning per account and instrument', () => {
+    const trades: EnrichedTrade[] = [];
+    for (let i = 0; i < 300; i++) {
+      trades.push(sell(1, new Date(2024, 0, 1, 0, i), A));
+    }
+    const { warnings } = run({ trades });
+    assert.equal(warnings.length, 1);
+    const w = warnings[0];
+    assert.equal(w.kind === 'shortfall-add-carry-in' && w.quantity, 300);
+    assert.deepEqual(
+      w.kind === 'shortfall-add-carry-in' && w.before,
+      new Date(2024, 0, 1, 0, 0),
+    );
+  });
+
+  void it('does not offer one donor holding twice', () => {
+    const { warnings } = run({
+      trades: [
+        trade({ account: B, quantity: 10, datetime: new Date(2024, 0, 1) }),
+        sell(10, new Date(2024, 1, 1), A),
+        sell(10, new Date(2024, 2, 1), A),
+      ],
+    });
+    assert.deepEqual(
+      warnings.map((w) => [w.kind, 'quantity' in w && w.quantity]),
+      [
+        ['transfer-suggested', 10],
+        ['shortfall-add-carry-in', 10],
+      ],
+    );
+  });
+});
+
+void describe('per-account FIFO: split de-duplication by day', () => {
+  void it('a midnight manual split and a timestamped import of the same day apply once', () => {
+    const { results } = run({
+      trades: [
+        trade({ account: A, quantity: 10, price: 10 }),
+        sell(20, new Date(2024, 4, 1), A),
+        sell(1, new Date(2024, 4, 2), A),
+      ],
+      corporateActions: [
+        split({ account: A, datetime: new Date(2024, 2, 1) }),
+        split({ account: A, datetime: new Date(2024, 2, 1, 15, 30) }),
+      ],
+    });
+    const sells = results.filter((r) => r.type === 'sell');
+    assert.equal(sells[0].costBasisMissing, undefined);
+    assert.equal(sells[1].costBasisMissing, true);
+  });
+});

@@ -1,8 +1,13 @@
+import { m } from '$lib/paraglide/messages.js';
+
+import { UNASSIGNED_ACCOUNT } from '../../core/tax/accounts.js';
+
 /** Prefix for accounts the user typed in by hand. */
 export const MANUAL_ACCOUNT_PREFIX = 'manual:';
 
 /** Account label for display; IBKR ids are masked (U1234567 → U***4567). */
 export function formatAccount(account: string): string {
+  if (account === UNASSIGNED_ACCOUNT) return m.account_unassigned();
   const sep = account.indexOf(':');
   const broker = sep < 0 ? '' : account.slice(0, sep);
   const id = sep < 0 ? account : account.slice(sep + 1);

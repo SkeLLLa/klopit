@@ -259,7 +259,7 @@
               {:else if warning.kind === 'shortfall-add-carry-in'}
                 {m.import_warning_shortfall_add_carry_in({
                   symbol: warning.instrument,
-                  account: warning.account ? formatAccount(warning.account) : '—',
+                  account: formatAccount(warning.account),
                   quantity: String(warning.quantity),
                   date: formatDate(warning.before),
                 })}

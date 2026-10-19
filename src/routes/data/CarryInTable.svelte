@@ -17,6 +17,9 @@
     parseDecimalInput,
     type CarryInValidationCode,
   } from '$lib/services/carry-in.js';
+  import { listSessionAccounts } from '$lib/services/accounts.js';
+  import AccountField from './AccountField.svelte';
+  import { formatAccount } from '$lib/utils/account.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -29,6 +32,7 @@
   const records = useLiveQuery(() =>
     db.carryInPositions.where('sessionId').equals(sessionId).sortBy('symbol'),
   );
+  const accounts = useLiveQuery(() => listSessionAccounts({ sessionId }));
   // Warnings from the last calculation: rows it did not use need no cost.
   const carryInWarnings = useLiveQuery(
     async () => (await db.taxSummaries.get(sessionId))?.carryInWarnings ?? [],
@@ -51,7 +55,9 @@
   let editAcquisitionDate = $state('');
   let editCostBasis = $state('');
   let editCurrency = $state('');
+  const showAccount = $derived((accounts.current?.length ?? 0) > 0 || editingId !== null);
   let editZeroConfirmed = $state(false);
+  let editAccount: string | undefined = $state(undefined);
   let editError = $state('');
   type EditField = 'symbol' | 'quantity' | 'year' | 'date' | 'cost';
   let editErrorField: EditField | null = $state(null);
@@ -80,6 +86,8 @@
     editCostBasis = row?.costBasis === undefined ? '' : String(row.costBasis);
     editCurrency = row?.currency ?? 'PLN';
     editZeroConfirmed = row?.costBasisSource === 'zero-confirmed';
+    const known = accounts.current ?? [];
+    editAccount = row ? row.account : known.length === 1 ? known[0] : undefined;
   }
 
   function startEdit(row: CarryInPositionRecord) {
@@ -108,6 +116,7 @@
       currency: editCurrency || undefined,
       // Normalized server-side: a cost (or PLN override) makes it 'user'.
       costBasisSource: editZeroConfirmed ? 'zero-confirmed' : 'missing',
+      account: editAccount,
     };
   }
 
@@ -199,6 +208,9 @@
         {/each}
       </select>
     </td>
+    {#if showAccount}
+      <td class="px-3 py-2"><AccountField id="carry-in-account" accounts={accounts.current ?? []} value={editAccount} onchange={(v) => (editAccount = v)} compact /></td>
+    {/if}
     <td class="px-3 py-2">
       <label class="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300" title={m.data_cost_zero_hint()}>
         <input type="checkbox" bind:checked={editZeroConfirmed} />
@@ -214,7 +226,7 @@
   </tr>
   {#if editError}
     <tr class="border-b border-slate-100 dark:border-slate-800">
-      <td colspan="9" class="px-3 pb-2">
+      <td colspan="10" class="px-3 pb-2">
         <p id={errorId} role="alert" class="text-xs text-red-600 dark:text-red-400">{editError}</p>
       </td>
     </tr>
@@ -252,6 +264,7 @@
             <th class="px-3 py-2">{m.data_acquisition_date()}</th>
             <th class="px-3 py-2 text-right">{m.data_cost_basis()}</th>
             <th class="px-3 py-2">{m.data_currency()}</th>
+            {#if showAccount}<th class="px-3 py-2">{m.data_account()}</th>{/if}
             <th class="px-3 py-2">{m.data_cost_status()}</th>
             <th class="px-3 py-2">{m.data_actions()}</th>
           </tr>
@@ -280,6 +293,9 @@
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{row.acquisitionDate ? formatDate(row.acquisitionDate) : '—'}</td>
                 <td class="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-slate-300">{row.costBasisPln ?? row.costBasis ?? '—'}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{row.costBasisPln === undefined ? (row.currency ?? '—') : 'PLN'}</td>
+                {#if showAccount}
+                  <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{row.account ? formatAccount(row.account) : ''}</td>
+                {/if}
                 <td class="px-3 py-2 text-xs">
                   {#if ignored}
                     <span class="text-slate-500 dark:text-slate-400">{m.data_cost_status_ignored()}</span>
