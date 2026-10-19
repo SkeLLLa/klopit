@@ -345,6 +345,33 @@ void describe('sectionGForeignFlatTax', () => {
     assert.equal(r.poz49, 19);
   });
 
+  void it('rounds the grosz-rounded dividend difference to full PLN', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: 2.6053,
+      dividendDeductiblePln: 0,
+      ...noInterest,
+    });
+    assert.equal(r.poz47, 0.5);
+    assert.equal(r.poz49, 1);
+  });
+
+  void it('clamps negative inputs to zero', () => {
+    const r = sectionGForeignFlatTax({
+      dividendIncomePln: -100,
+      dividendDeductiblePln: -5,
+      interestIncomePln: -50,
+      interestForeignTaxPln: -1,
+    });
+    assert.deepEqual([r.poz47, r.poz48, r.poz49], [0, 0, 0]);
+    const c = sectionGForeignFlatTax({
+      dividendIncomePln: 1000,
+      dividendDeductiblePln: -50,
+      ...noInterest,
+    });
+    assert.equal(c.poz48, 0);
+    assert.equal(c.poz49, 190);
+  });
+
   void it('returns zeros for no income', () => {
     const r = sectionGForeignFlatTax({ ...noDividends, ...noInterest });
     assert.deepEqual([r.poz47, r.poz48, r.poz49], [0, 0, 0]);

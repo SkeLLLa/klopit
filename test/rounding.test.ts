@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { roundToFullPln, roundToGroszUp } from '../src/core/tax/rounding.js';
+import {
+  roundToFullPln,
+  roundToGrosz,
+  roundToGroszUp,
+} from '../src/core/tax/rounding.js';
 
 void describe('roundToFullPln', () => {
   void it('rounds down below 0.5', () => {
@@ -65,5 +69,21 @@ void describe('roundToGroszUp', () => {
   void it('handles negative amounts', () => {
     // Math.ceil rounds toward zero for negatives
     assert.equal(roundToGroszUp({ amount: -1.001 }), -1);
+  });
+});
+
+void describe('roundToGrosz', () => {
+  void it('rounds half up despite float noise (1.005, 1234.565)', () => {
+    assert.equal(roundToGrosz({ amount: 1.005 }), 1.01);
+    assert.equal(roundToGrosz({ amount: 1234.565 }), 1234.57);
+  });
+
+  void it('rounds down below half a grosz', () => {
+    assert.equal(roundToGrosz({ amount: 1.0049 }), 1);
+  });
+
+  void it('keeps exact grosz amounts', () => {
+    assert.equal(roundToGrosz({ amount: 190.19 }), 190.19);
+    assert.equal(roundToGrosz({ amount: 0 }), 0);
   });
 });

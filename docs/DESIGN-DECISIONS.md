@@ -511,6 +511,12 @@ to whole złoty. Each foreign-tax credit is capped at its own part (art. 30a
 ust. 9). The calculation lives in `sectionGForeignFlatTax()`; the tax-form UI
 shows core values as given and does not re-round.
 
+The dividend part is deliberately rounded twice: poz. 47 and 48 are `zł, gr`
+amounts, so tax and credit are rounded to the grosz first, and poz. 49 is the
+difference "po zaokrągleniu do pełnych złotych" (e.g. 2.6053 zł of dividends →
+poz. 47 = 0.50 → poz. 49 = 1). Inputs to `sectionGForeignFlatTax()` are clamped
+at 0.
+
 **Implementation:**
 
 - `roundToFullPln()` for tax base and full-PLN tax fields such as PIT-38 poz. 31, 35 and the dividend part of poz. 49

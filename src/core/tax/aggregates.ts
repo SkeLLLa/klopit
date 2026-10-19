@@ -130,18 +130,27 @@ export function sectionGForeignFlatTax(args: {
   interestIncomePln: number;
   interestForeignTaxPln: number;
 }): SectionGForeignFlatTax {
-  const divTax = roundToGrosz({ amount: args.dividendIncomePln * TAX_RATE });
+  const dividendIncome = Math.max(args.dividendIncomePln, 0);
+  const dividendDeductible = Math.max(args.dividendDeductiblePln, 0);
+  const interestIncome = Math.max(args.interestIncomePln, 0);
+  const interestForeignTax = Math.max(args.interestForeignTaxPln, 0);
+
+  // Double rounding is intentional and follows the form layout: poz. 47 and 48
+  // are zł,gr amounts, while poz. 49 is "po zaokrągleniu do pełnych złotych"
+  // of poz. 47 − poz. 48. So the grosz-rounded tax and credit are subtracted
+  // first, and only then is the difference rounded to full PLN.
+  const divTax = roundToGrosz({ amount: dividendIncome * TAX_RATE });
   const divCredit = roundToGrosz({
-    amount: Math.min(args.dividendDeductiblePln, divTax),
+    amount: Math.min(dividendDeductible, divTax),
   });
   const divDue = roundToFullPln({
     amount: roundToGrosz({ amount: Math.max(divTax - divCredit, 0) }),
   });
 
-  const intBase = roundToGroszUp({ amount: args.interestIncomePln });
+  const intBase = roundToGroszUp({ amount: interestIncome });
   const intTax = roundToGroszUp({ amount: intBase * TAX_RATE });
   const intCredit = roundToGrosz({
-    amount: Math.min(args.interestForeignTaxPln, intTax),
+    amount: Math.min(interestForeignTax, intTax),
   });
   const intDue = roundToGroszUp({
     amount: Math.max(intTax - intCredit, 0),

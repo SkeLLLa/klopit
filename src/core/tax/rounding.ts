@@ -24,5 +24,5 @@ export function floorToGrosz(args: { amount: number }): number {
 
 /** Round to nearest grosz for form amounts stored with zł/gr precision. */
 export function roundToGrosz(args: { amount: number }): number {
-  return Math.round((args.amount + Number.EPSILON) * 100) / 100;
+  return Math.round(+(args.amount * 100).toFixed(10)) / 100;
 }
