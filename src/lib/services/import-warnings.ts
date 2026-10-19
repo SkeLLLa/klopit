@@ -86,7 +86,7 @@ function formatImportWarningMessage(args: {
 }): string {
   // `kind` may come from a warning persisted by another app version.
   if (args.section === 'Transfers' && args.kind === 'known-unsupported') {
-    return `${args.rowCount} stock transfers found and skipped — transferred-in shares need their original buy (enter it as a trade or carry-in) (art. 24 ust. 10)`;
+    return `${args.rowCount} stock transfers found and skipped — enter each one with "Add transfer" on the Data page (Corporate actions tab), so the shares keep their original buy (art. 24 ust. 10)`;
   }
   const format = importWarningFormatters[args.kind] as
     | ((section: string, count: string) => string)

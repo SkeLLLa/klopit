@@ -73,7 +73,25 @@ export async function deleteWithholdingTax(args: {
   await db.withholdingTaxes.delete(args.id);
 }
 
-// --- Corporate Actions (edit/delete) ---
+// --- Corporate Actions (add transfer, edit/delete) ---
+
+/**
+ * Manual transfer of shares between two accounts (not a sale; lots keep their
+ * cost and purchase date). Stored as a corporate action, so it is kept like the
+ * other rows of that table.
+ */
+export async function addTransfer(args: {
+  sessionId: string;
+  transfer: CorporateAction;
+}): Promise<number> {
+  const id = await db.corporateActions.add({
+    ...args.transfer,
+    type: 'transfer',
+    sessionId: args.sessionId,
+  });
+  if (id === undefined) throw new Error('Failed to insert transfer');
+  return id;
+}
 
 export async function updateCorporateAction(args: {
   id: number;

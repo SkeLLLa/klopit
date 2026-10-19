@@ -144,7 +144,7 @@ void describe('IBKR account stamping', () => {
     const [warning] = deriveImportWarnings({ skippedRows: result.skippedRows });
     assert.equal(
       warning.message,
-      '2 stock transfers found and skipped — transferred-in shares need their original buy (enter it as a trade or carry-in) (art. 24 ust. 10)',
+      '2 stock transfers found and skipped — enter each one with "Add transfer" on the Data page (Corporate actions tab), so the shares keep their original buy (art. 24 ust. 10)',
     );
   });
 });

@@ -19,6 +19,7 @@
   import { isSessionStale } from '$lib/utils/stale.js';
   import { formatAccount } from '$lib/utils/account.js';
   import { formatDate } from '$lib/utils/format-date.js';
+  import { transferHref } from '$lib/utils/transfer-link.js';
   import {
     calculateSessionTaxes,
     clearSessionResults,
@@ -255,6 +256,15 @@
                 })}
               {:else if warning.kind === 'transfer-suggested'}
                 {m.import_warning_transfer_suggested({
+                  symbol: warning.instrument,
+                  from: formatAccount(warning.fromAccount),
+                  to: formatAccount(warning.toAccount),
+                  quantity: String(warning.quantity),
+                  date: formatDate(warning.before),
+                })}
+                <a href={localizeHref(transferHref(warning))} class="ml-1 font-medium underline">{m.data_add_transfer()}</a>
+              {:else if warning.kind === 'transfer-shortfall'}
+                {m.import_warning_transfer_shortfall({
                   symbol: warning.instrument,
                   from: formatAccount(warning.fromAccount),
                   to: formatAccount(warning.toAccount),

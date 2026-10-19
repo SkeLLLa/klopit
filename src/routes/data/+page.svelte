@@ -14,6 +14,11 @@
   import { skippedRowsStore } from '$lib/state/skipped-rows.svelte.js';
   import { db, type SessionRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import {
+    parseTransferPrefill,
+    TRANSFER_HASH,
+    type TransferPrefill,
+  } from '$lib/utils/transfer-link.js';
   import { sessionState } from '$lib/state/session.svelte.js';
   import { useSessionBootstrap } from '$lib/utils/use-session-bootstrap.svelte.js';
   import type { ImportWarning } from '../../core/types.js';
@@ -36,8 +41,20 @@
 
   // `/data#carry-in` (linked from the dashboard and tax form) opens that tab.
   let dataTab: TabId = $state('trades');
+  // `/data?…#transfer` (from a transfer warning) opens "Add transfer" prefilled.
+  let transferPrefill: TransferPrefill | undefined = $state(undefined);
   function syncTabFromHash() {
     if (window.location.hash === '#carry-in') dataTab = 'carryIn';
+    if (window.location.hash === TRANSFER_HASH) {
+      dataTab = 'corporateActions';
+      transferPrefill = parseTransferPrefill(window.location.search);
+    }
+  }
+  function clearTransferLink() {
+    transferPrefill = undefined;
+    if (window.location.hash === TRANSFER_HASH) {
+      history.replaceState(history.state, '', window.location.pathname);
+    }
   }
   $effect(syncTabFromHash);
 
@@ -268,7 +285,12 @@
           {:else if tab === 'withholding'}
             <WithholdingTable sessionId={activeSession.id} />
           {:else if tab === 'corporateActions'}
-            <CorporateActionsTable sessionId={activeSession.id} />
+            <CorporateActionsTable
+              sessionId={activeSession.id}
+              sessionYear={activeSession.year}
+              prefill={transferPrefill}
+              onprefillused={clearTransferLink}
+            />
           {:else if tab === 'carryIn'}
             <CarryInTable sessionId={activeSession.id} sessionYear={activeSession.year} />
           {:else if tab === 'skipped'}

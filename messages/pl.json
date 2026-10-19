@@ -717,5 +717,13 @@
   "data_country_scope_both": "Oba",
   "data_country_scope_dividends": "Dywidendy",
   "data_country_scope_gains": "Zyski",
-  "data_country_pil_note": "Płatności w zastępstwie dywidendy używają kraju, który pobrał podatek, a nie tego nadpisania."
+  "data_country_pil_note": "Płatności w zastępstwie dywidendy używają kraju, który pobrał podatek, a nie tego nadpisania.",
+  "data_add_transfer": "Dodaj transfer",
+  "data_type_transfer": "transfer",
+  "data_transfer_from": "Z rachunku",
+  "data_transfer_to": "Na rachunek",
+  "data_transfer_hint": "Akcje przeniesione między Twoimi rachunkami papierów wartościowych. To nie jest sprzedaż: akcje zachowują koszt i datę nabycia, a najpierw przenoszone są najstarsze partie rachunku źródłowego.",
+  "data_transfer_same_account": "Wybierz inny rachunek",
+  "data_transfer_details": "{quantity} akcji: {from} → {to}",
+  "import_warning_transfer_shortfall": "{symbol}: transfer z rachunku {from} na {to} dnia {date} jest większy niż stan rachunku {from}: brakuje tam {quantity} akcji. Przeniesiono tylko akcje, które rachunek posiadał. Sprawdź transfer (strona Dane, zakładka Zdarzenia korporacyjne) lub dodaj brakującą historię. Do tego czasu późniejsze sprzedaże tego instrumentu na rachunku {to} są wersją roboczą."
 }

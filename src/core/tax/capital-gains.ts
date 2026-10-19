@@ -16,6 +16,8 @@ import {
   instrumentBase,
   instrumentGroup,
   instrumentNames,
+  isTransfer,
+  transferAccounts,
   UNASSIGNED_ACCOUNT,
   queueKey,
 } from './accounts.js';
@@ -27,6 +29,7 @@ import {
 import { incentiveExtraCost, isIncentiveBuy } from './incentive.js';
 import { isInTaxPeriod } from './period.js';
 import { shortfallWarnings, type ShortfallRequest } from './shortfall.js';
+import { moveLots, transferDestKey, transferSourceKeys } from './transfers.js';
 
 export { UNASSIGNED_ACCOUNT } from './accounts.js';
 
@@ -126,7 +129,27 @@ export type CarryInWarning =
       account: string;
       quantity: number;
       before: Date;
+    }
+  | {
+      /**
+       * A transfer moved fewer shares than entered: the source account held
+       * `quantity` fewer at that date. Only what existed moved; the form is a
+       * draft until the transfer or the missing history is fixed.
+       */
+      kind: 'transfer-shortfall';
+      instrument: string;
+      isin?: string;
+      fromAccount: string;
+      toAccount: string;
+      quantity: number;
+      before: Date;
     };
+
+/** A transfer asked for more shares than its source account held. */
+interface TransferShortfall {
+  action: EnrichedCorporateAction;
+  missing: number;
+}
 
 type TimelineEvent =
   | { kind: 'trade'; datetime: Date; trade: EnrichedTrade }
@@ -197,23 +220,26 @@ export function calculateCapitalGains(
     if (pos.isin && !globalIsin.has(symbol)) globalIsin.set(symbol, pos.isin);
   }
 
+  // Components built once: the join decisions and the dry runs must agree on
+  // which rows belong together.
+  const componentOf = createComponents({
+    trades: args.trades,
+    carryInPositions: args.carryInPositions,
+    corporateActions,
+    symbolToIsin: globalIsin,
+  });
   const assignArgs = {
     trades: args.trades,
     corporateActions,
     carryInPositions: args.carryInPositions,
     symbolToIsin: globalIsin,
+    componentOf,
   };
   // Unstamped rows first stand apart; they join an account only if that
   // resolves a shortfall seen in this dry run.
   let assigned = assignAccounts(assignArgs);
   if (assigned.unstamped.size > 0) {
     const apart = assigned;
-    const componentOf = createComponents({
-      trades: args.trades,
-      carryInPositions: args.carryInPositions,
-      corporateActions,
-      symbolToIsin: globalIsin,
-    });
     // Rows bucketed by component once, so each dry run sees only its own.
     interface Bucket {
       trades: EnrichedTrade[];
@@ -248,7 +274,9 @@ export function calculateCapitalGains(
       }
       const bucket = buckets.get(component);
       if (!bucket) {
-        return { shortfall: 0, shortfallByAccount: new Map(), signature: '' };
+        throw new Error(
+          `Dry run of component '${component}' (${anchor}) found no rows`,
+        );
       }
       const remap = <
         R extends { account?: string; isin?: string; symbol: string },
@@ -275,6 +303,7 @@ export function calculateCapitalGains(
               ...new Set([
                 ...trades.map((t) => t.account ?? ''),
                 ...carryInPositions.map((c) => c.account ?? ''),
+                ...transferAccounts(bucket.corporateActions),
               ]),
             ].toSorted(),
           },
@@ -291,6 +320,17 @@ export function calculateCapitalGains(
   for (const warning of assigned.warnings) args.onWarning?.(warning);
 
   const pass = runPass({ ...args, assigned, onWarning: args.onWarning });
+  for (const { action, missing } of pass.transferShortfalls) {
+    args.onWarning?.({
+      kind: 'transfer-shortfall',
+      instrument: action.symbol,
+      isin: action.isin,
+      fromAccount: action.fromAccount ?? '',
+      toAccount: action.toAccount ?? '',
+      quantity: missing,
+      before: action.datetime,
+    });
+  }
   const warnings = shortfallWarnings({
     requests: pass.shortfalls,
     accounts: assigned.accounts,
@@ -340,6 +380,15 @@ function componentStats(pass: ReturnType<typeof runPass>): ComponentStats {
       (shortfallByAccount.get(account) ?? 0) + missing,
     );
   }
+  // A transfer the source cannot cover is a shortfall of the source account.
+  for (const { action, missing } of pass.transferShortfalls) {
+    shortfall += missing;
+    const account = action.fromAccount ?? '';
+    shortfallByAccount.set(
+      account,
+      (shortfallByAccount.get(account) ?? 0) + missing,
+    );
+  }
   const signature = pass.results
     .filter((r) => r.type === 'sell')
     .map(
@@ -361,6 +410,7 @@ function runPass(
 ): {
   results: TradeResult[];
   shortfalls: ShortfallRequest[];
+  transferShortfalls: TransferShortfall[];
   timeline: TimelineEvent[];
   isinMapFor: IsinMapFor;
   sellOrigins: Map<TradeResult, EnrichedTrade>;
@@ -421,6 +471,7 @@ function runPass(
   const isNewSplit = createSplitDeduper();
   const taintedQueues = new Set<string>();
   const shortfalls: ShortfallRequest[] = [];
+  const transferShortfalls: TransferShortfall[] = [];
 
   for (const event of timeline) {
     if (event.kind === 'carry-in') {
@@ -431,6 +482,14 @@ function runPass(
         rateUnavailable: event.rateUnavailable,
         ...(event.costMissing ? { costMissing: true } : {}),
         acquiredAt: event.datetime,
+      });
+    } else if (event.kind === 'action' && event.action.type === 'transfer') {
+      processTransfer({
+        action: event.action,
+        isinMapFor,
+        taintedQueues,
+        lotQueues,
+        transferShortfalls,
       });
     } else if (event.kind === 'action') {
       processAction({
@@ -461,7 +520,14 @@ function runPass(
     }
   }
 
-  return { results, shortfalls, timeline, isinMapFor, sellOrigins };
+  return {
+    results,
+    shortfalls,
+    transferShortfalls,
+    timeline,
+    isinMapFor,
+    sellOrigins,
+  };
 }
 
 /**
@@ -474,6 +540,11 @@ function compareEvents(a: TimelineEvent, b: TimelineEvent): number {
   const timeDiff = a.datetime.getTime() - b.datetime.getTime();
   if (timeDiff !== 0) return timeDiff;
   if (a.kind !== b.kind) return KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
+  // A transfer moves lots after the splits and mergers of the same moment.
+  if (a.kind === 'action' && b.kind === 'action') {
+    const aMoves = a.action.type === 'transfer';
+    if (aMoves !== (b.action.type === 'transfer')) return aMoves ? 1 : -1;
+  }
   if (a.kind === 'trade' && b.kind === 'trade') {
     const aLot = a.trade.lotId ?? '';
     const bLot = b.trade.lotId ?? '';
@@ -552,6 +623,31 @@ function simulateHoldings(
       if (qty < -1e-9 && !shortfalls.has(key)) {
         shortfalls.set(key, { datetime: event.datetime, quantity: -qty });
       }
+    } else if (isTransfer(event.action)) {
+      const { action } = event;
+      const sources = transferSourceKeys({
+        keys: net.keys(),
+        action,
+        symbolToIsin: isinMapFor(action.fromAccount ?? ''),
+      });
+      let remaining = action.quantity ?? 0;
+      for (const key of sources) {
+        const held = net.get(key) ?? 0;
+        if (held <= 0 || remaining <= 0) continue;
+        const used = Math.min(held, remaining);
+        net.set(key, held - used);
+        remaining -= used;
+      }
+      const moved = (action.quantity ?? 0) - remaining;
+      if (moved > 0) {
+        const destKey = transferDestKey({
+          action,
+          symbolToIsin: isinMapFor(action.toAccount ?? ''),
+        });
+        net.set(destKey, (net.get(destKey) ?? 0) + moved);
+      }
+    } else if (event.action.type === 'transfer') {
+      continue;
     } else {
       const { action } = event;
       for (const { account, key } of actionTargets(action, accounts)) {
@@ -900,6 +996,45 @@ function buildCarryInEvents(args: {
     }
   }
   return seeded;
+}
+
+/**
+ * Move shares between accounts (not a disposal: no proceeds, no income). Only
+ * what the source holds moves; the rest is a shortfall and drafts the
+ * destination's later sells, because their FIFO order is then unknown.
+ */
+function processTransfer(args: {
+  action: EnrichedCorporateAction;
+  isinMapFor: IsinMapFor;
+  taintedQueues: Set<string>;
+  lotQueues: Map<string, FifoLot[]>;
+  transferShortfalls: TransferShortfall[];
+}): void {
+  const { action, lotQueues, taintedQueues } = args;
+  if (!isTransfer(action)) return;
+  const quantity = action.quantity ?? 0;
+  const sourceKeys = transferSourceKeys({
+    keys: lotQueues.keys(),
+    action,
+    symbolToIsin: args.isinMapFor(action.fromAccount ?? ''),
+  });
+  const destKey = transferDestKey({
+    action,
+    symbolToIsin: args.isinMapFor(action.toAccount ?? ''),
+  });
+  const { missing } = moveLots({
+    lotQueues,
+    sourceKeys,
+    destKey,
+    quantity,
+    epsilon: Math.min(Math.max(quantity, 1) * 1e-9, 1e-8),
+  });
+  if (missing > 0) {
+    args.transferShortfalls.push({ action, missing });
+  }
+  if (missing > 0 || sourceKeys.some((key) => taintedQueues.has(key))) {
+    taintedQueues.add(destKey);
+  }
 }
 
 function processAction(args: {

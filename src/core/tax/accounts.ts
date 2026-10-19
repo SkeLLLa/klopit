@@ -1,4 +1,5 @@
 import type {
+  CorporateAction,
   EnrichedCarryInPosition,
   EnrichedCorporateAction,
   EnrichedTrade,
@@ -62,6 +63,43 @@ export function instrumentGroup(
     symbolToIsin.get(row.symbol.toUpperCase()) ??
     row.symbol
   ).toUpperCase();
+}
+
+/**
+ * A usable transfer row: shares of one instrument move between two different
+ * accounts. Anything else typed `transfer` is ignored by the engine.
+ */
+export function isTransfer(
+  action: Pick<
+    CorporateAction,
+    'type' | 'fromAccount' | 'toAccount' | 'quantity'
+  >,
+): boolean {
+  return (
+    action.type === 'transfer' &&
+    !!action.fromAccount &&
+    !!action.toAccount &&
+    action.fromAccount !== action.toAccount &&
+    (action.quantity ?? 0) > 0
+  );
+}
+
+/** Accounts at either end of the usable transfers. */
+export function transferAccounts(
+  actions: readonly Pick<
+    CorporateAction,
+    'type' | 'fromAccount' | 'toAccount' | 'quantity'
+  >[],
+): string[] {
+  const accounts = new Set<string>();
+  for (const action of actions) {
+    if (!isTransfer(action) || !action.fromAccount || !action.toAccount) {
+      continue;
+    }
+    accounts.add(action.fromAccount);
+    accounts.add(action.toAccount);
+  }
+  return [...accounts];
 }
 
 /** Unstamped rows of one instrument in a session with several accounts. */
@@ -241,6 +279,8 @@ export function assignAccounts(args: {
   carryInPositions: EnrichedCarryInPosition[];
   symbolToIsin: Map<string, string>;
   decisions?: Map<string, JoinDecision>;
+  /** Components of the rows; built from the arguments when omitted. */
+  componentOf?: (row: { isin?: string; symbol: string }) => string;
 }): {
   trades: EnrichedTrade[];
   carryInPositions: EnrichedCarryInPosition[];
@@ -257,17 +297,27 @@ export function assignAccounts(args: {
   ]) {
     if (row.account) distinct.add(row.account);
   }
+  const transfers = args.corporateActions.filter(isTransfer);
+  for (const account of transferAccounts(transfers)) distinct.add(account);
 
   // Accounts hold components: an account with only the merger target's rows
-  // still holds what the unstamped rows of the old symbol turn into.
-  const componentOf = createComponents(args);
+  // still holds what the unstamped rows of the old symbol turn into. Both ends
+  // of a transfer hold the instrument.
+  const componentOf = args.componentOf ?? createComponents(args);
   const holders = new Map<string, Set<string>>();
   if (distinct.size > 1) {
-    for (const row of [...args.trades, ...args.carryInPositions]) {
-      if (!row.account) continue;
-      const held = holders.get(row.account) ?? new Set<string>();
+    const hold = (account: string, row: { isin?: string; symbol: string }) => {
+      const held = holders.get(account) ?? new Set<string>();
       held.add(componentOf(row));
-      holders.set(row.account, held);
+      holders.set(account, held);
+    };
+    for (const row of [...args.trades, ...args.carryInPositions]) {
+      if (row.account) hold(row.account, row);
+    }
+    for (const transfer of transfers) {
+      if (!transfer.fromAccount || !transfer.toAccount) continue;
+      hold(transfer.fromAccount, transfer);
+      hold(transfer.toAccount, transfer);
     }
   }
 
@@ -309,6 +359,7 @@ export function assignAccounts(args: {
     ...new Set([
       ...trades.map((t) => t.account),
       ...carryInPositions.map((c) => c.account),
+      ...transferAccounts(transfers),
     ]),
   ].toSorted();
   const warnings = [...unstamped].map(([group, u]): CarryInWarning => {
@@ -339,6 +390,8 @@ export function actionTargets(
   action: EnrichedCorporateAction,
   accounts: readonly string[],
 ): { account: string; key: string }[] {
+  // A transfer moves lots between queues; it is not applied to one queue.
+  if (action.type === 'transfer') return [];
   const base = instrumentBase(action);
   return (action.account ? [action.account] : accounts).map((account) => ({
     account,

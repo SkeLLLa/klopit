@@ -59,8 +59,8 @@ export const KNOWN_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
   'Bond Interest Received',
   'Transaction Fees',
   'Commission Detail',
-  // Stock transfers between accounts/brokers change FIFO lots; the user must
-  // enter them manually.
+  // Stock transfers between accounts/brokers change FIFO lots; the user enters
+  // them with "Add transfer" (the counterpart account is not reliably known).
   'Transfers',
 ]);
 

@@ -132,18 +132,25 @@ export interface RawWithholdingTax {
 
 /** Corporate action */
 export interface CorporateAction {
-  type: 'stock-split' | 'merger';
+  type: 'stock-split' | 'merger' | 'transfer';
   /**
    * Securities account the row belongs to, formatted `<brokerId>:<id>` (art. 24
-   * ust. 10 updof requires FIFO per account). Absent on legacy rows.
+   * ust. 10 updof requires FIFO per account). Absent on legacy rows. A
+   * `transfer` has no single account: see `fromAccount` / `toAccount`.
    */
   account?: string;
   symbol: string;
   isin?: string;
   datetime: Date;
-  // Stock split fields
+  // Stock split fields (a transfer stores 1 / 1)
   numerator: number;
   denominator: number;
+  // Transfer fields (only when type === 'transfer'): `quantity` shares of the
+  // instrument move from `fromAccount` to `toAccount` at `datetime`. Not a
+  // disposal: lots keep their cost and acquisition date.
+  fromAccount?: string;
+  toAccount?: string;
+  quantity?: number;
   // Merger fields (only when type === 'merger')
   targetSymbol?: string;
   targetIsin?: string;

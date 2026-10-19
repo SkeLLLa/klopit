@@ -723,5 +723,13 @@
   "data_country_scope_both": "Both",
   "data_country_scope_dividends": "Dividends",
   "data_country_scope_gains": "Gains",
-  "data_country_pil_note": "Payments in lieu use the country that withheld the tax, not this override."
+  "data_country_pil_note": "Payments in lieu use the country that withheld the tax, not this override.",
+  "data_add_transfer": "Add transfer",
+  "data_type_transfer": "transfer",
+  "data_transfer_from": "From account",
+  "data_transfer_to": "To account",
+  "data_transfer_hint": "Shares moved between your own securities accounts. It is not a sale: the shares keep their cost and purchase date, and the oldest lots of the source account move first.",
+  "data_transfer_same_account": "Choose a different account",
+  "data_transfer_details": "{quantity} shares: {from} → {to}",
+  "import_warning_transfer_shortfall": "{symbol}: the transfer from {from} to {to} on {date} is larger than what {from} held: {quantity} shares are missing there. Only the shares it held moved. Check the transfer (Data page, Corporate actions tab) or add the missing history. Until then later sales of the instrument in {to} are drafts."
 }
