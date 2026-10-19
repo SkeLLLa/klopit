@@ -216,7 +216,7 @@
       <div class="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
         <AlertTriangle size={16} />
         <span>{m.dash_rates_warning()}</span>
-        <a href="/rates" class="ml-auto font-medium underline">{m.page_rates()}</a>
+        <a href={localizeHref('/rates')} class="ml-auto font-medium underline">{m.page_rates()}</a>
       </div>
     {/if}
 
