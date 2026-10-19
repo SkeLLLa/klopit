@@ -304,8 +304,29 @@ interface SnapshotRow {
   seedQty: number;
 }
 
-/** Upper bound on shortfall passes per year (one per affected key is typical). */
-const MAX_SHORTFALL_PASSES = 50;
+/** Product of `key`'s split ratios effective in (`from`, `to`]. */
+function splitFactor(
+  events: TimelineEvent[],
+  key: string,
+  from: number,
+  to: number,
+): number {
+  let factor = 1;
+  for (const event of events) {
+    const t = event.datetime.getTime();
+    if (
+      event.kind === 'action' &&
+      event.action.type === 'stock-split' &&
+      event.action.denominator !== 0 &&
+      t > from &&
+      t <= to &&
+      lotKey(event.action) === key
+    ) {
+      factor *= event.action.numerator / event.action.denominator;
+    }
+  }
+  return factor;
+}
 
 /**
  * Turn carry-in positions into timeline events.
@@ -315,14 +336,17 @@ const MAX_SHORTFALL_PASSES = 50;
  * trades may already explain part of it. Per lot key, snapshots are processed
  * from the earliest year:
  *
- * - Imported sells that the imported history cannot cover (the holdings would go
- *   negative) sold shares held before it. They are seeded as a separate lot
- *   placed at the first such sell, priced like the oldest snapshot row.
- * - The holdings implied by imported trades and previously seeded carry-ins at
- *   the end of `year` are then compared with the snapshot. Only the unexplained
- *   difference is seeded, dropping the latest-acquired rows first. A fully
- *   explained snapshot seeds nothing (overlap warning); a snapshot below the
- *   implied holdings is reported as inconsistent and seeds nothing.
+ * - The holding implied at the end of `year` by imported trades and previously
+ *   seeded carry-ins is compared with the snapshot. The difference was held
+ *   before every imported trade since the previous snapshot: it is modelled as
+ *   one lot at the earliest row placement, priced like the oldest row. A
+ *   snapshot below the implied holding, or one that still leaves an imported
+ *   sell uncovered, is reported as inconsistent and seeds nothing.
+ * - FIFO sells that lot before any later imported buy. The part imported sells
+ *   consume is seeded at that placement; the part that survives to the end of
+ *   `year` is the unexplained share of the snapshot. The rest of the snapshot
+ *   is explained by imported buys (overlap warning): the latest-acquired rows
+ *   are dropped first and the remaining rows are seeded at their placement.
  * - Key: falls back to the ISIN of a trade / corporate action with the same
  *   symbol (IBKR MTM rows, old DB rows and cross-file imports lack an ISIN).
  * - Date: `acquisitionDate`; otherwise just before the earliest imported trade
@@ -389,6 +413,7 @@ function buildCarryInEvents(args: {
 
     // Place every snapshot row of this year.
     const placedByKey = new Map<string, SnapshotRow[]>();
+    const historyStart = new Map<string, number>();
     for (const [key, byYear] of snapshots) {
       const rows = byYear.get(year);
       if (!rows) continue;
@@ -407,39 +432,18 @@ function buildCarryInEvents(args: {
         yearEnd,
         periodStart - 1000,
       );
-      placedByKey.set(
+      const placed = rows
+        .map((pos) => ({
+          pos,
+          datetime: pos.acquisitionDate ?? new Date(undatedTime),
+          seedQty: pos.quantity,
+        }))
+        .toSorted((a, b) => a.datetime.getTime() - b.datetime.getTime());
+      placedByKey.set(key, placed);
+      historyStart.set(
         key,
-        rows
-          .map((pos) => ({
-            pos,
-            datetime: pos.acquisitionDate ?? new Date(undatedTime),
-            seedQty: pos.quantity,
-          }))
-          .toSorted((a, b) => a.datetime.getTime() - b.datetime.getTime()),
+        Math.min(undatedTime, placed[0].datetime.getTime()),
       );
-    }
-
-    // Imported sells the history cannot cover: seed the missing shares at the
-    // first such sell, one pass per shortfall (later sells may need more).
-    for (let pass = 0; pass < MAX_SHORTFALL_PASSES; pass++) {
-      const { shortfalls } = simulate(yearEnd);
-      let added = false;
-      for (const [key, placed] of placedByKey) {
-        const shortfall = shortfalls.get(key);
-        if (!shortfall) continue;
-        const oldest = placed[0].pos;
-        seeded.push({
-          kind: 'carry-in',
-          datetime: shortfall.datetime,
-          key,
-          quantity: shortfall.quantity,
-          costPerSharePln: oldest.costPln / oldest.quantity,
-          costMissing: oldest.costMissing,
-          rateUnavailable: oldest.rateUnavailable,
-        });
-        added = true;
-      }
-      if (!added) break;
     }
 
     const { holdings } = simulate(yearEnd);
@@ -447,10 +451,33 @@ function buildCarryInEvents(args: {
       const first = placed[0].pos;
       const snapshotQty = placed.reduce((sum, row) => sum + row.seedQty, 0);
       const implied = holdings.get(key) ?? 0;
-      const diff = snapshotQty - implied;
       const eps = Math.max(snapshotQty, 1) * 1e-9;
+      const start = historyStart.get(key) ?? yearEnd;
+      const startFactor = splitFactor(events, key, start, yearEnd);
+      // Shares the imported history does not explain (end-of-`year` units),
+      // provisionally one lot older than every imported trade since the
+      // previous snapshot, priced like the oldest row.
+      const unexplained = snapshotQty - implied;
+      const historyLot = (quantity: number): TimelineEvent => ({
+        kind: 'carry-in',
+        datetime: new Date(start),
+        key,
+        quantity: quantity / startFactor,
+        costPerSharePln: (first.costPln / first.quantity) * startFactor,
+        costMissing: first.costMissing,
+        rateUnavailable: first.rateUnavailable,
+      });
 
-      if (diff < -eps) {
+      const inconsistent =
+        unexplained < -eps ||
+        simulateHoldings(
+          [...events, ...seeded, historyLot(Math.max(unexplained, 0))].toSorted(
+            compareEvents,
+          ),
+          yearEnd,
+          symbolToIsin,
+        ).shortfalls.has(key);
+      if (inconsistent) {
         args.onWarning?.({
           kind: 'carry-in-inconsistent',
           symbol: first.symbol,
@@ -462,9 +489,35 @@ function buildCarryInEvents(args: {
         continue;
       }
 
-      // Imported trades explain part (or all) of the snapshot: drop the
+      // FIFO: later sells consume that oldest lot before any imported buy, so
+      // what survives of it at the end of `year` is the part of the snapshot
+      // the imported buys do not explain. The rest of it was sold by imported
+      // sells and is seeded at `start`.
+      const withoutLaterBuys = [...events, ...seeded].filter(
+        (e) =>
+          !(
+            e.kind === 'trade' &&
+            e.trade.type === 'buy' &&
+            lotKey(e.trade) === key &&
+            e.datetime.getTime() > start
+          ),
+      );
+      const left =
+        simulateHoldings(
+          [...withoutLaterBuys, historyLot(unexplained)].toSorted(
+            compareEvents,
+          ),
+          yearEnd,
+          symbolToIsin,
+        ).holdings.get(key) ?? 0;
+      const survives = Math.min(Math.max(left, 0), unexplained);
+      if (unexplained - survives > eps) {
+        seeded.push(historyLot(unexplained - survives));
+      }
+
+      // Imported buys explain the rest of the snapshot: drop the
       // latest-acquired shares first.
-      const covered = Math.min(Math.max(snapshotQty - diff, 0), snapshotQty);
+      const covered = snapshotQty - survives;
       if (covered > eps) {
         let remaining = covered;
         for (const row of placed.toReversed()) {
@@ -499,20 +552,13 @@ function buildCarryInEvents(args: {
 
       for (const row of placed) {
         if (row.seedQty <= eps) continue;
-        let splitFactor = 1;
-        for (const event of events) {
-          if (
-            event.kind === 'action' &&
-            event.action.type === 'stock-split' &&
-            event.action.denominator !== 0 &&
-            event.datetime.getTime() > row.datetime.getTime() &&
-            event.datetime.getTime() <= yearEnd &&
-            lotKey(event.action) === key
-          ) {
-            splitFactor *= event.action.numerator / event.action.denominator;
-          }
-        }
-        const quantity = row.seedQty / splitFactor;
+        const factor = splitFactor(
+          events,
+          key,
+          row.datetime.getTime(),
+          yearEnd,
+        );
+        const quantity = row.seedQty / factor;
         const costPln = (row.pos.costPln * row.seedQty) / row.pos.quantity;
         seeded.push({
           kind: 'carry-in',

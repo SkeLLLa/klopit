@@ -1838,7 +1838,7 @@ void describe('carry-in snapshots (regressions)', () => {
     );
   });
 
-  void it('N2: shares sold before a dated carry-in are seeded at the sell', () => {
+  void it('N2: shares sold before a dated carry-in keep the imported buy', () => {
     const warnings: CarryInWarning[] = [];
     const result = calculateCapitalGains({
       trades: [
@@ -1996,5 +1996,156 @@ void describe('carry-in snapshots (regressions)', () => {
       warnings.map((w) => w.kind),
       ['carry-in-overlap'],
     );
+  });
+
+  function plnBuy(quantity: number, datetime: Date, price = 40): EnrichedTrade {
+    return plnTrade({ type: 'buy', quantity, price, datetime });
+  }
+
+  const split2023: EnrichedCorporateAction = {
+    type: 'stock-split',
+    symbol: 'AAPL',
+    isin: ISIN,
+    datetime: new Date(2023, 3, 1),
+    numerator: 2,
+    denominator: 1,
+    cashExchangeRate: 0,
+    cashRateUnavailable: false,
+  };
+
+  void it('R1: shares sold before the snapshot do not displace a later imported buy', () => {
+    const result = calculateCapitalGains({
+      trades: [
+        plnBuy(5, new Date(2023, 2, 1)),
+        sell(8, new Date(2023, 5, 1)),
+        sell(6, new Date(2024, 5, 15)),
+      ],
+      corporateActions: [],
+      carryInPositions: [carryIn({ quantity: 10 })],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    // 5 carry-in shares (no cost) + 1 of the 40 PLN buy
+    assert.equal(result[0].costPln, 40);
+    assert.equal(result[0].costBasisMissing, true);
+  });
+
+  void it('R1k: the same with a known carry-in cost', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        plnBuy(5, new Date(2023, 2, 1)),
+        sell(8, new Date(2023, 5, 1)),
+        sell(6, new Date(2024, 5, 15)),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({ quantity: 10, costPln: 100, costMissing: false }),
+      ],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.equal(result.length, 1);
+    // 5 carry-in shares at 10 PLN + 1 of the 40 PLN buy
+    assert.ok(Math.abs(result[0].costPln - 90) < 1e-9);
+    assert.equal(result[0].costBasisMissing, undefined);
+    const overlap = warnings.find((w) => w.kind === 'carry-in-overlap');
+    assert.ok(overlap?.kind === 'carry-in-overlap');
+    assert.equal(overlap.coveredQuantity, 5);
+    assert.ok(warnings.some((w) => w.kind === 'carry-in-cost-prorated'));
+  });
+
+  void it('R2: a dated row duplicating an imported buy is dropped, not the older row', () => {
+    const result = calculateCapitalGains({
+      trades: [
+        plnBuy(5, new Date(2023, 2, 1)),
+        sell(8, new Date(2023, 5, 1)),
+        sell(10, new Date(2024, 5, 15)),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({
+          quantity: 5,
+          acquisitionDate: new Date(2020, 0, 1),
+          costPln: 50,
+          costMissing: false,
+        }),
+        carryIn({
+          quantity: 5,
+          acquisitionDate: new Date(2023, 2, 1),
+          costPln: 200,
+          costMissing: false,
+        }),
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    // 5 shares of row A (10 PLN each) + the 5 imported shares at 40 PLN
+    assert.ok(Math.abs(result[0].costPln - 250) < 1e-9);
+  });
+
+  void it('R3: shares sold before a split are seeded in pre-split units', () => {
+    for (const acquisitionDate of [undefined, new Date(2020, 0, 1)]) {
+      const result = calculateCapitalGains({
+        trades: [
+          sell(2, new Date(2023, 2, 1)),
+          sell(4, new Date(2023, 5, 1)),
+          sell(6, new Date(2024, 5, 15)),
+        ],
+        corporateActions: [split2023],
+        carryInPositions: [
+          carryIn({
+            quantity: 6,
+            acquisitionDate,
+            costPln: 600,
+            costMissing: false,
+          }),
+        ],
+        taxPeriod: taxPeriod2024,
+      });
+      const sells = result.filter((r) => r.type === 'sell');
+      assert.equal(sells.length, 1);
+      assert.ok(Math.abs(sells[0].costPln - 600) < 1e-9);
+    }
+  });
+
+  void it('R4: two uncovered sells around an imported buy', () => {
+    const result = calculateCapitalGains({
+      trades: [
+        sell(3, new Date(2023, 2, 1)),
+        plnBuy(2, new Date(2023, 3, 1)),
+        sell(5, new Date(2023, 5, 1)),
+        sell(4, new Date(2024, 5, 15)),
+      ],
+      corporateActions: [],
+      carryInPositions: [
+        carryIn({ quantity: 4, costPln: 40, costMissing: false }),
+      ],
+      taxPeriod: taxPeriod2024,
+    });
+    assert.equal(result.length, 1);
+    // 2 carry-in shares at 10 PLN + the 2 imported shares at 40 PLN
+    assert.ok(Math.abs(result[0].costPln - 100) < 1e-9);
+  });
+
+  void it('R5b: a snapshot equal to the imported buy FIFO leaves is ignored', () => {
+    const warnings: CarryInWarning[] = [];
+    const result = calculateCapitalGains({
+      trades: [
+        plnBuy(5, new Date(2023, 2, 1)),
+        sell(8, new Date(2023, 5, 1)),
+        sell(5, new Date(2024, 5, 15)),
+      ],
+      corporateActions: [],
+      carryInPositions: [carryIn({ quantity: 5 })],
+      taxPeriod: taxPeriod2024,
+      onWarning: (w) => warnings.push(w),
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].costPln, 200);
+    assert.equal(result[0].costBasisMissing, undefined);
+    const overlap = warnings.find((w) => w.kind === 'carry-in-overlap');
+    assert.ok(overlap?.kind === 'carry-in-overlap');
+    assert.equal(overlap.coveredQuantity, 5);
   });
 });
