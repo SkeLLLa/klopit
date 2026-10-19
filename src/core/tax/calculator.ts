@@ -143,7 +143,8 @@ export function calculateTaxes(args: CalculateTaxesArgs): TaxCalculationResult {
     trades: tradeResults,
     dividends: dividendResults,
     showDividends: showDividendsInPitZg ?? false,
-    polishTaxDuePln: summary.capitalGainTaxPostLcfPln,
+    taxBeforeCreditPln: pit38[33],
+    totalIncomePln: pit38[28],
   });
 
   return {

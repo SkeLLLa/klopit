@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildPitZg, requiredPitZg } from '../src/core/tax/pit-zg.js';
+import {
+  buildPitZg,
+  creditableGainsForeignTaxPln,
+  requiredPitZg,
+} from '../src/core/tax/pit-zg.js';
 import type { DividendResult, TradeResult } from '../src/core/types.js';
 
 function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
@@ -49,6 +53,24 @@ function makeDivResult(
     ...overrides,
   };
 }
+
+const sell = (country: string, gain: number, tax: number) =>
+  makeSellResult({
+    country,
+    proceedsPln: 10000 + Math.max(gain, 0),
+    costPln: 10000 + Math.max(-gain, 0),
+    foreignTaxPln: tax,
+  });
+const run = (trades: TradeResult[], t: number, d: number) =>
+  creditableGainsForeignTaxPln(
+    buildPitZg({
+      trades,
+      dividends: [],
+      showDividends: false,
+      taxBeforeCreditPln: t,
+      totalIncomePln: d,
+    }),
+  );
 
 void describe('buildPitZg', () => {
   void it('returns empty array for no results', () => {
@@ -355,7 +377,8 @@ void describe('buildPitZg', () => {
       ],
       dividends: [],
       showDividends: false,
-      polishTaxDuePln: 0,
+      taxBeforeCreditPln: 0,
+      totalIncomePln: 1000,
     });
     assert.equal(result[0].creditableForeignTaxPln, 0);
     assert.equal(result[0].required, false);
@@ -379,12 +402,55 @@ void describe('buildPitZg', () => {
       ],
       dividends: [],
       showDividends: false,
-      polishTaxDuePln: 100,
+      taxBeforeCreditPln: 100,
+      totalIncomePln: 3000,
     });
     const de = result.find((entry) => entry.country === 'DE');
     const fr = result.find((entry) => entry.country === 'FR');
     // DE: 100 * 2000/3000, FR: 100 * 1000/3000
     assert.ok(Math.abs((de?.creditableForeignTaxPln ?? 0) - 66.6667) < 0.001);
     assert.ok(Math.abs((fr?.creditableForeignTaxPln ?? 0) - 33.3333) < 0.001);
+  });
+
+  void describe('poz. 34 fixtures', () => {
+    void it('Z1 loss elsewhere, two taxed countries', () => {
+      assert.equal(
+        run(
+          [sell('DE', 2000, 100), sell('IL', 1000, 150), sell('US', -1500, 0)],
+          285,
+          1500,
+        ),
+        250,
+      );
+    });
+    void it('Z2 partly taxed country', () => {
+      assert.equal(
+        run([sell('US', 1000, 300), sell('US', 4000, 0)], 950, 5000),
+        190,
+      );
+    });
+    void it('Z3 loss carry-forward, single country', () => {
+      assert.equal(run([sell('DE', 2000, 380)], 190, 2000), 190);
+    });
+    void it('Z4 domestic loss', () => {
+      assert.equal(
+        run([sell('PL', -1000, 0), sell('DE', 2000, 300)], 190, 1000),
+        190,
+      );
+    });
+    void it('Z5 rounding from poz. 33', () => {
+      assert.equal(run([sell('DE', 1000.4, 1000)], 190, 1000.4), 190);
+    });
+    void it('Z6 no foreign tax', () => {
+      const list = buildPitZg({
+        trades: [sell('DE', 2000, 0)],
+        dividends: [],
+        showDividends: false,
+        taxBeforeCreditPln: 380,
+        totalIncomePln: 2000,
+      });
+      assert.equal(creditableGainsForeignTaxPln(list), 0);
+      assert.equal(requiredPitZg(list).length, 0);
+    });
   });
 });
