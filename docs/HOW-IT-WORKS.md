@@ -960,7 +960,13 @@ The app supports **three languages:**
 
 - Delete a session = clears entire database for that year
 - Clear browser cache/cookies = entire local database is lost
-- Recommend: export or screenshot your tax form before clearing
+- Recommend: export a backup (Settings → Backup) or screenshot your tax form before clearing
+
+### Backup and restore
+
+Settings → Backup exports every input table (sessions, trades, dividends, withholding taxes, carry-in positions, fees, credit interest, corporate actions including transfers, prior losses and country overrides, with all account fields and manual entries) to a JSON file. Dates are stored as tagged ISO strings and revived on import. Calculated results and the NBP rate cache are not exported; they are recomputed.
+
+Import replaces all local data in one transaction after a confirmation. Calculated sessions are then marked stale (same mechanism as the schema upgrades), so you recalculate to rebuild results. Backups from a newer app version, or from an older database schema, are rejected with a message: replaying the upgrade chain in a temporary database would require keeping every historical store definition in the app.
 
 ---
 
@@ -981,7 +987,7 @@ The app supports **three languages:**
 
 ### Known limitations
 
-- No automatic backup — data is local only. Export results before clearing browser storage.
+- No automatic backup — data is local only. Export a backup (Settings → Backup) before clearing browser storage.
 - No password-protected sessions — anyone with access to your computer can see data
 - PIT-38(18) form fields only — changes annually
 
