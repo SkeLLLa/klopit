@@ -7,13 +7,19 @@ import { afterEach, describe, it, mock } from 'node:test';
 (globalThis as unknown as { $state: <T>(value: T) => T }).$state = (value) =>
   value;
 
-const [{ db }, { importFile }, { createSession }, { ibiDefinition }] =
-  await Promise.all([
-    import('../src/lib/db.js'),
-    import('../src/lib/services/import.js'),
-    import('../src/lib/services/session.js'),
-    import('../src/core/parsers/ibi/index.js'),
-  ]);
+const [
+  { db },
+  { importFile },
+  { createSession },
+  { ibiDefinition },
+  { listSessionAccounts },
+] = await Promise.all([
+  import('../src/lib/db.js'),
+  import('../src/lib/services/import.js'),
+  import('../src/lib/services/session.js'),
+  import('../src/core/parsers/ibi/index.js'),
+  import('../src/lib/services/accounts.js'),
+]);
 
 void describe('importFile account stamping', () => {
   afterEach(async () => {
@@ -107,5 +113,72 @@ void describe('importFile account stamping', () => {
       .equals(session.id)
       .toArray();
     assert.equal(carry[0]?.account, 'ibi:default');
+  });
+
+  void it('stamps the statement account on IBKR rows and lists session accounts', async () => {
+    const session = await createSession({ year: 2024 });
+    const text = readFileSync(
+      join(import.meta.dirname, 'fixtures', 'ib', 'full-statement.csv'),
+      'utf-8',
+    );
+    await importFile({
+      sessionId: session.id,
+      brokerId: 'ibkr',
+      fileName: 'full-statement.csv',
+      fileSize: text.length,
+      file: new File([text], 'full-statement.csv'),
+    });
+    const trades = await db.trades
+      .where('sessionId')
+      .equals(session.id)
+      .toArray();
+    assert.ok(trades.length > 0);
+    assert.ok(trades.every((t) => t.account === 'ibkr:U0000000'));
+    assert.deepEqual(await listSessionAccounts({ sessionId: session.id }), [
+      'ibkr:U0000000',
+    ]);
+  });
+
+  void it('listSessionAccounts returns distinct sorted accounts across tables', async () => {
+    const session = await createSession({ year: 2024 });
+    const other = await createSession({ year: 2024 });
+    const trade = {
+      symbol: 'A',
+      currency: 'USD',
+      datetime: new Date(2024, 0, 1),
+      quantity: 1,
+      price: 1,
+      proceeds: 1,
+      commission: 0,
+      commissionCurrency: 'USD',
+      type: 'buy' as const,
+    };
+    await db.trades.bulkAdd([
+      { ...trade, sessionId: session.id, account: 'manual:b' },
+      { ...trade, sessionId: session.id, account: 'manual:b' },
+      { ...trade, sessionId: session.id },
+      { ...trade, sessionId: other.id, account: 'ibkr:OTHER' },
+    ]);
+    await db.carryInPositions.add({
+      sessionId: session.id,
+      symbol: 'A',
+      quantity: 1,
+      year: 2023,
+      account: 'ibkr:U1',
+    });
+    await db.corporateActions.add({
+      sessionId: session.id,
+      type: 'stock-split',
+      symbol: 'A',
+      datetime: new Date(2024, 1, 1),
+      numerator: 2,
+      denominator: 1,
+      account: 'ibi:default',
+    });
+    assert.deepEqual(await listSessionAccounts({ sessionId: session.id }), [
+      'ibi:default',
+      'ibkr:U1',
+      'manual:b',
+    ]);
   });
 });

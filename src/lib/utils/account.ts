@@ -12,8 +12,17 @@ export function formatAccount(account: string): string {
   return id;
 }
 
-/** Stores a user-typed label as a manual account; blank → undefined. */
-export function manualAccount(label: string): string | undefined {
+/**
+ * Turns a user-typed label into a manual account; blank → undefined. Reuses an
+ * existing account whose value matches case-insensitively.
+ */
+export function manualAccount(
+  label: string,
+  existing: readonly string[] = [],
+): string | undefined {
   const trimmed = label.trim();
-  return trimmed ? `${MANUAL_ACCOUNT_PREFIX}${trimmed}` : undefined;
+  if (!trimmed) return undefined;
+  const value = `${MANUAL_ACCOUNT_PREFIX}${trimmed}`;
+  const key = value.toLowerCase();
+  return existing.find((account) => account.toLowerCase() === key) ?? value;
 }

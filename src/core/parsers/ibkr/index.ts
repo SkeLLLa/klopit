@@ -248,24 +248,21 @@ class InteractiveBrokersParser extends CsvStatementParser {
   override finish(): ParsedStatement {
     const fallback = this.defaultAccount();
     if (fallback) {
+      let fallbackRows = 0;
       for (const row of [
         ...this.trades,
         ...this.carryInPositions,
         ...this.corporateActions,
       ]) {
-        row.account ??= fallback;
+        if (row.account === undefined) {
+          row.account = fallback;
+          fallbackRows++;
+        }
       }
-    }
-    if (this.accounts.length > 1) {
-      const perRow = [
-        'Trades',
-        'Mark-to-Market Performance Summary',
-        'Corporate Actions',
-      ].some((section) => this.headerFor(section)?.includes('Account'));
-      if (!perRow) {
+      if (this.accounts.length > 1 && fallbackRows > 0) {
         this.addWarning({
           section: 'Account Information',
-          message: `Statement lists ${this.accounts.length} accounts (${this.accounts.join(', ')}) but rows carry no account column — all rows attributed to ${this.accounts[0]}`,
+          message: `Statement lists ${this.accounts.length} accounts; ${fallbackRows} rows have no per-row account and were attributed to the first one — check account assignment`,
         });
       }
     }

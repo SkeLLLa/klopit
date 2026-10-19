@@ -66,10 +66,52 @@ void describe('IBKR account stamping', () => {
       ].join('\n'),
     );
     assert.equal(result.trades[0]?.account, 'ibkr:U1111111');
-    assert.equal(
-      result.warnings.filter((w) => w.section === 'Account Information').length,
-      1,
+    const warnings = result.warnings.filter(
+      (w) => w.section === 'Account Information',
     );
+    assert.equal(warnings.length, 1);
+    assert.ok(!warnings[0]?.message.includes('U1111111'));
+    assert.ok(!warnings[0]?.message.includes('U2222222'));
+  });
+
+  void it('warns when only some sections or cells lack a per-row account', () => {
+    const result = parseText(
+      [
+        'Account Information,Header,Field Name,Field Value',
+        'Account Information,Data,Account,U1111111',
+        'Account Information,Data,Account,U2222222',
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Account,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee',
+        'Trades,Data,Order,Stocks,USD,U2222222,AAPL,"2024-03-15, 10:30:00",10,175.50,175.50,-1755,-1',
+        'Trades,Data,Order,Stocks,USD,,MSFT,"2024-03-16, 10:30:00",5,400,400,-2000,-1',
+        'Mark-to-Market Performance Summary,Header,Asset Category,Symbol,Prior Quantity,Current Quantity',
+        'Mark-to-Market Performance Summary,Data,Stocks,AAPL,5,2',
+      ].join('\n'),
+    );
+    assert.deepEqual(
+      result.trades.map((t) => t.account),
+      ['ibkr:U2222222', 'ibkr:U1111111'],
+    );
+    assert.equal(result.carryInPositions[0]?.account, 'ibkr:U1111111');
+    const warnings = result.warnings.filter(
+      (w) => w.section === 'Account Information',
+    );
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0]?.message ?? '', /2 rows/);
+  });
+
+  void it('reads per-row Account in MTM and Corporate Actions sections', () => {
+    const result = parseText(
+      [
+        'Account Information,Header,Field Name,Field Value',
+        'Account Information,Data,Account,U1111111',
+        'Mark-to-Market Performance Summary,Header,Asset Category,Account,Symbol,Prior Quantity,Current Quantity',
+        'Mark-to-Market Performance Summary,Data,Stocks,U3333333,AAPL,5,2',
+        'Corporate Actions,Header,Asset Category,Currency,Account,Report Date,Date/Time,Description,Quantity,Proceeds,Value,Realized P/L,Code',
+        'Corporate Actions,Data,Stocks,USD,U3333333,2024-06-10,"2024-06-09, 20:25:00","NVDA(US67066G1040) Split 10 for 1 (NVDA, NVIDIA CORP, US67066G1040)",180,0,0,0,',
+      ].join('\n'),
+    );
+    assert.equal(result.carryInPositions[0]?.account, 'ibkr:U3333333');
+    assert.equal(result.corporateActions[0]?.account, 'ibkr:U3333333');
   });
 
   void it('leaves account unset when the statement has none', () => {
@@ -100,7 +142,7 @@ void describe('IBKR account stamping', () => {
     const [warning] = deriveImportWarnings({ skippedRows: result.skippedRows });
     assert.equal(
       warning.message,
-      '2 stock transfers found — add a transfer on the Data page (art. 24 ust. 10)',
+      '2 stock transfers found and skipped — transferred-in shares need their original buy (enter it as a trade or carry-in) (art. 24 ust. 10)',
     );
   });
 });

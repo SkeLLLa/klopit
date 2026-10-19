@@ -136,7 +136,7 @@
                 <td class="px-3 py-2"><input type="text" aria-label={m.data_isin()} bind:value={editIsin} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 <td class="px-3 py-2"><input type="datetime-local" aria-label={m.data_datetime()} bind:value={editDatetime} onkeydown={handleKeydown} class="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" /></td>
                 {#if showAccount}
-                  <td class="px-3 py-2"><AccountField id="ca-account" accounts={accounts.current ?? []} bind:value={editAccount} compact /></td>
+                  <td class="px-3 py-2"><AccountField id="ca-account" accounts={accounts.current ?? []} value={editAccount} onchange={(v) => (editAccount = v)} compact /></td>
                 {/if}
                 <td class="px-3 py-2">
                   {#if editType === 'stock-split'}

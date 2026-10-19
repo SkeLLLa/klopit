@@ -60,7 +60,11 @@
   let commission = $state(seed?.commission?.toString() ?? '0');
   let commissionCurrency = $state(seed?.commissionCurrency ?? '');
   let currency = $state(seed?.currency ?? 'USD');
-  let account: string | undefined = $state(seed?.account);
+  let accountChoice: string | undefined = $state(seed?.account);
+  // The session's only account is preselected until the user picks another.
+  const account = $derived(
+    accountChoice ?? (accounts.length === 1 ? accounts[0] : undefined),
+  );
   let errors: Record<string, string> = $state({});
 
   // Anchor the picker view to the session year when no date is set yet.
@@ -162,7 +166,7 @@
       commission: comm,
       commissionCurrency: (commissionCurrency.trim() || currency.trim()).toUpperCase(),
       type,
-      account: account ?? (accounts.length === 1 ? accounts[0] : undefined),
+      account,
     });
   }
 </script>
@@ -224,12 +228,10 @@
       <label for="trade-comm-currency" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_commission_currency()}</label>
       <input id="trade-comm-currency" type="text" bind:value={commissionCurrency} placeholder={currency} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
     </div>
-    {#if accounts.length > 1}
-      <div>
+    <div>
         <label for="trade-account" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_account()}</label>
-        <AccountField id="trade-account" {accounts} bind:value={account} />
-      </div>
-    {/if}
+        <AccountField id="trade-account" {accounts} value={account} onchange={(v) => (accountChoice = v)} />
+    </div>
   </div>
   <div class="flex justify-end gap-2">
     <button type="button" onclick={oncancel} class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700">
