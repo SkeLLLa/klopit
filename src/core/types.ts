@@ -219,7 +219,7 @@ export interface TradeResult {
   exchangeRate: number;
   proceedsPln: number;
   costPln: number;
-  /** Sell commission in PLN, already included in costPln (0 for non-sells). */
+  /** Sell commission in PLN, already included in costPln (unset for non-sells). */
   sellCommissionPln?: number;
   gainLossPln: number;
   rateUnavailable: boolean;
