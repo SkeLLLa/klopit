@@ -10,6 +10,8 @@ export const load = () => {
         year: String(filingYear),
         deadlineYear: String(deadlineYear),
       }),
+      datePublished: '2026-04-18',
+      dateModified: '2026-10-19',
     },
   };
 };

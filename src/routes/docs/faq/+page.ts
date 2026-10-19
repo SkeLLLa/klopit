@@ -27,6 +27,8 @@ export const load = () => {
     meta: {
       title: m.page_faq_meta_title(),
       description: m.page_faq_meta_description(),
+      datePublished: '2026-04-12',
+      dateModified: '2026-10-19',
       jsonLd: {
         '@type': 'FAQPage',
         '@id': `${pageUrl}#faq`,
