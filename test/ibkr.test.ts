@@ -539,5 +539,106 @@ void describe('InteractiveBrokersParser', () => {
       );
       assert.equal(failures.length, 2);
     });
+
+    void it('rejects trades when Comm/Fee is missing', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds',
+        'Trades,Data,Order,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60',
+      ]);
+      assert.equal(result.trades.length, 0);
+      assert.equal(result.warnings.length, 1);
+      assert.match(result.warnings[0].message, /Comm\/Fee\/Comm in USD/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('rejects trades when DataDiscriminator is missing', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee',
+        'Trades,Data,Stocks,USD,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-1.00',
+      ]);
+      assert.equal(result.trades.length, 0);
+      assert.match(result.warnings[0].message, /DataDiscriminator/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('attributes Comm in USD to USD for non-USD trades', () => {
+      const result = parseLines([
+        ...stmt,
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm in USD',
+        'Trades,Data,Order,Stocks,EUR,AAPL,"2024-06-20, 14:15:00",-8,195.20,195.20,1561.60,-2.50',
+      ]);
+      assert.equal(result.trades.length, 1);
+      assert.equal(result.trades[0].currency, 'EUR');
+      assert.equal(result.trades[0].commissionCurrency, 'USD');
+    });
+
+    void it('rejects Financial Instrument Information without Asset Category', () => {
+      const result = parseLines([
+        'Financial Instrument Information,Header,Symbol,Description,Conid,Security ID',
+        'Financial Instrument Information,Data,AAPL,APPLE INC,265598,US0378331005',
+      ]);
+      assert.equal(result.symbolToIsin.size, 0);
+      assert.match(result.warnings[0].message, /Asset Category/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('does not reject Options headers lacking Security ID', () => {
+      const result = parseLines([
+        'Financial Instrument Information,Header,Asset Category,Symbol,Description,Conid',
+        'Financial Instrument Information,Data,Equity and Index Options,AAPL 240621C00200000,APPLE,1234',
+      ]);
+      assert.equal(result.warnings.length, 0);
+      assert.equal(result.skippedRows.length, 0);
+    });
+
+    void it('rejects carry-in rows when Prior Quantity is missing', () => {
+      const result = parseLines([
+        'Mark-to-Market Performance Summary,Header,Asset Category,Symbol,Current Quantity',
+        'Mark-to-Market Performance Summary,Data,Stocks,AAPL,30',
+      ]);
+      assert.equal(result.carryInPositions.length, 0);
+      assert.match(result.warnings[0].message, /Prior Quantity/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('rejects corporate actions when Quantity is missing', () => {
+      const result = parseLines([
+        'Corporate Actions,Header,Asset Category,Currency,Report Date,Date/Time,Description,Proceeds,Value',
+        'Corporate Actions,Data,Stocks,USD,2024-06-10,"2024-06-09, 20:25:00","NVDA(US67066G1040) Split 10 for 1 (NVDA, NVIDIA CORP, US67066G1040)",0,0',
+      ]);
+      assert.equal(result.corporateActions.length, 0);
+      assert.match(result.warnings[0].message, /Quantity/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
+
+    void it('rejects dividend accruals when Code is missing', () => {
+      const result = parseLines([
+        'Change in Dividend Accruals,Header,Asset Category,Currency,Symbol,Date,Ex Date,Pay Date,Quantity,Tax,Fee',
+        'Change in Dividend Accruals,Data,Stocks,USD,MHPC,2025-12-25,2025-12-26,2026-01-22,200,0,4',
+      ]);
+      assert.equal(result.transactionFees.length, 0);
+      assert.match(result.warnings[0].message, /Code/);
+      assert.equal(
+        result.skippedRows.filter((r) => r.kind === 'parse-failure').length,
+        1,
+      );
+    });
   });
 });

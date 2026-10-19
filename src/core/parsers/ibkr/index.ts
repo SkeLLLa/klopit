@@ -1,4 +1,5 @@
 import { BrokerId } from '../../types.js';
+import type { RawDividend } from '../../types.js';
 import { CsvStatementParser } from '../shared/csv-parser.js';
 import {
   cleanField,
@@ -46,6 +47,7 @@ const MERGER_RE =
 
 class InteractiveBrokersParser extends CsvStatementParser {
   private warnedHeaders = new Set<string>();
+  private trimmedHeaders = new WeakMap<string[], string[]>();
 
   protected getBrokerId(): string {
     return 'ibkr';
@@ -114,44 +116,83 @@ class InteractiveBrokersParser extends CsvStatementParser {
     }
   }
 
+  /** Trimmed header row for a section (cached per captured header). */
+  private headerFor(section: string): string[] | undefined {
+    const raw = this.getSectionHeader(section);
+    if (!raw) return undefined;
+    let header = this.trimmedHeaders.get(raw);
+    if (!header) {
+      header = raw.map((name) => name.trim());
+      this.trimmedHeaders.set(raw, header);
+    }
+    return header;
+  }
+
   /**
    * Resolves a column index by header name. Header indices line up with Data
-   * row fields (both include the section name and Header/Data columns). Falls
-   * back to the historical fixed index when no header was captured, and returns
-   * -1 when a header exists but lacks every candidate name.
+   * row fields (both include the section name and Header/Data columns). Returns
+   * -1 when a header exists but lacks every candidate name. The fixed fallback
+   * index exists only for header-less input (a Data row with no preceding
+   * Header row); it is never used once a header has been captured.
    */
   private col(args: {
     section: string;
     names: string[];
     fallbackIdx: number;
   }): number {
-    const header = this.getSectionHeader(args.section);
+    const header = this.headerFor(args.section);
     if (!header) return args.fallbackIdx;
-    return header.findIndex((name) => args.names.includes(name.trim()));
+    return header.findIndex((name) => args.names.includes(name));
+  }
+
+  /**
+   * Resolves a `{ headerName: fallbackIdx }` map once per row and returns a
+   * lookup from header name to column index (-1 when the column is missing).
+   */
+  private cols<K extends string>(
+    section: string,
+    spec: Record<K, number>,
+  ): (name: K) => number {
+    const cache = new Map<K, number>();
+    return (name) => {
+      let idx = cache.get(name);
+      if (idx === undefined) {
+        idx = this.col({ section, names: [name], fallbackIdx: spec[name] });
+        cache.set(name, idx);
+      }
+      return idx;
+    };
   }
 
   private field(fields: string[], idx: number): string {
     return cleanField({ value: fields[idx] ?? '' });
   }
 
+  private num(fields: string[], idx: number): number | undefined {
+    return parseDecimal({ value: fields[idx] ?? '' });
+  }
+
   /**
    * Returns true (and records a parse-failure skipped row) when the section
-   * header exists but lacks a required column. Warns once per distinct header.
+   * header exists but lacks a required column. Each entry is a column name or a
+   * list of accepted aliases. Warns once per distinct header and missing set.
    */
   private rejectMissingColumns(args: {
     section: string;
-    required: string[];
+    required: (string | string[])[];
     fields: string[];
     rawLine: string;
   }): boolean {
     const { section, required, fields, rawLine } = args;
-    const header = this.getSectionHeader(section);
+    const header = this.headerFor(section);
     if (!header) return false;
-    const names = new Set(header.map((name) => name.trim()));
-    const missing = required.filter((name) => !names.has(name));
+    const missing = required
+      .map((entry) => (Array.isArray(entry) ? entry : [entry]))
+      .filter((names) => !names.some((name) => header.includes(name)))
+      .map((names) => names.join('/'));
     if (missing.length === 0) return false;
 
-    const key = `${section}\u0000${header.join('\u0000')}`;
+    const key = [section, ...header, '|', ...missing].join('\u0000');
     if (!this.warnedHeaders.has(key)) {
       this.warnedHeaders.add(key);
       this.addWarning({
@@ -202,15 +243,28 @@ class InteractiveBrokersParser extends CsvStatementParser {
   }): void {
     const { fields, rawLine } = args;
     const section = 'Financial Instrument Information';
-    const assetCategory = this.field(
-      fields,
-      this.col({ section, names: ['Asset Category'], fallbackIdx: 2 }),
-    );
-    if (assetCategory !== 'Stocks') return;
     if (
       this.rejectMissingColumns({
         section,
-        required: ['Symbol', 'Security ID'],
+        required: ['Asset Category', 'Symbol'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const ix = this.cols(section, {
+      'Asset Category': 2,
+      'Symbol': 3,
+      'Security ID': 6,
+    });
+    if (this.field(fields, ix('Asset Category')) !== 'Stocks') return;
+
+    // Only Stocks need an ISIN; other categories (e.g. Options) may lack it.
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Security ID'],
         fields,
         rawLine,
       })
@@ -218,14 +272,8 @@ class InteractiveBrokersParser extends CsvStatementParser {
       return;
     }
 
-    const symbol = this.field(
-      fields,
-      this.col({ section, names: ['Symbol'], fallbackIdx: 3 }),
-    );
-    const securityId = this.field(
-      fields,
-      this.col({ section, names: ['Security ID'], fallbackIdx: 6 }),
-    );
+    const symbol = this.field(fields, ix('Symbol'));
+    const securityId = this.field(fields, ix('Security ID'));
     if (symbol && securityId) {
       this.symbolToIsin.set(symbol, securityId);
     }
@@ -234,47 +282,65 @@ class InteractiveBrokersParser extends CsvStatementParser {
   private parseTrade(args: { fields: string[]; rawLine: string }): void {
     const { fields, rawLine } = args;
     const section = 'Trades';
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const discriminator = this.field(fields, c(['DataDiscriminator'], 2));
-    // Only process Order and Trade rows (Total rows are filtered upstream in processRow).
-    if (discriminator !== 'Order' && discriminator !== 'Trade') return;
-
-    const assetCategory = this.field(fields, c(['Asset Category'], 3));
-    if (assetCategory !== 'Stocks') return;
-
+    const commissionNames = ['Comm/Fee', 'Comm in USD'];
     if (
       this.rejectMissingColumns({
         section,
-        required: ['Date/Time', 'Symbol', 'Quantity', 'Proceeds', 'Currency'],
+        required: [
+          'DataDiscriminator',
+          'Asset Category',
+          'Date/Time',
+          'Symbol',
+          'Quantity',
+          'T. Price',
+          'Proceeds',
+          commissionNames,
+          'Currency',
+        ],
         fields,
         rawLine,
       })
     ) {
       return;
     }
+    const ix = this.cols(section, {
+      'DataDiscriminator': 2,
+      'Asset Category': 3,
+      'Currency': 4,
+      'Symbol': 5,
+      'Date/Time': 6,
+      'Quantity': 7,
+      'T. Price': 8,
+      'Proceeds': 10,
+    });
+    const commissionIdx = this.col({
+      section,
+      names: commissionNames,
+      fallbackIdx: 11,
+    });
 
-    const currencyIdx = c(['Currency'], 4);
-    const symbolIdx = c(['Symbol'], 5);
-    const datetimeIdx = c(['Date/Time'], 6);
-    const quantityIdx = c(['Quantity'], 7);
+    const discriminator = this.field(fields, ix('DataDiscriminator'));
+    // Only process Order and Trade rows (Total rows are filtered upstream in processRow).
+    if (discriminator !== 'Order' && discriminator !== 'Trade') return;
+
+    const assetCategory = this.field(fields, ix('Asset Category'));
+    if (assetCategory !== 'Stocks') return;
 
     try {
-      const currency = this.field(fields, currencyIdx);
-      const symbol = this.field(fields, symbolIdx);
+      const currency = this.field(fields, ix('Currency'));
+      const symbol = this.field(fields, ix('Symbol'));
       const datetime = parseDateTime({
-        value: this.field(fields, datetimeIdx),
+        value: this.field(fields, ix('Date/Time')),
       });
-      const rawQuantity = parseDecimal({ value: fields[quantityIdx] ?? '' });
-      const price = parseDecimal({
-        value: fields[c(['T. Price'], 8)] ?? '',
-      });
-      const rawProceeds = parseDecimal({
-        value: fields[c(['Proceeds'], 10)] ?? '',
-      });
-      const rawCommission = parseDecimal({
-        value: fields[c(['Comm/Fee', 'Comm in USD'], 11)] ?? '',
-      });
+      const rawQuantity = this.num(fields, ix('Quantity'));
+      const price = this.num(fields, ix('T. Price'));
+      const rawProceeds = this.num(fields, ix('Proceeds'));
+      const rawCommission = this.num(fields, commissionIdx);
+      // "Comm in USD" is denominated in USD regardless of the trade currency.
+      const commissionCurrency =
+        this.headerFor(section)?.[commissionIdx] === 'Comm in USD'
+          ? 'USD'
+          : currency;
 
       if (!datetime || rawQuantity === undefined || price === undefined) {
         this.reportParseFailure({
@@ -284,8 +350,8 @@ class InteractiveBrokersParser extends CsvStatementParser {
           assetCategory,
           currency: currency || undefined,
           symbol: symbol || undefined,
-          datetime: this.field(fields, datetimeIdx) || undefined,
-          description: this.joinTail(fields, quantityIdx),
+          datetime: this.field(fields, ix('Date/Time')) || undefined,
+          description: this.joinTail(fields, ix('Quantity')),
         });
         return;
       }
@@ -304,7 +370,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         price,
         proceeds,
         commission,
-        commissionCurrency: currency,
+        commissionCurrency,
         type,
       });
     } catch {
@@ -313,80 +379,45 @@ class InteractiveBrokersParser extends CsvStatementParser {
         rawLine,
         message: `Failed to parse trade row: ${rawLine}`,
         assetCategory,
-        currency: this.field(fields, currencyIdx) || undefined,
-        symbol: this.field(fields, symbolIdx) || undefined,
-        datetime: this.field(fields, datetimeIdx) || undefined,
-        description: this.joinTail(fields, quantityIdx),
+        currency: this.field(fields, ix('Currency')) || undefined,
+        symbol: this.field(fields, ix('Symbol')) || undefined,
+        datetime: this.field(fields, ix('Date/Time')) || undefined,
+        description: this.joinTail(fields, ix('Quantity')),
       });
     }
   }
 
   private parseDividend(args: { fields: string[]; rawLine: string }): void {
-    const { fields, rawLine } = args;
-    const section = 'Dividends';
-    if (
-      this.rejectMissingColumns({
-        section,
-        required: ['Currency', 'Date', 'Description', 'Amount'],
-        fields,
-        rawLine,
-      })
-    ) {
-      return;
-    }
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const dateIdx = c(['Date'], 3);
-    const descriptionIdx = c(['Description'], 4);
-    const currency = this.field(fields, c(['Currency'], 2));
-
-    try {
-      const date = parseDateTime({
-        value: cleanField({ value: fields[dateIdx] ?? '' }),
-      });
-      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
-      const amount = parseDecimal({ value: fields[c(['Amount'], 5)] ?? '' });
-
-      if (!date || amount === undefined) {
-        const match = SYMBOL_ISIN_RE.exec(description);
-        this.reportParseFailure({
-          section: 'Dividends',
-          rawLine,
-          message: `Could not parse dividend row: missing date or amount`,
-          currency: currency || undefined,
-          symbol: match?.[1] ?? undefined,
-          datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
-          description: description || undefined,
-        });
-        return;
-      }
-
-      const match = SYMBOL_ISIN_RE.exec(description);
-      const symbol = match?.[1] ?? '';
-      const isin = match?.[2];
-
-      this.dividends.push({ symbol, isin, currency, date, amount });
-    } catch {
-      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
-      const match = SYMBOL_ISIN_RE.exec(description);
-      this.reportParseFailure({
-        section: 'Dividends',
-        rawLine,
-        message: `Failed to parse dividend row: ${rawLine}`,
-        currency: currency || undefined,
-        symbol: match?.[1] ?? undefined,
-        datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
-        description: description || undefined,
-      });
-    }
+    this.parseCashRow({
+      ...args,
+      section: 'Dividends',
+      rowLabel: 'dividend',
+      push: (record) => this.dividends.push(record),
+    });
   }
 
   private parseWithholdingTax(args: {
     fields: string[];
     rawLine: string;
   }): void {
-    const { fields, rawLine } = args;
-    const section = 'Withholding Tax';
+    // Amount is negative in the CSV — keep as-is
+    this.parseCashRow({
+      ...args,
+      section: 'Withholding Tax',
+      rowLabel: 'withholding tax',
+      push: (record) => this.withholdingTaxes.push(record),
+    });
+  }
+
+  /** Shared parsing for Dividends and Withholding Tax rows (same layout). */
+  private parseCashRow(args: {
+    section: string;
+    rowLabel: string;
+    fields: string[];
+    rawLine: string;
+    push: (record: RawDividend) => void;
+  }): void {
+    const { section, rowLabel, fields, rawLine, push } = args;
     if (
       this.rejectMissingColumns({
         section,
@@ -397,50 +428,48 @@ class InteractiveBrokersParser extends CsvStatementParser {
     ) {
       return;
     }
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const dateIdx = c(['Date'], 3);
-    const descriptionIdx = c(['Description'], 4);
-    const currency = this.field(fields, c(['Currency'], 2));
+    const ix = this.cols(section, {
+      Currency: 2,
+      Date: 3,
+      Description: 4,
+      Amount: 5,
+    });
+    const currency = this.field(fields, ix('Currency'));
+    const rawDate = this.field(fields, ix('Date'));
+    const description = this.field(fields, ix('Description'));
+    const match = SYMBOL_ISIN_RE.exec(description);
+    const failure = {
+      section,
+      rawLine,
+      currency: currency || undefined,
+      symbol: match?.[1] ?? undefined,
+      datetime: rawDate || undefined,
+      description: description || undefined,
+    };
 
     try {
-      const date = parseDateTime({
-        value: cleanField({ value: fields[dateIdx] ?? '' }),
-      });
-      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
-      const amount = parseDecimal({ value: fields[c(['Amount'], 5)] ?? '' });
+      const date = parseDateTime({ value: rawDate });
+      const amount = this.num(fields, ix('Amount'));
 
       if (!date || amount === undefined) {
-        const match = SYMBOL_ISIN_RE.exec(description);
         this.reportParseFailure({
-          section: 'Withholding Tax',
-          rawLine,
-          message: `Could not parse withholding tax row: missing date or amount`,
-          currency: currency || undefined,
-          symbol: match?.[1] ?? undefined,
-          datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
-          description: description || undefined,
+          ...failure,
+          message: `Could not parse ${rowLabel} row: missing date or amount`,
         });
         return;
       }
 
-      const match = SYMBOL_ISIN_RE.exec(description);
-      const symbol = match?.[1] ?? '';
-      const isin = match?.[2];
-
-      // Amount is negative in the CSV — keep as-is
-      this.withholdingTaxes.push({ symbol, isin, currency, date, amount });
+      push({
+        symbol: match?.[1] ?? '',
+        isin: match?.[2],
+        currency,
+        date,
+        amount,
+      });
     } catch {
-      const description = cleanField({ value: fields[descriptionIdx] ?? '' });
-      const match = SYMBOL_ISIN_RE.exec(description);
       this.reportParseFailure({
-        section: 'Withholding Tax',
-        rawLine,
-        message: `Failed to parse withholding tax row: ${rawLine}`,
-        currency: currency || undefined,
-        symbol: match?.[1] ?? undefined,
-        datetime: cleanField({ value: fields[dateIdx] ?? '' }) || undefined,
-        description: description || undefined,
+        ...failure,
+        message: `Failed to parse ${rowLabel} row: ${rawLine}`,
       });
     }
   }
@@ -451,19 +480,35 @@ class InteractiveBrokersParser extends CsvStatementParser {
   }): void {
     const { fields, rawLine } = args;
     const section = 'Corporate Actions';
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const currencyIdx = c(['Currency'], 3);
-    const datetimeIdx = c(['Date/Time'], 5);
-    const descriptionIdx = c(['Description'], 6);
-    const assetCategory = this.field(fields, c(['Asset Category'], 2));
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Date/Time', 'Description', 'Quantity', 'Proceeds', 'Value'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const ix = this.cols(section, {
+      'Asset Category': 2,
+      'Currency': 3,
+      'Date/Time': 5,
+      'Description': 6,
+      'Quantity': 7,
+      'Proceeds': 8,
+      'Value': 9,
+    });
+    const assetCategory = this.field(fields, ix('Asset Category'));
+    const currencyIdx = ix('Currency');
+    const datetimeIdx = ix('Date/Time');
     let description = '';
 
     try {
       const datetime = parseDateTime({
         value: cleanField({ value: fields[datetimeIdx] ?? '' }),
       });
-      description = cleanField({ value: fields[descriptionIdx] ?? '' });
+      description = cleanField({ value: fields[ix('Description')] ?? '' });
 
       if (!datetime) {
         this.reportParseFailure({
@@ -501,7 +546,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
       const mergerMatch = MERGER_RE.exec(description);
       if (mergerMatch) {
         const quantity = parseDecimal({
-          value: fields[c(['Quantity'], 7)] ?? '',
+          value: fields[ix('Quantity')] ?? '',
         });
         const targetIsin = mergerMatch[3];
 
@@ -509,7 +554,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         // Negative-qty row: create the corporate action.
         // Positive-qty row: extract new shares FMV (Value column) and attach to the last merger.
         if (quantity !== undefined && quantity >= 0) {
-          const value = parseDecimal({ value: fields[c(['Value'], 9)] ?? '' });
+          const value = parseDecimal({ value: fields[ix('Value')] ?? '' });
           if (value !== undefined && value > 0) {
             const lastCA = this.corporateActions.at(-1);
             if (lastCA?.type === 'merger' && lastCA.targetIsin === targetIsin) {
@@ -526,7 +571,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
         const cashCurrency = mergerMatch[6];
         const cashPerShare = Number(mergerMatch[7]);
         const proceeds = parseDecimal({
-          value: fields[c(['Proceeds'], 8)] ?? '',
+          value: fields[ix('Proceeds')] ?? '',
         });
 
         // Reverse-lookup target symbol from symbolToIsin map
@@ -586,11 +631,24 @@ class InteractiveBrokersParser extends CsvStatementParser {
   }): void {
     const { fields, rawLine } = args;
     const section = 'Mark-to-Market Performance Summary';
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const symbolIdx = c(['Symbol'], 3);
-    const priorQuantityIdx = c(['Prior Quantity'], 4);
-    const assetCategory = this.field(fields, c(['Asset Category'], 2));
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Asset Category', 'Symbol', 'Prior Quantity'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const ix = this.cols(section, {
+      'Asset Category': 2,
+      'Symbol': 3,
+      'Prior Quantity': 4,
+    });
+    const symbolIdx = ix('Symbol');
+    const priorQuantityIdx = ix('Prior Quantity');
+    const assetCategory = this.field(fields, ix('Asset Category'));
 
     // Only process Stocks (Total rows are filtered upstream in processRow).
     if (assetCategory !== 'Stocks') return;
@@ -633,11 +691,15 @@ class InteractiveBrokersParser extends CsvStatementParser {
     ) {
       return;
     }
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const currency = this.field(fields, c(['Currency'], 2));
-    const rawDate = this.field(fields, c(['Date'], 3));
-    const description = this.field(fields, c(['Description'], 4));
+    const ix = this.cols(section, {
+      Currency: 2,
+      Date: 3,
+      Description: 4,
+      Amount: 5,
+    });
+    const currency = this.field(fields, ix('Currency'));
+    const rawDate = this.field(fields, ix('Date'));
+    const description = this.field(fields, ix('Description'));
 
     // Check description-based skips before attempting date/amount parse
     if (description.startsWith('Purchase Accrued Interest')) {
@@ -654,7 +716,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
 
     try {
       const date = parseDateTime({ value: rawDate });
-      const amount = parseDecimal({ value: fields[c(['Amount'], 5)] ?? '' });
+      const amount = parseDecimal({ value: fields[ix('Amount')] ?? '' });
 
       if (!date || amount === undefined) {
         this.reportParseFailure({
@@ -704,14 +766,31 @@ class InteractiveBrokersParser extends CsvStatementParser {
   }): void {
     const { fields, rawLine } = args;
     const section = 'Change in Dividend Accruals';
-    const c = (names: string[], fallbackIdx: number) =>
-      this.col({ section, names, fallbackIdx });
-    const assetCategory = this.field(fields, c(['Asset Category'], 2));
-    const currency = this.field(fields, c(['Currency'], 3));
-    const symbol = this.field(fields, c(['Symbol'], 4));
-    const rawDate = this.field(fields, c(['Date'], 5));
-    const rawPayDate = this.field(fields, c(['Pay Date'], 7));
-    const code = this.field(fields, c(['Code'], 14));
+    if (
+      this.rejectMissingColumns({
+        section,
+        required: ['Asset Category', 'Code', 'Fee'],
+        fields,
+        rawLine,
+      })
+    ) {
+      return;
+    }
+    const ix = this.cols(section, {
+      'Asset Category': 2,
+      'Currency': 3,
+      'Symbol': 4,
+      'Date': 5,
+      'Pay Date': 7,
+      'Fee': 10,
+      'Code': 14,
+    });
+    const assetCategory = this.field(fields, ix('Asset Category'));
+    const currency = this.field(fields, ix('Currency'));
+    const symbol = this.field(fields, ix('Symbol'));
+    const rawDate = this.field(fields, ix('Date'));
+    const rawPayDate = this.field(fields, ix('Pay Date'));
+    const code = this.field(fields, ix('Code'));
 
     if (assetCategory !== 'Stocks' || !code.split(';').includes('ADR')) {
       this.addSkippedRow({
@@ -727,7 +806,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
       return;
     }
 
-    const fee = parseDecimal({ value: fields[c(['Fee'], 10)] ?? '' });
+    const fee = this.num(fields, ix('Fee'));
     const datetime = parseDateTime({ value: rawPayDate || rawDate });
 
     if (!datetime || fee === undefined || fee <= 0) {
@@ -795,7 +874,7 @@ class InteractiveBrokersParser extends CsvStatementParser {
     description?: string;
   } {
     const { section, fields } = args;
-    const header = this.getSectionHeader(section);
+    const header = this.headerFor(section);
 
     if (!header) {
       return { description: this.joinTail(fields, 2) };
