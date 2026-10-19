@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
+  import { AlertTriangle } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import type { Pit38Fields } from '../../core/types.js';
   import type { ApplyLossCarryForwardResult } from '../../core/tax/loss-carry-forward.js';

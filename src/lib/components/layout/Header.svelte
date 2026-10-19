@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Menu } from 'lucide-svelte';
+  import { Menu } from '@lucide/svelte';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { sidebar } from '$lib/state/sidebar.svelte.js';
   import ThemeToggle from '../ui/ThemeToggle.svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Calendar } from 'lucide-svelte';
+  import { Calendar } from '@lucide/svelte';
   import { untrack } from 'svelte';
   import SveltyPicker from 'svelty-picker';
   import { m } from '$lib/paraglide/messages.js';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RefreshCw } from 'lucide-svelte';
+  import { RefreshCw } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { calculateSessionTaxes } from '$lib/services/tax.js';
   import { isSessionStale } from '$lib/utils/stale.js';

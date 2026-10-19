@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Info } from 'lucide-svelte';
+  import { Info } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import type { PitZgFields } from '../../core/types.js';

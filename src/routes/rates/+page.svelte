@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Calendar } from 'lucide-svelte';
+  import { Calendar } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { db } from '$lib/db.js';

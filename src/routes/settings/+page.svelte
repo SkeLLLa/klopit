@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Info } from 'lucide-svelte';
+  import { Info } from '@lucide/svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import { db } from '$lib/db.js';
   import { m } from '$lib/paraglide/messages.js';

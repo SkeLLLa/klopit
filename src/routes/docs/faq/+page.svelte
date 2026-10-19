@@ -5,7 +5,7 @@
   import { getLocale } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte';
   import { FAQ_ITEMS, type FaqMessageKey } from '$lib/constants/faq.js';
-  import { ChevronDown } from 'lucide-svelte';
+  import { ChevronDown } from '@lucide/svelte';
 
   pageTitle.set(m.nav_faq());
 

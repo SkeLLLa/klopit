@@ -2,7 +2,7 @@
   import GroundingLinks from '$lib/components/docs/GroundingLinks.svelte';
   import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
   import type { GroundingSource } from '$lib/components/docs/grounding';
-  import { ArrowRight } from 'lucide-svelte';
+  import { ArrowRight } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';

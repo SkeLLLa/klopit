@@ -1,7 +1,7 @@
 <!-- src/routes/data/CorporateActionsTable.svelte -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { Pencil, Plus, Trash2 } from 'lucide-svelte';
+  import { Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { db, type CorporateActionRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';

@@ -1,6 +1,6 @@
 <!-- src/routes/data/DividendsTable.svelte -->
 <script lang="ts">
-  import { Pencil, Trash2, Plus } from 'lucide-svelte';
+  import { Pencil, Trash2, Plus } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { db, type DividendRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';

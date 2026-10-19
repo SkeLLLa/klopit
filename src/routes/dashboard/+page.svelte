@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertCircle, ArrowRight, AlertTriangle, LoaderCircle, RefreshCw } from 'lucide-svelte';
+  import { AlertCircle, ArrowRight, AlertTriangle, LoaderCircle, RefreshCw } from '@lucide/svelte';
   import MetricCards from './MetricCards.svelte';
   import GainsTaxDonut from './GainsTaxDonut.svelte';
   import PortfolioDonut from './PortfolioDonut.svelte';

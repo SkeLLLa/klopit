@@ -3,7 +3,7 @@
   import type { GroundingSource } from '$lib/components/docs/grounding';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight, CheckCircle2, Clock, FileText, MinusCircle } from 'lucide-svelte';
+  import { ArrowRight, CheckCircle2, Clock, FileText, MinusCircle } from '@lucide/svelte';
 
   let { data } = $props();
 

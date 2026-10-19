@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pencil, Trash2, Plus } from 'lucide-svelte';
+  import { Pencil, Trash2, Plus } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import { db, type PriorYearLossRecord } from '$lib/db.js';

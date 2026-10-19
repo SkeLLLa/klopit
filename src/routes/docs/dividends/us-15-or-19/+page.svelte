@@ -3,7 +3,7 @@
   import LegalClaim from '$lib/components/docs/LegalClaim.svelte';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { localizeHref } from '$lib/paraglide/runtime';
-  import { ArrowRight } from 'lucide-svelte';
+  import { ArrowRight } from '@lucide/svelte';
 
   let { data } = $props();
 

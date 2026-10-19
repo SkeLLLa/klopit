@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronUp } from 'lucide-svelte';
+  import { ChevronDown, ChevronUp } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { importFiles } from '$lib/services/import-files.js';
   import type { ImportFileResult } from '$lib/services/import-files.js';

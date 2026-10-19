@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sun, Moon } from 'lucide-svelte';
+  import { Sun, Moon } from '@lucide/svelte';
   import { theme } from '$lib/state/theme.svelte.js';
 </script>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { Heart } from 'lucide-svelte';
+  import { Heart } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
   import { updateSession } from '$lib/services/session.js';

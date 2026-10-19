@@ -27,7 +27,7 @@
 
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { Info } from 'lucide-svelte';
+  import { Info } from '@lucide/svelte';
   import { formatPlnValue } from '$lib/utils/format-pln.js';
 
   let {

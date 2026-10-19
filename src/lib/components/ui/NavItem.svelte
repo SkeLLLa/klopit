@@ -11,7 +11,7 @@
     TrendingDown,
     Settings,
     ChevronDown,
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
   const iconMap: Record<string, typeof House> = {
     House,
     FolderOpen,

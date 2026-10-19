@@ -1,6 +1,6 @@
 <!-- src/routes/data/CarryInTable.svelte -->
 <script lang="ts">
-  import { AlertTriangle, Pencil, Plus, Trash2 } from 'lucide-svelte';
+  import { AlertTriangle, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { db, type CarryInPositionRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';

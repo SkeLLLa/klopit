@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from 'lucide-svelte';
+  import { RefreshCw, AlertCircle, ArrowRight, AlertTriangle, Info } from '@lucide/svelte';
   import {
     copyBlockReason,
     isTaxFormIncomplete,

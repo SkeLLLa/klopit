@@ -4,7 +4,7 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { KLO_ACRONYMS } from '$lib/constants/acronyms.js';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
-  import { ArrowRight, Bug, ChevronDown, FileText, ListChecks, Lock, Scale } from 'lucide-svelte';
+  import { ArrowRight, Bug, ChevronDown, FileText, ListChecks, Lock, Scale } from '@lucide/svelte';
 
   pageTitle.set(m.page_about());
 

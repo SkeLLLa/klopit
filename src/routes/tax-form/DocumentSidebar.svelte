@@ -6,7 +6,7 @@
     ChevronRight,
     ChevronDown,
     MapPin,
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
 
   type ActiveDocument = 'pit38' | { pitZg: string };
 

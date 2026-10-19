@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
+  import { AlertTriangle } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import type { TradeResultRecord, DividendResultRecord, CreditInterestResultRecord } from '$lib/db.js';
   import { formatDatetime, formatDate } from '$lib/utils/format-date.js';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PanelLeftClose, PanelLeft } from 'lucide-svelte';
+  import { PanelLeftClose, PanelLeft } from '@lucide/svelte';
   import { sidebar } from '$lib/state/sidebar.svelte.js';
   import { navigation } from '$lib/nav.js';
   import Logo from '../ui/Logo.svelte';

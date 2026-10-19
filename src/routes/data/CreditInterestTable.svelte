@@ -1,6 +1,6 @@
 <!-- src/routes/data/CreditInterestTable.svelte -->
 <script lang="ts">
-  import { Pencil, Trash2 } from 'lucide-svelte';
+  import { Pencil, Trash2 } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { db, type CreditInterestRecord } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';

@@ -3,7 +3,7 @@
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { navigation, type NavItem } from '$lib/nav.js';
-  import { ArrowRight, BookOpen, FileText, HelpCircle } from 'lucide-svelte';
+  import { ArrowRight, BookOpen, FileText, HelpCircle } from '@lucide/svelte';
 
   pageTitle.set(m.page_docs());
 

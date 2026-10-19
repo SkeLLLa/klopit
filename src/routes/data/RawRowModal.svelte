@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X } from 'lucide-svelte';
+  import { X } from '@lucide/svelte';
   import { m } from '$lib/paraglide/messages.js';
   import { kindLabel } from '$lib/utils/skipped-row.js';
   import type { SkippedRow } from '../../core/types.js';

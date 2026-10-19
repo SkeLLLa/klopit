@@ -176,6 +176,9 @@ importers:
       '@fontsource/onest':
         specifier: ^5.3.1
         version: 5.3.1
+      '@lucide/svelte':
+        specifier: ^1.59.0
+        version: 1.59.0(svelte@5.57.2)
       '@unovis/svelte':
         specifier: ^1.7.1
         version: 1.7.1(@unovis/ts@1.7.1(supports-color@7.2.0))(svelte@5.57.2)
@@ -185,9 +188,6 @@ importers:
       dexie:
         specifier: ^4.4.6
         version: 4.4.6
-      lucide-svelte:
-        specifier: ^1.0.1
-        version: 1.0.1(svelte@5.57.2)
       svelte:
         specifier: ^5.57.2
         version: 5.57.2
@@ -520,6 +520,11 @@ packages:
 
   '@lix-js/sdk@0.20.1':
     resolution: {integrity: sha512-oscOFP8Cr1My6Wh2KVYC9+aJ1mHs+d7vnD+7PPJaA4L+Y1FR37Sm99SrFGfvUizaj/XtRi2GlDF2IOFt9iXMNQ==}
+
+  '@lucide/svelte@1.59.0':
+    resolution: {integrity: sha512-ga9IrEsFJBkt/34VnRFcQ2HLs8eOpOovXZ62XzwfC7f0zBfo4y116FBIDroZkD0gInYYY2hSSAcsQEm/Vm+AoA==}
+    peerDependencies:
+      svelte: ^5
 
   '@mapbox/jsonlint-lines-primitives@2.0.3':
     resolution: {integrity: sha512-0SElaV0uMxEnxzBhhX9WTuPyUeMsAN/SS0i16tjuba4/mio63MG9khjC1a0JAiPGXAwvwm4UfHJURCN7nyudQg==}
@@ -2647,12 +2652,6 @@ packages:
     resolution: {integrity: sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==}
     engines: {node: 20 || >=22}
 
-  lucide-svelte@1.0.1:
-    resolution: {integrity: sha512-WvzZgk0pqzgda+AErLvgWxHkfg/+GgUwqKMRHvzt0IqyMdmyEDzDCk3Z+Wo/3y753oIgx8u9Q4eUbWkghFa8Jg==}
-    deprecated: Package deprecated. Please use @lucide/svelte instead.
-    peerDependencies:
-      svelte: ^3 || ^4 || ^5.0.0-next.42
-
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -3862,6 +3861,10 @@ snapshots:
       '@bytecodealliance/jco-transpile': 0.13.0
       binaryen: 130.0.0
       fflate: 0.8.3
+
+  '@lucide/svelte@1.59.0(svelte@5.57.2)':
+    dependencies:
+      svelte: 5.57.2
 
   '@mapbox/jsonlint-lines-primitives@2.0.3': {}
 
@@ -5760,10 +5763,6 @@ snapshots:
   lru-cache@10.4.3: {}
 
   lru-cache@11.5.3: {}
-
-  lucide-svelte@1.0.1(svelte@5.57.2):
-    dependencies:
-      svelte: 5.57.2
 
   magic-string@0.30.21:
     dependencies:

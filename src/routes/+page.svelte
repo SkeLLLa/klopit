@@ -11,7 +11,7 @@
     Lock,
     Table,
     Upload,
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
   import GitHubIcon from '$lib/components/ui/GitHubIcon.svelte';
   import WhyPillars from '$lib/components/home/WhyPillars.svelte';
   import HowItWorks from '$lib/components/home/HowItWorks.svelte';

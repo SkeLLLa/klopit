@@ -1,7 +1,7 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
-  import { HelpCircle, ArrowRight } from 'lucide-svelte';
+  import { HelpCircle, ArrowRight } from '@lucide/svelte';
 
   const questions = [
     { text: m.home_faq_teaser_q1(), hash: 'capital-loss' },

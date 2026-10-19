@@ -5,7 +5,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizeHref } from '$lib/paraglide/runtime';
   import { pageTitle } from '$lib/state/page-title.svelte.js';
-  import { ArrowRight, ExternalLink } from 'lucide-svelte';
+  import { ArrowRight, ExternalLink } from '@lucide/svelte';
 
   pageTitle.set(m.page_pit38());
 

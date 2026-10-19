@@ -454,21 +454,21 @@ Planned future tests using Svelte testing utilities for:
 
 ### External npm Packages
 
-| Package           | Purpose               | Size              |
-| ----------------- | --------------------- | ----------------- |
-| **SvelteKit**     | Web framework         | ~500 KB           |
-| **Svelte 5**      | UI components (runes) | ~50 KB            |
-| **Dexie**         | IndexedDB wrapper     | ~30 KB            |
-| **Paraglide JS**  | i18n (compile-time)   | ~5 KB             |
-| **Unovis**        | Charts library        | ~800 KB           |
-| **Tailwind CSS**  | Styling               | ~50 KB (PurgeCSS) |
-| **lucide-svelte** | Icons                 | ~100 KB           |
+| Package            | Purpose               | Size              |
+| ------------------ | --------------------- | ----------------- |
+| **SvelteKit**      | Web framework         | ~500 KB           |
+| **Svelte 5**       | UI components (runes) | ~50 KB            |
+| **Dexie**          | IndexedDB wrapper     | ~30 KB            |
+| **Paraglide JS**   | i18n (compile-time)   | ~5 KB             |
+| **Unovis**         | Charts library        | ~800 KB           |
+| **Tailwind CSS**   | Styling               | ~50 KB (PurgeCSS) |
+| **@lucide/svelte** | Icons                 | ~100 KB           |
 
 ### Internal Dependencies
 
 ```
 UI Components
-  ├── → svelte/components (Tailwind + lucide-svelte)
+  ├── → svelte/components (Tailwind + @lucide/svelte)
   └── → $lib/services/
       ├── → $lib/db.ts (Dexie)
       ├── → $lib/utils/ (formatting, live-query bridge)
