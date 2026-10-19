@@ -74,9 +74,10 @@ void describe('SchwabParser', () => {
     assert.match(result.warnings[0].message, /Sell-to-cover/);
     assert.match(result.warnings[0].message, /12 shares/);
     const detail = result.warnings[0].sellToCover;
-    assert.equal(detail?.symbol, 'XYZ');
-    assert.equal(detail?.shares, 12);
-    assert.equal(detail?.date.getMonth(), 2);
+    if (!detail) throw new Error('expected sell-to-cover detail');
+    assert.equal(detail.symbol, 'XYZ');
+    assert.equal(detail.shares, 12);
+    assert.equal(detail.date.getMonth(), 2);
 
     assert.equal(parseFixture('equity-awards.csv').warnings.length, 0);
   });
