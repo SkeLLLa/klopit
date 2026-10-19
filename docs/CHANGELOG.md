@@ -1,3 +1,21 @@
+## [1.26.0](https://github.com/SkeLLLa/klopit/compare/v1.25.2...v1.26.0) (2026-10-19)
+
+### 🛠 Fixes
+
+* **release:** pin conventionalcommits preset to v9 ([7fe8693](https://github.com/SkeLLLa/klopit/commit/7fe86938d133fb74240bd57be7ffd9e497fd18f7))
+
+### 🧾 Other
+
+* **deps-dev:** bump @types/node from 25.9.2 to 26.0.1 ([c93f464](https://github.com/SkeLLLa/klopit/commit/c93f4644b25a057eefae5222835c118ffd743b65))
+* **deps-dev:** bump conventional-changelog-conventionalcommits ([660fefd](https://github.com/SkeLLLa/klopit/commit/660fefd6df4d82211e5177f049ab092ab522c03c))
+* **deps:** bump actions/cache from 5 to 6 in the all-actions group ([9f1f54f](https://github.com/SkeLLLa/klopit/commit/9f1f54f2a7e57c8eae3a57cb95dc04d0d1926165))
+* **deps:** bump actions/setup-node in the all-actions group ([ae5bc3a](https://github.com/SkeLLLa/klopit/commit/ae5bc3a00dc87e211ed68bcd3c2b3873da4ac314))
+* **deps:** bump ts to 7 ([0f948b8](https://github.com/SkeLLLa/klopit/commit/0f948b832b85377cfe3dae72353cbb63c025e524))
+
+### 🚀 Features
+
+* upgrade and fixes ([#58](https://github.com/SkeLLLa/klopit/issues/58)) ([4dfb3ff](https://github.com/SkeLLLa/klopit/commit/4dfb3ff6817b69aa7a3ef2cbd0116bb8ec2ec43f)), closes [#lib](https://github.com/SkeLLLa/klopit/issues/lib) [#lib](https://github.com/SkeLLLa/klopit/issues/lib) [#lib](https://github.com/SkeLLLa/klopit/issues/lib)
+
 ## [1.25.2](https://github.com/SkeLLLa/klopit/compare/v1.25.1...v1.25.2) (2026-06-22)
 
 ### 🧾 Other
