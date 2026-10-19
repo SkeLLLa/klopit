@@ -116,7 +116,7 @@ const ALLOWED_HOSTS = new Set([
   'www.gnu.org',
   // links in docs, FAQ and legal references
   'github.com',
-  'lexlege.pl',
+  'lexlege.pb.pl',
   'sip.lex.pl',
   'www.podatki.gov.pl',
   'www.gov.pl',
