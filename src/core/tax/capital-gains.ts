@@ -11,9 +11,11 @@ import {
   assignAccounts,
   createSplitDeduper,
   decideJoins,
+  type GroupStats,
   instrumentBase,
   instrumentGroup,
   instrumentNames,
+  type JoinDecision,
   queueKey,
 } from './accounts.js';
 import {
@@ -204,15 +206,26 @@ export function calculateCapitalGains(
   // resolves a shortfall seen in this dry run.
   let assigned = assignAccounts(assignArgs);
   if (assigned.unstamped.size > 0) {
-    const dry = runPass({ ...args, onWarning: undefined, assigned });
+    const dry = (decisions?: Map<string, JoinDecision>) =>
+      runPass({
+        ...args,
+        onWarning: undefined,
+        assigned: decisions
+          ? assignAccounts({ ...assignArgs, decisions })
+          : assigned,
+      });
+    const apartPass = dry();
+    const statsOf = (pass: ReturnType<typeof runPass>, group: string) =>
+      groupStats(pass, group, globalIsin);
     assigned = assignAccounts({
       ...assignArgs,
-      decisions: decideJoins(
-        assigned.unstamped,
-        dry.shortfalls.map(({ trade }) => ({
-          account: trade.account ?? '',
-          group: instrumentGroup(trade, globalIsin),
-        })),
+      decisions: decideJoins(assigned.unstamped, (group, account) =>
+        statsOf(
+          account
+            ? dry(new Map([[group, { account, overlap: false }]]))
+            : apartPass,
+          group,
+        ),
       ),
     });
   }
@@ -254,6 +267,34 @@ export function calculateCapitalGains(
   }
 
   return pass.results;
+}
+
+/** Shortfall and in-period sells of one instrument in a dry run. */
+function groupStats(
+  pass: ReturnType<typeof runPass>,
+  group: string,
+  symbolToIsin: Map<string, string>,
+): GroupStats {
+  const shortfallByAccount = new Map<string, number>();
+  let shortfall = 0;
+  for (const { trade, missing } of pass.shortfalls) {
+    if (instrumentGroup(trade, symbolToIsin) !== group) continue;
+    shortfall += missing;
+    const account = trade.account ?? '';
+    shortfallByAccount.set(
+      account,
+      (shortfallByAccount.get(account) ?? 0) + missing,
+    );
+  }
+  const signature = [...pass.sellOrigins]
+    .filter(([, trade]) => instrumentGroup(trade, symbolToIsin) === group)
+    .map(
+      ([result, trade]) =>
+        `${String(trade.datetime.getTime())}|${String(trade.quantity)}|${result.costPln.toFixed(6)}|${String(result.costBasisMissing ?? false)}`,
+    )
+    .toSorted()
+    .join(';');
+  return { shortfall, shortfallByAccount, signature };
 }
 
 function runPass(

@@ -79,34 +79,65 @@ export interface JoinDecision {
   overlap: boolean;
 }
 
+/** What a dry run says about one instrument. */
+export interface GroupStats {
+  /** Shares sold that no lot covered, over all accounts. */
+  shortfall: number;
+  shortfallByAccount: Map<string, number>;
+  /** In-period sell results, comparable between runs. */
+  signature: string;
+}
+
+const EPS = 1e-9;
+
 /**
- * Decide, per instrument, whether unstamped rows join a stamped account. They
- * join only when that resolves a shortfall found with them in their own queue:
- * an account ran short and they fill it, or they ran short and the account
- * covers them. Consistent on their own, they stay apart (guessing an account
- * could silently turn a correct cost into a wrong final one). Several possible
- * accounts keep them unassigned and `overlap` drafts the form.
+ * Decide, per instrument, what happens to rows without an account. Any
+ * attribution is a guess (art. 24 ust. 10 updof), so a result is final only
+ * when the guess cannot matter:
+ *
+ * - A candidate account takes the rows when joining it lowers the instrument's
+ *   total shortfall and adds none to that account (checked by a dry run).
+ *   Exactly one such account: join it (`account-assumed`).
+ * - Otherwise, if no shortfall exists and joining any candidate leaves the
+ *   in-period sells unchanged, they stay apart and final.
+ * - Anything else (several resolving accounts, no resolving account, or a choice
+ *   that changes the result) stays unassigned and drafts the form. Instruments
+ *   no account holds stay apart (nothing to confuse them with).
  */
 export function decideJoins(
   groups: Map<string, UnstampedGroup>,
-  shortfalls: { account: string; group: string }[],
+  evaluate: (group: string, account?: string) => GroupStats,
 ): Map<string, JoinDecision> {
   const decisions = new Map<string, JoinDecision>();
   for (const [group, info] of groups) {
-    const mine = shortfalls.filter((s) => s.group === group);
-    const unassignedShort = mine.some((s) => s.account === UNASSIGNED_ACCOUNT);
-    const shortAccounts = new Set(
-      mine
-        .filter((s) => s.account !== UNASSIGNED_ACCOUNT)
-        .map((s) => s.account),
-    );
-    const resolvers = unassignedShort
-      ? info.candidates
-      : info.candidates.filter((account) => shortAccounts.has(account));
-    if (resolvers.length === 1) {
-      decisions.set(group, { account: resolvers[0], overlap: false });
+    if (info.candidates.length === 0) {
+      decisions.set(group, { overlap: false });
+      continue;
+    }
+    const apart = evaluate(group);
+    const joined = info.candidates.map((account) => ({
+      account,
+      stats: evaluate(group, account),
+    }));
+    if (apart.shortfall > EPS) {
+      const resolvers = joined.filter(
+        ({ account, stats }) =>
+          stats.shortfall < apart.shortfall - EPS &&
+          (stats.shortfallByAccount.get(account) ?? 0) <=
+            (apart.shortfallByAccount.get(account) ?? 0) + EPS,
+      );
+      decisions.set(
+        group,
+        resolvers.length === 1
+          ? { account: resolvers[0].account, overlap: false }
+          : { overlap: true },
+      );
     } else {
-      decisions.set(group, { overlap: resolvers.length > 1 });
+      const same = joined.every(
+        ({ stats }) =>
+          stats.shortfall <= EPS && stats.signature === apart.signature,
+      );
+      decisions.set(group, { overlap: !same });
     }
   }
   return decisions;

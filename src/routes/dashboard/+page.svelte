@@ -252,7 +252,6 @@
                 {m.import_warning_account_assumed({
                   symbol: warning.symbol,
                   account: formatAccount(warning.account),
-                  count: String(warning.rows),
                 })}
               {:else if warning.kind === 'transfer-suggested'}
                 {m.import_warning_transfer_suggested({

@@ -403,7 +403,7 @@ void describe('per-account FIFO: unstamped rows', () => {
     assert.equal(s?.costBasisMissing, undefined);
   });
 
-  void it('stays apart, without drafting, when nothing runs short', () => {
+  void it('stays apart, without drafting, when no sell is affected', () => {
     const { results, warnings } = run({
       trades: [trade({ account: A }), trade({ account: B })],
       carryInPositions: [carryIn({ quantity: 5 })],
@@ -618,6 +618,15 @@ const priced = (
   overrides: Partial<EnrichedTrade> = {},
 ) => trade({ price, datetime, ...overrides });
 
+const assumedAccounts = (warnings: CarryInWarning[]) =>
+  warnings.flatMap((w) => (w.kind === 'account-assumed' ? [w.account] : []));
+
+const noAssumption = (warnings: CarryInWarning[]) =>
+  assert.ok(!warnings.some((w) => w.kind === 'account-assumed'));
+
+const isDraft = (warnings: CarryInWarning[]) =>
+  warnings.some((w) => w.kind === 'account-unassigned' && w.overlap);
+
 function onlySell(results: ReturnType<typeof run>['results']) {
   const sells = results.filter((r) => r.type === 'sell');
   assert.equal(sells.length, 1);
@@ -625,7 +634,7 @@ function onlySell(results: ReturnType<typeof run>['results']) {
 }
 
 void describe('per-account FIFO: joining unstamped rows only when needed', () => {
-  void it('L1b: a legacy lot does not join a consistent account', () => {
+  void it('L1b: a legacy lot does not join a consistent account, and the guess drafts the form', () => {
     const { results, warnings } = run({
       trades: [
         priced(50, new Date(2021, 0, 1)),
@@ -638,14 +647,12 @@ void describe('per-account FIFO: joining unstamped rows only when needed', () =>
     assert.equal(s.costPln, 400);
     assert.equal(s.costBasisMissing, undefined);
     assert.ok(!warnings.some((w) => w.kind === 'account-assumed'));
-    assert.ok(
-      warnings.every((w) => w.kind !== 'account-unassigned' || !w.overlap),
-    );
+    assert.ok(isDraft(warnings));
   });
 
   void it('L1c: same with symbol-only rows', () => {
     const noIsin = { isin: undefined };
-    const { results } = run({
+    const { results, warnings } = run({
       trades: [
         priced(50, new Date(2021, 0, 1), noIsin),
         priced(40, new Date(2023, 0, 1), { account: B, ...noIsin }),
@@ -656,10 +663,11 @@ void describe('per-account FIFO: joining unstamped rows only when needed', () =>
     const s = onlySell(results);
     assert.equal(s.costPln, 400);
     assert.equal(s.costBasisMissing, undefined);
+    assert.ok(isDraft(warnings));
   });
 
   void it('J1: manual rows that are consistent alone do not join a holder', () => {
-    const { results } = run({
+    const { results, warnings } = run({
       trades: [
         priced(50, new Date(2022, 0, 1), { account: A }),
         priced(40, new Date(2023, 0, 1)),
@@ -670,6 +678,7 @@ void describe('per-account FIFO: joining unstamped rows only when needed', () =>
     const s = onlySell(results);
     assert.equal(s.costPln, 400);
     assert.equal(s.costBasisMissing, undefined);
+    assert.ok(isDraft(warnings));
   });
 
   void it('J2: a carry-in is not absorbed by an account that sold out', () => {
@@ -795,5 +804,165 @@ void describe('per-account FIFO: donors', () => {
         (w) => w.kind === 'shortfall-add-carry-in' && w.account === C,
       ),
     );
+  });
+});
+
+void describe('per-account FIFO: a join must resolve the shortfall', () => {
+  void it('U1: legacy rows next to a stamped account are a draft, not final', () => {
+    for (const legacy of [50, 30]) {
+      const { results, warnings } = run({
+        trades: [
+          priced(legacy, new Date(2021, 0, 1)),
+          sell(5, new Date(2022, 5, 1)),
+          priced(40, new Date(2024, 0, 1), { account: A }),
+          sell(10, new Date(2024, 5, 1), A),
+          trade(OTHER),
+        ],
+      });
+      assert.equal(onlySell(results).costPln, 400);
+      assert.ok(isDraft(warnings));
+      noAssumption(warnings);
+    }
+  });
+
+  void it('N1: no join when the account stays short and the rows are consistent', () => {
+    const { warnings } = run({
+      trades: [
+        priced(10, new Date(2023, 0, 1), { account: A, quantity: 5 }),
+        sell(10, new Date(2024, 2, 1), A),
+        priced(30, new Date(2023, 5, 1)),
+        sell(10, new Date(2024, 0, 1)),
+        trade(OTHER),
+      ],
+    });
+    noAssumption(warnings);
+    assert.ok(isDraft(warnings));
+  });
+
+  void it('N2: no join into an account that only held the instrument years ago', () => {
+    const { results, warnings } = run({
+      trades: [
+        priced(50, new Date(2020, 0, 1), { account: A }),
+        sell(10, new Date(2021, 0, 1), A),
+        sell(10, new Date(2024, 0, 10)),
+        priced(10, new Date(2024, 1, 1), { account: A }),
+        sell(10, new Date(2024, 4, 1), A),
+        trade(OTHER),
+      ],
+    });
+    noAssumption(warnings);
+    assert.ok(isDraft(warnings));
+    const own = results.filter((r) => r.type === 'sell' && r.costPln === 100);
+    assert.equal(own.length, 1);
+    assert.equal(own[0].costBasisMissing, undefined);
+  });
+
+  void it('N3: no join when the shortfall only moves to a later sale', () => {
+    const { warnings } = run({
+      trades: [
+        priced(10, new Date(2022, 0, 1), { account: A }),
+        sell(10, new Date(2024, 5, 1), A),
+        sell(5, new Date(2024, 0, 1)),
+        trade(OTHER),
+      ],
+    });
+    noAssumption(warnings);
+    assert.ok(isDraft(warnings));
+  });
+
+  void it('N4: plain rows do not claim to fill a lot-id shortfall', () => {
+    const ibi = 'ibi:default';
+    const { warnings } = run({
+      trades: [
+        priced(10, new Date(2022, 0, 1), { account: ibi, lotId: 'L1' }),
+        { ...sell(10, new Date(2024, 5, 1), ibi), lotId: 'L2' },
+        priced(30, new Date(2022, 0, 1)),
+        trade(OTHER),
+      ],
+    });
+    noAssumption(warnings);
+  });
+
+  void it('N6: a carry-in netted against imported buys is not a join', () => {
+    const { warnings } = run({
+      trades: [
+        priced(50, new Date(2022, 0, 1), { account: A }),
+        sell(20, new Date(2024, 5, 1), A),
+        trade(OTHER),
+      ],
+      carryInPositions: [carryIn({ quantity: 10, costPln: 400 })],
+    });
+    noAssumption(warnings);
+    assert.ok(isDraft(warnings));
+  });
+
+  void it('L1d: ISIN-keyed legacy rows do not join a symbol-keyed account', () => {
+    const noIsin = { isin: undefined };
+    const { warnings } = run({
+      trades: [
+        priced(50, new Date(2021, 0, 1)),
+        priced(40, new Date(2023, 0, 1), { account: B, ...noIsin }),
+        { ...sell(15, new Date(2024, 5, 1), B), ...noIsin },
+        trade({ account: A, symbol: 'MSFT', isin: 'US5949181045' }),
+      ],
+    });
+    noAssumption(warnings);
+  });
+
+  void it('N11: groups are decided independently', () => {
+    const { warnings } = run({
+      trades: [
+        sell(10, new Date(2024, 5, 1), A),
+        priced(10, new Date(2022, 0, 1)),
+        trade({ symbol: 'MSFT', isin: undefined, quantity: 3 }),
+        trade(OTHER),
+      ],
+    });
+    const assumed = warnings.filter((w) => w.kind === 'account-assumed');
+    assert.equal(assumed.length, 1);
+    assert.equal(assumed[0].symbol, 'AAPL');
+  });
+});
+
+void describe('per-account FIFO: joins that resolve a shortfall stay', () => {
+  void it('N5a: a scoped split makes the join cover the sale', () => {
+    const { results, warnings } = run({
+      trades: [
+        priced(10, new Date(2022, 0, 1)),
+        sell(20, new Date(2024, 5, 1)),
+        trade({ account: A, quantity: 1, datetime: new Date(2024, 0, 1) }),
+        trade(OTHER),
+      ],
+      corporateActions: [split({ account: A, datetime: new Date(2023, 5, 1) })],
+    });
+    assert.deepEqual(assumedAccounts(warnings), [A]);
+    assert.equal(onlySell(results).costBasisMissing, undefined);
+  });
+
+  void it('N8: of two holders the one that ran short takes the rows', () => {
+    const { warnings } = run({
+      trades: [
+        sell(5, new Date(2024, 1, 1), A),
+        priced(10, new Date(2022, 0, 1), { account: B }),
+        sell(5, new Date(2024, 2, 1), B),
+        priced(30, new Date(2022, 0, 1)),
+      ],
+    });
+    assert.deepEqual(assumedAccounts(warnings), [A]);
+  });
+
+  void it('N9: rows that fill an earlier, out-of-period shortfall join', () => {
+    const { results, warnings } = run({
+      trades: [
+        priced(50, new Date(2022, 0, 1), { account: A, quantity: 5 }),
+        sell(10, new Date(2023, 0, 1), A),
+        priced(10, new Date(2023, 5, 1), { account: A }),
+        sell(10, new Date(2024, 5, 1), A),
+        priced(30, new Date(2021, 0, 1), { quantity: 5 }),
+        trade(OTHER),
+      ],
+    });
+    assert.deepEqual(assumedAccounts(warnings), [A]);
+    assert.equal(onlySell(results).costBasisMissing, undefined);
   });
 });
