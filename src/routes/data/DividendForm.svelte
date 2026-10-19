@@ -4,7 +4,24 @@
   import SveltyPicker from 'svelty-picker';
   import { m } from '#lib/paraglide/messages.js';
   import { formatDate, parseDate, datePlaceholder } from '#lib/utils/format-date.js';
+  import {
+    validateDividendInput,
+    parseWithholding,
+    type DividendInputError,
+    type DividendInputField,
+  } from '#lib/utils/dividend-input.js';
+  import type { DividendCountryInfo } from '#lib/services/country-overrides.js';
+  import { dividendMatchKey } from '../../core/tax/dividends.js';
+  import { getDividendCreditCapRate } from '../../core/tax/treaty-rates.js';
   import type { RawDividend } from '../../core/types.js';
+
+  export interface DividendFormResult {
+    dividend: RawDividend;
+    /** Positive tax withheld; undefined = leave the stored withholding alone. */
+    withholding?: number | undefined;
+    /** Source country to store as an override, only when it was asked for. */
+    country?: string | undefined;
+  }
 
   const PICKER_FORMAT = 'yyyy-mm-dd';
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -24,12 +41,22 @@
   let {
     initial,
     defaultYear,
+    initialWithholding,
+    withholdingLocked,
+    resolveCountry,
     onsave,
     oncancel,
   }: {
     initial?: Partial<RawDividend> | undefined;
     defaultYear?: number | undefined;
-    onsave: (dividend: RawDividend) => void;
+    /** Positive tax withheld currently linked to this dividend. */
+    initialWithholding?: number | undefined;
+    /** True when imported withholding already exists for this match key. */
+    withholdingLocked?: ((key: string) => boolean) | undefined;
+    resolveCountry?:
+      | ((symbol: string, isin: string) => Promise<DividendCountryInfo>)
+      | undefined;
+    onsave: (result: DividendFormResult) => void;
     oncancel: () => void;
   } = $props();
 
@@ -43,7 +70,53 @@
   let pickerValue = $state(seed?.date ? dateToPickerValue(seed.date) : '');
   let amount = $state(seed?.amount?.toString() ?? '');
   let currency = $state(seed?.currency ?? 'USD');
-  let errors: Partial<Record<'symbol' | 'date' | 'amount' | 'currency', string>> = $state({});
+  let withholding = $state(untrack(() => initialWithholding)?.toString() ?? '');
+  let country = $state('');
+  let countryInfo = $state<DividendCountryInfo | null>(null);
+  let errors: Partial<Record<DividendInputField, string>> = $state({});
+
+  const locked = $derived(
+    withholdingLocked !== undefined &&
+      parsedDate !== null &&
+      symbol.trim() !== '' &&
+      currency.trim() !== '' &&
+      withholdingLocked(
+        dividendMatchKey({
+          symbol: symbol.trim().toUpperCase(),
+          isin: isin.trim() || undefined,
+          currency: currency.trim(),
+          date: parsedDate,
+          kind: seed?.kind,
+        }),
+      ),
+  );
+  // Without a resolver the country is not asked for.
+  const countryKnown = $derived(
+    resolveCountry === undefined || (countryInfo !== null && countryInfo.source !== 'unknown'),
+  );
+  const countryInputShown = $derived(
+    resolveCountry !== undefined &&
+      countryInfo?.source === 'unknown' &&
+      countryInfo.overrideScope === undefined,
+  );
+  const countryGainsOnly = $derived(
+    countryInfo?.source === 'unknown' && countryInfo.overrideScope === 'gains',
+  );
+
+  let resolveSeq = 0;
+  $effect(() => {
+    const sym = symbol.trim().toUpperCase();
+    const code = isin.trim();
+    const seq = ++resolveSeq;
+    if (!resolveCountry || !sym) {
+      countryInfo = null;
+      return;
+    }
+    void (async () => {
+      const info = await resolveCountry(sym, code);
+      if (seq === resolveSeq) countryInfo = info;
+    })();
+  });
 
   // Anchor the picker view to the session year when no date is set yet.
   $effect(() => {
@@ -66,17 +139,42 @@
     dateText = formatDate(d);
   }
 
-  function validate(): boolean {
-    const e: Partial<Record<'symbol' | 'date' | 'amount' | 'currency', string>> = {};
-    if (!symbol.trim()) e.symbol = m.data_validation_required();
-    if (!dateText.trim()) {
-      e.date = m.data_validation_required();
-    } else if (!parsedDate) {
-      e.date = datePlaceholder();
+  function errorText(code: DividendInputError): string {
+    switch (code) {
+      case 'required':
+        return m.data_validation_required();
+      case 'date-format':
+        return datePlaceholder();
+      case 'must-be-positive':
+        return m.data_validation_must_be_positive();
+      case 'must-be-non-negative':
+        return m.data_validation_must_be_non_negative();
+      case 'withholding-exceeds-gross':
+        return m.data_validation_withholding_exceeds_gross();
+      case 'country-code':
+        return m.data_validation_country_code();
+      case 'country-required-for-withholding':
+        return m.data_validation_country_required_for_withholding();
     }
-    const amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) e.amount = m.data_validation_must_be_positive();
-    if (!currency.trim()) e.currency = m.data_validation_required();
+  }
+
+  function validate(): boolean {
+    const found = validateDividendInput({
+      symbol,
+      dateText,
+      dateParsed: parsedDate !== null,
+      amount,
+      currency,
+      withholding,
+      withholdingLocked: locked,
+      country,
+      countryInputShown,
+      countryKnown,
+    });
+    const e: Partial<Record<DividendInputField, string>> = {};
+    for (const [field, code] of Object.entries(found)) {
+      e[field as DividendInputField] = errorText(code);
+    }
     errors = e;
     return Object.keys(e).length === 0;
   }
@@ -85,12 +183,17 @@
     event.preventDefault();
     if (!validate()) return;
 
+    const countryCode = country.trim().toUpperCase();
     onsave({
-      symbol: symbol.trim().toUpperCase(),
-      isin: isin.trim() || undefined,
-      currency: currency.trim().toUpperCase(),
-      date: parsedDate as Date,
-      amount: parseFloat(amount),
+      dividend: {
+        symbol: symbol.trim().toUpperCase(),
+        isin: isin.trim() || undefined,
+        currency: currency.trim().toUpperCase(),
+        date: parsedDate as Date,
+        amount: parseFloat(amount),
+      },
+      withholding: locked ? undefined : (parseWithholding(withholding) ?? 0),
+      country: countryInputShown && countryCode ? countryCode : undefined,
     });
   }
 </script>
@@ -128,6 +231,32 @@
       <input id="dividend-currency" type="text" bind:value={currency} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
       {#if errors.currency}<span class="text-xs text-red-500">{errors.currency}</span>{/if}
     </div>
+    <div>
+      <label for="dividend-withholding" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_dividend_withholding()}</label>
+      <input id="dividend-withholding" type="number" step="any" min="0" bind:value={withholding} disabled={locked} aria-describedby="dividend-withholding-note" class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+      {#if errors.withholding}<span class="text-xs text-red-500">{errors.withholding}</span>{/if}
+    </div>
+    {#if countryInputShown}
+      <div>
+        <label for="dividend-country" class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{m.data_dividend_country()}</label>
+        <input id="dividend-country" type="text" maxlength="2" bind:value={country} placeholder={m.data_country_override_placeholder()} class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm uppercase dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" />
+        {#if errors.country}<span class="text-xs text-red-500">{errors.country}</span>{/if}
+      </div>
+    {/if}
+  </div>
+  <div id="dividend-withholding-note" class="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+    <p>{locked ? m.data_dividend_withholding_imported() : m.data_dividend_withholding_hint()}</p>
+    {#if countryInfo && countryInfo.source !== 'unknown'}
+      <p>
+        {m.data_dividend_country_known({ country: countryInfo.country, rate: `${(getDividendCreditCapRate({ country: countryInfo.country }) * 100).toFixed(0)}%` })}
+        {#if countryInfo.source === 'override'}
+          {m.data_dividend_country_hint({ symbol: symbol.trim().toUpperCase() })}
+        {/if}
+      </p>
+    {:else if countryGainsOnly}
+      <p>{m.data_dividend_country_gains_only()}</p>
+    {/if}
+    {#if errors.country && !countryInputShown}<p class="text-red-500">{errors.country}</p>{/if}
   </div>
   <div class="flex justify-end gap-2">
     <button type="button" onclick={oncancel} class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700">
