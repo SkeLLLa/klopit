@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildPitZg } from '../src/core/tax/pit-zg.js';
+import { buildPitZg, requiredPitZg } from '../src/core/tax/pit-zg.js';
 import type { DividendResult, TradeResult } from '../src/core/types.js';
 
 function makeSellResult(overrides: Partial<TradeResult> = {}): TradeResult {
@@ -210,5 +210,63 @@ void describe('buildPitZg', () => {
     });
     assert.equal(result[0].country, 'DE');
     assert.equal(result[1].country, 'US');
+  });
+
+  void it('marks a country with zero foreign tax as not required', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({ country: 'US', foreignTaxPln: 0 }),
+        makeSellResult({ country: 'DE', foreignTaxPln: 0 }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    assert.equal(result.length, 2);
+    assert.ok(result.every((entry) => !entry.required));
+    assert.deepEqual(requiredPitZg(result), []);
+  });
+
+  void it('marks a country with foreign tax as required and counts it', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({ country: 'US', foreignTaxPln: 0 }),
+        makeSellResult({ country: 'DE', foreignTaxPln: 500 }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    const de = result.find((entry) => entry.country === 'DE');
+    const us = result.find((entry) => entry.country === 'US');
+    assert.equal(de?.required, true);
+    assert.equal(us?.required, false);
+    assert.deepEqual(
+      requiredPitZg(result).map((entry) => entry.country),
+      ['DE'],
+    );
+  });
+
+  void it('does not require a country whose net result is a loss', () => {
+    const result = buildPitZg({
+      trades: [
+        makeSellResult({
+          country: 'DE',
+          proceedsPln: 1000,
+          costPln: 2000,
+          foreignTaxPln: 50,
+        }),
+      ],
+      dividends: [],
+      showDividends: false,
+    });
+    assert.equal(result[0].required, false);
+  });
+
+  void it('keeps dividend-only compatibility rows informational', () => {
+    const result = buildPitZg({
+      trades: [],
+      dividends: [makeDivResult({ country: 'US' })],
+      showDividends: true,
+    });
+    assert.equal(result[0].required, false);
   });
 });

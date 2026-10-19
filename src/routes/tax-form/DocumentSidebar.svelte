@@ -12,10 +12,12 @@
 
   let {
     countries,
+    informationalCountries = [],
     activeDocument,
     onselect,
   }: {
     countries: string[];
+    informationalCountries?: string[];
     activeDocument: ActiveDocument;
     onselect: (doc: ActiveDocument) => void;
   } = $props();
@@ -33,6 +35,7 @@
   }
 
   const hasPitZg = $derived(countries.length > 0);
+  const hasInformational = $derived(informationalCountries.length > 0);
 </script>
 
 <!-- Desktop sidebar -->
@@ -83,6 +86,25 @@
         {/each}
       {/if}
     {/if}
+
+    <!-- Countries taxed only in Poland: PIT/ZG not required -->
+    {#if hasInformational}
+      <p
+        class="px-2 pt-2 pl-6 text-xs text-slate-500 dark:text-slate-400"
+        title={m.tax_sidebar_pitzg_not_required_hint()}
+      >
+        {m.tax_sidebar_pitzg_not_required()}
+      </p>
+      {#each informationalCountries as country (country)}
+        <button
+          class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 pl-12 text-left opacity-60 {isActive({ pitZg: country }) ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'}"
+          onclick={() => onselect({ pitZg: country })}
+        >
+          <FileText size={14} />
+          {country}
+        </button>
+      {/each}
+    {/if}
   </div>
 
   <!-- Country mapping link -->
@@ -115,6 +137,11 @@
     <option value="pit38">PIT-38</option>
     {#each countries as country (country)}
       <option value="pitzg:{country}">PIT/ZG — {country}</option>
+    {/each}
+    {#each informationalCountries as country (country)}
+      <option value="pitzg:{country}">
+        PIT/ZG — {country} ({m.tax_sidebar_pitzg_not_required_short()})
+      </option>
     {/each}
   </select>
 </div>

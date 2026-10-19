@@ -17,6 +17,7 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
       entry = {
         country,
         countryNamePl: getPolishCountryName({ country }),
+        required: false,
       };
       countries.set(country, entry);
     }
@@ -43,6 +44,13 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
     }
   }
 
+  // PIT/ZG is required only where foreign tax on the gain was paid and is
+  // credited (art. 30b ust. 5a/5b updof). Country-only dividend rows stay
+  // informational as well: dividends are settled in PIT-38 section G.
+  for (const entry of countries.values()) {
+    entry.required = (entry.tradeForeignTaxPln ?? 0) > 0;
+  }
+
   if (showDividends) {
     for (const div of dividends) {
       const entry = getEntry(div.country);
@@ -57,4 +65,9 @@ export function buildPitZg(args: BuildPitZgArgs): PitZgFields[] {
   return [...countries.values()].toSorted((a, b) =>
     a.country.localeCompare(b.country),
   );
+}
+
+/** PIT/ZG attachments that must actually be filed (foreign tax credited). */
+export function requiredPitZg(list: PitZgFields[]): PitZgFields[] {
+  return list.filter((entry) => entry.required);
 }

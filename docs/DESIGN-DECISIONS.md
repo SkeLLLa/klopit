@@ -551,7 +551,21 @@ Can't use progressive tax brackets (which would require income info outside scop
 - Country overrides carry a non-indexed `scope` (`dividends` | `gains` | `both`; missing = `both`), so existing overrides keep their meaning and a dividend override doesn't move gains.
 - Payments in lieu get `kind: 'payment-in-lieu'` and are separate events. Their country is the withholding country (`taxCountry`), falling back to the ISIN country; a user override always wins, except for payments in lieu, whose country is the state that withheld the tax (a US-withheld PIL is capped by the US treaty, not by an override to another state); they never feed ADR learning, get no W-8BEN warning, and always carry an informational "substitute payment" warning. The classification of PIL as a dividend for PIT-38 is flagged for the user to verify, not decided by kloPIT.
 
-**Trade-offs:** The ADR country lives on dividend rows only, so rows imported before this change need a re-import (legacy rows without `kind` count as ordinary dividends, so legacy payments in lieu are only separated after a re-import). The PIT/ZG "required only with foreign tax" labelling is a separate follow-up.
+**Trade-offs:** The ADR country lives on dividend rows only, so rows imported before this change need a re-import (legacy rows without `kind` count as ordinary dividends, so legacy payments in lieu are only separated after a re-import). The PIT/ZG "required only with foreign tax" labelling is covered in the next decision.
+
+---
+
+## Design Decision: PIT/ZG required only when foreign tax is credited
+
+**Problem:** `buildPitZg` produced a PIT/ZG for every country with sell trades, implying one attachment per country.
+
+**Decision:**
+
+- PIT/ZG is required only for foreign income to which the foreign-tax-credit method applies (art. 30b ust. 5a/5b updof; MF "Broszura do PIT-38 za 2025 r.", Część L; PIT/ZG(8) header). Share gains are taxable only in Poland under the treaties (OECD MC art. 13 ust. 5), so no foreign tax arises.
+- `PitZgFields.required = tradeForeignTaxPln > 0`. Countries with zero foreign tax stay in the result (users who filed them before can still see the values) but are shown muted as "Not required — income taxed only in Poland (informational)" and excluded from the attachment list via `requiredPitZg()`.
+- Dividends are unchanged: art. 30a income goes to PIT-38 section G; the optional compatibility rows are informational unless a country also has foreign tax on gains.
+
+**Trade-offs:** `TradeResult.foreignTaxPln` is always 0 for gains today, so all gains rows are informational until a source of foreign capital-gains tax exists.
 
 ---
 

@@ -79,7 +79,10 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       ],
       ['Foreign dividends', 'Polish 19% tax, treaty credit limit, excess WHT'],
       ['PIT-38', 'sections C, D, G and payment summary'],
-      ['PIT/ZG', 'one attachment per country for foreign income'],
+      [
+        'PIT/ZG',
+        'required only for countries with foreign tax credited on gains',
+      ],
       ['Prior-year losses', '5-year carry-forward with a 50% annual cap'],
     ],
     manualTitle: 'When a broker has no parser',

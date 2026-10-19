@@ -128,7 +128,7 @@ kloPIT generates PIT/ZG for **share income reported in PIT/ZG section C.3** alon
 - Income from abroad: item 29
 - Tax paid abroad on that income: item 30
 
-You need **one PIT/ZG per country**. The country is inferred from ISIN country mappings, and dividend ISINs are reused to fill the country for the same symbol when trade rows do not have a usable ISIN country.
+PIT/ZG is **required only for countries where foreign tax on the gain was paid and is credited** (art. 30b ust. 5a/5b updof; MF "Broszura do PIT-38 za 2025 r.", Część L). Under the treaties share gains are taxed only in Poland (OECD MC art. 13 ust. 5), so such countries are shown muted as "Not required — income taxed only in Poland (informational)" and are not counted as attachments. The country is inferred from ISIN country mappings, and dividend ISINs are reused to fill the country for the same symbol when trade rows do not have a usable ISIN country.
 
 **Capital gains always use the ISIN-prefix country.** An ADR such as TSM (`US8740391003`) is US in `TradeResult.country` and in PIT/ZG, even when its dividends come from another state. Only dividends use a different country for ADRs (see step 1 in "Dividend Tax"). A user country override can be scoped to dividends, gains or both (a missing scope means both). When filing electronically via e-Urząd Skarbowy, PIT/ZG is generated as part of the PIT-38 form. kloPIT shows the values you need to fill in.
 
@@ -157,7 +157,7 @@ The tax calculator (`calculator.ts`) orchestrates six steps:
 3. calculateCreditInterest()→  CreditInterestResult[] (PLN conversion, 19% flat rate)
 4. buildSummary()           →  TaxSummary             (aggregate totals for dashboard)
 5. buildPit38()             →  Pit38Fields            (PIT-38 form field values with rounding)
-6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG C.3 share income; optional dividend compatibility rows)
+6. buildPitZg()             →  PitZgFields[]          (per-country PIT/ZG C.3 share income, `required` only with foreign tax; optional dividend compatibility rows)
 ```
 
 All inputs arrive **pre-enriched** with NBP exchange rates resolved by the service layer before reaching the calculator.
@@ -667,6 +667,8 @@ PIT/ZG is generated from sell trades by country. In the PIT/ZG view:
 
 If item 29 is zero, item 30 is also shown as zero because it is tax paid abroad from the income in item 29.
 
+**Required vs. informational:** `PitZgFields.required` is `true` only when `tradeForeignTaxPln > 0` (art. 30b ust. 5a/5b updof; MF PIT-38 brochure, Część L: "do których ma zastosowanie metoda odliczenia podatku zapłaconego za granicą"; PIT/ZG(8) header). Countries with no foreign tax stay in the list with `required: false`; the tax form lists them separately and muted, and `requiredPitZg()` returns only the required ones. `TradeResult.foreignTaxPln` is currently always 0 for gains (nothing sets it), so today every capital-gains row is informational; the logic is general and a non-zero value makes the country required.
+
 Foreign dividends are art. 30a flat-rate income and stay in PIT-38 section G by default. They do not create PIT/ZG entries unless the user enables the compatibility setting.
 
 **Optional dividend compatibility setting:**
@@ -689,6 +691,7 @@ For each country:
     lossPln = max(costPln − proceedsPln, 0)
     If gainPln == 0:
         tradeForeignTaxPln = 0
+    required = tradeForeignTaxPln > 0
 
 If showDividendsInPitZg:
     For each dividend:

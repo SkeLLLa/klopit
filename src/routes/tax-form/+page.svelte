@@ -69,7 +69,12 @@
   let activeDocument: ActiveDocument = $state('pit38');
 
   const pitZgList = $derived(taxSummary?.pitZg ?? []);
-  const pitZgCountries = $derived(pitZgList.map((z) => z.country));
+  const pitZgCountries = $derived(
+    pitZgList.filter((z) => z.required).map((z) => z.country),
+  );
+  const pitZgInformationalCountries = $derived(
+    pitZgList.filter((z) => !z.required).map((z) => z.country),
+  );
   const pitZgMap = $derived(
     new Map(pitZgList.map((z) => [z.country, z])),
   );
@@ -338,6 +343,7 @@
     <div class="flex gap-6">
       <DocumentSidebar
         countries={pitZgCountries}
+        informationalCountries={pitZgInformationalCountries}
         {activeDocument}
         onselect={(doc) => (activeDocument = doc)}
       />
