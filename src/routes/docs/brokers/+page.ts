@@ -59,7 +59,8 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       schwab: {
         importType: 'CSV',
-        supportedData: 'trades and dividends from Charles Schwab reports',
+        supportedData:
+          'ESPP deposits, RSU vests and sales; dividends and withholding are not imported yet and must be entered manually',
         docsHref: '/docs/faq',
         status: 'partial',
       },
@@ -135,7 +136,8 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       schwab: {
         importType: 'CSV',
-        supportedData: 'transakcje i dywidendy z raportów Charles Schwab',
+        supportedData:
+          'wpłaty ESPP, vesting RSU i sprzedaże; dywidendy i podatek u źródła nie są jeszcze importowane i trzeba je wpisać ręcznie',
         docsHref: '/docs/faq',
         status: 'partial',
       },
@@ -215,7 +217,8 @@ const contentByLocale: Record<Locale, BrokerPageContent> = {
       },
       schwab: {
         importType: 'CSV',
-        supportedData: 'транзакції і дивіденди зі звітів Charles Schwab',
+        supportedData:
+          'надходження ESPP, vesting RSU і продажі; дивіденди та податок у джерела поки не імпортуються, їх потрібно вводити вручну',
         docsHref: '/docs/faq',
         status: 'partial',
       },
@@ -283,7 +286,7 @@ export const load = () => {
       description: content.metaDescription,
       ogType: 'article',
       datePublished: '2026-04-27',
-      dateModified: '2026-04-27',
+      dateModified: '2026-10-19',
       jsonLd: [
         {
           '@type': 'ItemList',
