@@ -495,24 +495,27 @@ Can't use progressive tax brackets (which would require income info outside scop
 
 Rounding follows both legal tax rounding rules and the precision printed on the official PIT forms:
 
-| Amount                        | Rule                                   | Legal basis                                                          |
-| ----------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
-| Tax base                      | Mathematical rounding to **whole PLN** | Art. 63 § 1 — ends below 50 gr → discard, 50 gr and above → round up |
-| Tax owed                      | Mathematical rounding to **whole PLN** | Art. 63 § 1 — same rule                                              |
-| Dividend tax (groszy amounts) | Round **up** to full groszy            | Art. 63 § 1a — taxes in groszy are rounded up                        |
-| PIT-38 fields marked `zł, gr` | Round to nearest grosz                 | Official form field precision                                        |
+| Amount                                    | Rule                                   | Legal basis                                                                         |
+| ----------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| Tax base, capital gains tax due           | Mathematical rounding to **whole PLN** | Art. 63 § 1 OP — ends below 50 gr → discard, 50 gr and above → round up             |
+| Dividend tax due (poz. 49, dividend part) | Mathematical rounding to **whole PLN** | Art. 63 § 1 OP — dividends are art. 30a ust. 1 pkt 4, outside § 1a                  |
+| Interest tax (poz. 47/49, interest part)  | Round **up** to full groszy            | Art. 63 § 1a OP — covers only art. 30a ust. 1 pkt 1–3 (interest is pkt 3); base too |
+| PIT-38 fields marked `zł, gr`             | Round to nearest grosz                 | Official form field precision                                                       |
 
-PIT-38 Section G has one awkward official-form detail: the label for `poz. 49`
-mentions full-złoty rounding, but the PIT-38(18) amount cells and official
-e-PIT examples use `zł, gr` precision for `poz. 47-49` and `poz. 51-52`.
-kloPIT follows the filing UI precision for copy/paste values while still using
-Art. 30a and Art. 63 as the legal grounding for the calculation itself.
+PIT-38 Section G is computed **per component** and poz. 49 is the sum of the
+two parts. The MF PIT-38 (2025) guide, part G, says amounts in poz. 46 and 49
+are given in full złoty, with the exception in art. 63 § 1a OP for art. 30a
+ust. 1 pkt 1–3 income, which is rounded up to full groszy. Art. 63 § 1a does
+**not** cover pkt 4 (dividends), so the dividend difference is rounded half-up
+to whole złoty. Each foreign-tax credit is capped at its own part (art. 30a
+ust. 9). The calculation lives in `sectionGForeignFlatTax()`; the tax-form UI
+shows core values as given and does not re-round.
 
 **Implementation:**
 
-- `roundToFullPln()` for tax base and full-PLN tax fields such as PIT-38 poz. 31 and 35
-- `roundToGrosz()` for PIT-38 fields that the official form marks as `zł, gr`, including Section C totals/gain/loss and poz. 51/52
-- `roundToGroszUp()` for tax amounts that must be rounded up to groszy, including PIT-38 poz. 47 and 49
+- `roundToFullPln()` for tax base and full-PLN tax fields such as PIT-38 poz. 31, 35 and the dividend part of poz. 49
+- `roundToGrosz()` for PIT-38 fields that the official form marks as `zł, gr`, including Section C totals/gain/loss, the dividend tax/credit parts and poz. 51/52
+- `roundToGroszUp()` for the interest part (art. 30a ust. 1 pkt 3) of poz. 47 and 49
 
 ---
 

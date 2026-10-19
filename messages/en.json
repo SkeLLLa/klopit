@@ -249,7 +249,7 @@
   "faq_08_question": "How is foreign withholding tax deducted for dividends?",
   "faq_09_answer": "kloPIT maps results to PIT-38 fields step by step: proceeds and costs in Section C, tax base and capital gains tax in Section D, dividend tax summary in Section G, payment summary, and the optional OPP request in Section J. It also builds PIT/ZG C.3 values per country for share income, using ISIN country mapping and reusing dividend ISIN mappings for the same symbol when needed.",
   "faq_09_question": "How are PIT-38 and PIT/ZG fields calculated?",
-  "faq_10_answer": "Fields marked as rounded to full PLN, such as the tax base and tax due, use standard mathematical rounding. PIT-38 fields shown in zł/gr, including Section C totals and payment summary lines 51-52, keep grosz precision. Dividend flat-tax difference fields are rounded up to full grosz where required by the form rules.",
+  "faq_10_answer": "Fields marked as rounded to full PLN, such as the tax base and tax due, use standard mathematical rounding. PIT-38 fields shown in zł/gr, including Section C totals and payment summary lines 51-52, keep grosz precision. PIT-38 section G is rounded per component: the dividend part of poz. 49 to full PLN (art. 63 § 1 of the Tax Ordinance), and the credit-interest part up to the full grosz (art. 63 § 1a, which covers only art. 30a ust. 1 pkt 1–3).",
   "faq_10_question": "What rounding rules does kloPIT apply?",
   "faq_11_answer": "Sections E and F (crypto) and monthly flat-rate fields in sections H/I are currently placeholders in kloPIT and are set to zero. The app currently focuses on capital gains and foreign dividends for PIT-38 with PIT/ZG support.",
   "faq_11_question": "Which PIT-38 sections are currently placeholders?",

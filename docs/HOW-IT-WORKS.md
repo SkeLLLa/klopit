@@ -338,7 +338,7 @@ Note: `capitalGainTaxPln` in the summary is the **pre-rounding, pre-deduction** 
 - **Sell price in PLN:** `proceeds × NBP_rate_from_day_before_sell`
 - **Minus sell commission in PLN:** `commission × NBP_rate_from_day_before_sell`
 
-**Rounding:** Tax base and tax owed are rounded to full złoty using mathematical rounding ([art. 63 § 1 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/) — amounts ending in less than 50 groszy are discarded, 50 groszy and above are rounded up to the next full złoty).
+**Rounding:** Tax base and tax owed are rounded to full złoty using mathematical rounding ([art. 63 § 1 Ordynacji podatkowej](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/) — amounts ending in less than 50 groszy are discarded, 50 groszy and above are rounded up to the next full złoty).
 
 ---
 
@@ -502,15 +502,15 @@ foreignTaxPln   = 0 (IBKR LLC — US portfolio interest exemption)
 
 Two distinct rounding functions are used, matching separate legal provisions:
 
-| Function         | Legal basis                                                                         | Algorithm                                                    | Used for                                                                                                               |
-| ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `roundToFullPln` | [Art. 63 § 1 Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/)  | `Math.round(amount)` — mathematical rounding to full złoty   | Tax base (poz. 31), capital gains tax due (poz. 35), crypto placeholders (poz. 41/45), monthly placeholder fields      |
-| `roundToGrosz`   | Form field precision (`zł, gr`)                                                     | `Math.round((amount + EPSILON) × 100) / 100` — nearest grosz | PIT-38 Section C totals/gain/loss (poz. 22/23/26/27/28/29), foreign tax credit (poz. 48), payment summary (poz. 51/52) |
-| `roundToGroszUp` | [Art. 63 § 1a Ordynacji podatkowej](https://lexlege.pl/ordynacja-podatkowa/art-63/) | `Math.ceil(amount × 100) / 100` — ceiling to full groszy     | Dividend/interest tax amount (poz. 47), dividend/interest tax difference (poz. 49)                                     |
+| Function         | Legal basis                                                                                                           | Algorithm                                                    | Used for                                                                                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roundToFullPln` | [Art. 63 § 1 Ordynacji podatkowej](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/)                                 | Half-up rounding to full złoty (under 50 gr dropped)         | Tax base (poz. 31), capital gains tax due (poz. 35), dividend part of poz. 49, crypto placeholders (poz. 41/45), monthly placeholder fields |
+| `roundToGrosz`   | Form field precision (`zł, gr`)                                                                                       | `Math.round((amount + EPSILON) × 100) / 100` — nearest grosz | PIT-38 Section C totals/gain/loss (poz. 22/23/26/27/28/29), dividend tax/credit parts of poz. 47/48, payment summary (poz. 51/52)           |
+| `roundToGroszUp` | [Art. 63 § 1a Ordynacji podatkowej](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/) — art. 30a ust. 1 pkt 1–3 only | `Math.ceil(amount × 100) / 100` — ceiling to full groszy     | Interest part (art. 30a ust. 1 pkt 3) of poz. 47 and 49 — base and tax                                                                      |
 
 **`roundToGroszUp` precision handling:** Uses `+(amount * 100).toFixed(10)` before `Math.ceil` to avoid floating-point artifacts (e.g., `0.1 + 0.2 = 0.30000000000000004`).
 
-**PIT-38 Section G precision note:** PIT-38(18) labels `poz. 49` as a difference "po zaokrągleniu do pełnych złotych", while the official e-PIT examples and the form amount cells for `poz. 47-49` and `poz. 51-52` use `zł, gr` precision. kloPIT follows the filing UI precision for copy/paste values: `poz. 47` and `poz. 49` are rounded up to full groszy, `poz. 48` and `poz. 51-52` are rounded to nearest grosz.
+**PIT-38 Section G rounding note:** the MF PIT-38 (2025) guide, part G, says amounts in `poz. 46` and `poz. 49` are given in full złoty, except under [art. 63 § 1a OP](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/) for income under art. 30a ust. 1 pkt 1–3, which is rounded up to full groszy. § 1a does not cover pkt 4 (dividends). kloPIT therefore computes section G per component (`sectionGForeignFlatTax`): the dividend part of `poz. 49` is rounded half-up to full złoty (art. 63 § 1), the interest part (pkt 3) is rounded up to the grosz (base and tax), and `poz. 49` is the sum. `poz. 47`/`poz. 48` are the sums of the per-part tax and credit; `poz. 51-52` stay at grosz precision.
 
 ---
 
@@ -568,22 +568,25 @@ Not yet implemented. Fields poz36–poz45 are set to 0.
 **Grounding:**
 
 - PIT-38(18) `poz. 46` is for art. 29, 30, and 30a flat-rate tax not collected by a payer, excluding the tax shown separately in `poz. 47`, `poz. 48`, and section H. kloPIT currently leaves this at `0` because supported dividends and credit interest are routed to `poz. 47-49`.
-- PIT-38(18) `poz. 47` is the flat-rate tax from foreign art. 30a ust. 1 pkt 1-5 income. This includes dividends under art. 30a ust. 1 pkt 4 and supported broker credit interest under art. 30a ust. 1 pkt 3.
-- PIT-38(18) `poz. 48` is foreign tax paid under art. 30a ust. 9, converted to PLN and capped so it cannot exceed `poz. 47`.
-- PIT-38(18) `poz. 49` is the difference `poz. 47 - poz. 48`.
+- PIT-38(18) `poz. 47` is the flat-rate tax from foreign art. 30a ust. 1 pkt 1-5 income (the form's scope; § 1a rounding applies only to pkt 1–3). This includes dividends under art. 30a ust. 1 pkt 4 and supported broker credit interest under art. 30a ust. 1 pkt 3.
+- PIT-38(18) `poz. 48` is foreign tax paid under art. 30a ust. 9, converted to PLN and capped per part (art. 30a ust. 9) so each credit cannot exceed its own part's tax.
+- PIT-38(18) `poz. 49` is the difference `poz. 47 - poz. 48`, computed per component: dividend difference to full złoty (art. 63 § 1), interest difference up to the grosz (art. 63 § 1a).
 - PIT-38(18) `poz. 51` is `max(poz35 + poz45 + poz46 + poz49 - poz50, 0)`.
 
 ```
 poz46 = 0                                                        // Other flat-rate tax (not applicable)
-poz47 = roundToGroszUp((totalDividendsPln + totalCreditInterestPln) × 0.19)  // Foreign flat-rate tax (19%)
-poz48 = round_to_groszy(min(totalDeductibleWithholdingPln + totalCreditInterestForeignTaxPln, poz47))  // Deductible foreign tax
-poz49 = roundToGroszUp(max(poz47 − poz48, 0))                   // Dividend tax difference (art. 63 § 1a)
+divTax    = roundToGrosz(totalDividendsPln × 0.19)
+divCredit = roundToGrosz(min(totalDeductibleWithholdingPln, divTax))     // art. 30a ust. 9
+intTax    = roundToGroszUp(roundToGroszUp(totalCreditInterestPln) × 0.19) // art. 63 § 1a
+intCredit = roundToGrosz(min(totalCreditInterestForeignTaxPln, intTax))
+poz47 = divTax + intTax                                          // Foreign flat-rate tax (19%)
+poz48 = divCredit + intCredit                                    // Deductible foreign tax
+poz49 = roundToFullPln(roundToGrosz(max(divTax − divCredit, 0)))  // dividends: art. 63 § 1
+      + roundToGroszUp(max(intTax − intCredit, 0))               // interest:  art. 63 § 1a
 poz50 = 0                                                        // Advance payments by payers
 poz51 = roundToGrosz(max(poz35 + poz45 + poz46 + poz49 − poz50, 0))  // TAX TO PAY
 poz52 = roundToGrosz(max(poz50 − (poz35 + poz45 + poz46 + poz49), 0))  // OVERPAYMENT
 ```
-
-Where `round_to_groszy` uses `Math.round(amount × 100) / 100` (standard rounding to nearest grosz).
 
 #### Section J — OPP 1.5% Request
 
@@ -867,8 +870,8 @@ The app supports **three languages:**
    - Map summary values to form fields with proper rounding
    - Apply prior-year loss deduction via `applyLossCarryForward` (5-year window, 50%-per-year cap, FIFO across loss years)
    - Round Section C totals and gain/loss to grosz precision before deriving the tax base
-   - Round tax base and tax due to full PLN ([art. 63 § 1](https://lexlege.pl/ordynacja-podatkowa/art-63/))
-   - Round dividend and credit interest tax to full groszy up ([art. 63 § 1a](https://lexlege.pl/ordynacja-podatkowa/art-63/))
+   - Round tax base and tax due to full PLN ([art. 63 § 1](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/))
+   - Round section G per component: dividend difference to full złoty ([art. 63 § 1](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/)), credit interest tax up to the grosz ([art. 63 § 1a](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/), art. 30a ust. 1 pkt 1–3 only)
    - Keep poz. 51/52 at grosz precision because PIT-38(18) labels these fields as `zł, gr`
 8. **PIT/ZG** (`buildPitZg`):
    - Group sell trades by country for PIT/ZG C.3 items 29/30
@@ -996,23 +999,23 @@ A: Losses are tracked and can offset gains up to limits, or be carried forward 5
 
 Key Polish tax law provisions used in kloPIT calculations:
 
-| Topic                                 | Legal basis                        | Link                                                                                                    |
-| ------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| PIT-38 form obligation                | Art. 45 ust. 1a pkt 1 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
-| Capital gains tax 19%                 | Art. 30b ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                |
-| Dividend tax 19%                      | Art. 30a ust. 1 pkt 4 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
-| Credit interest tax 19%               | Art. 30a ust. 1 pkt 3 ustawy o PIT | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
-| Foreign tax deduction cap             | Art. 30a ust. 9 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
-| FIFO method                           | Art. 24 ust. 10 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                 |
-| Exchange rate conversion              | Art. 11a ust. 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                |
-| Loss carry-forward (5 years)          | Art. 9 ust. 3 ustawy o PIT         | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)                  |
-| Rounding to full PLN                  | Art. 63 § 1 Ordynacji podatkowej   | [lexlege.pl](https://lexlege.pl/ordynacja-podatkowa/art-63/)                                            |
-| Rounding to full groszy               | Art. 63 § 1a Ordynacji podatkowej  | [lexlege.pl](https://lexlege.pl/ordynacja-podatkowa/art-63/)                                            |
-| OPP 1.5% donation                     | Art. 45c ustawy o PIT              | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/)                |
-| Filing deadline (April 30)            | Art. 45 ust. 1 ustawy o PIT        | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
-| PIT/ZG attachment                     | Art. 45 ust. 1a ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
-| US-Poland tax treaty (dividends)      | Art. 11 Konwencji PL-US            | [isap.sejm.gov.pl](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19760310178)                  |
-| DTT withholding rates (all countries) | Polish double-tax treaties (UPO)   | [PwC Worldwide Tax Summaries — Poland](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes) |
+| Topic                                 | Legal basis                              | Link                                                                                                    |
+| ------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| PIT-38 form obligation                | Art. 45 ust. 1a pkt 1 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| Capital gains tax 19%                 | Art. 30b ust. 1 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30b/)                |
+| Dividend tax 19%                      | Art. 30a ust. 1 pkt 4 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| Credit interest tax 19%               | Art. 30a ust. 1 pkt 3 ustawy o PIT       | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| Foreign tax deduction cap             | Art. 30a ust. 9 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-30a/)                |
+| FIFO method                           | Art. 24 ust. 10 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-24/)                 |
+| Exchange rate conversion              | Art. 11a ust. 1 ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-11a/)                |
+| Loss carry-forward (5 years)          | Art. 9 ust. 3 ustawy o PIT               | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-9/)                  |
+| Rounding to full PLN                  | Art. 63 § 1 Ordynacji podatkowej         | [lexlege.pl](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/)                                         |
+| Rounding up to full groszy (interest) | Art. 63 § 1a OP, art. 30a ust. 1 pkt 1–3 | [lexlege.pl](https://lexlege.pb.pl/ordynacja-podatkowa/art-63/)                                         |
+| OPP 1.5% donation                     | Art. 45c ustawy o PIT                    | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45c/)                |
+| Filing deadline (April 30)            | Art. 45 ust. 1 ustawy o PIT              | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| PIT/ZG attachment                     | Art. 45 ust. 1a ustawy o PIT             | [lexlege.pl](https://lexlege.pl/ustawa-o-podatku-dochodowym-od-osob-fizycznych/art-45/)                 |
+| US-Poland tax treaty (dividends)      | Art. 11 Konwencji PL-US                  | [isap.sejm.gov.pl](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU19760310178)                  |
+| DTT withholding rates (all countries) | Polish double-tax treaties (UPO)         | [PwC Worldwide Tax Summaries — Poland](https://taxsummaries.pwc.com/poland/corporate/withholding-taxes) |
 
 **Full legal texts:**
 
@@ -1047,6 +1050,6 @@ kloPIT treats the PIT-38 form page as a **summary view** — every number is com
 
 - **Capital gains (Sections C + D)** — `/dashboard#trades` shows each closed trade with proceeds (PLN), FIFO-matched cost basis (PLN), gain/loss (PLN), and the 19% tax on that trade. Totals at the bottom of the table tie to `poz. 22` (proceeds), `poz. 23` (costs), `poz. 28` (gain) or `poz. 29` (loss). Prior-year loss deductions feeding `poz. 30` are broken down per-year in Section D.
 - **Dividends and credit interest (Section G)** — `/dashboard#dividends` shows each dividend with PLN amount, effective foreign withholding %, the UPO-capped deductible %, and PL tax-to-pay %. Totals correspond to `poz. 47` (19% flat-rate tax), `poz. 48` (deductible foreign tax), and `poz. 49` (tax difference).
-- **Rounding** — section C form totals (`poz. 22/23/26/27/28/29`) and payment summary (`poz. 51/52`) are rounded to grosz precision. The base and capital-gains tax due (`poz. 31`, `poz. 35`) are rounded to full PLN (`roundToFullPln`). Dividend and interest tax amounts (`poz. 47`, `poz. 49`) are rounded up to full grosze (`roundToGroszUp`). See `src/core/tax/pit38.ts`, `src/core/tax/rounding.ts`, and `src/core/tax/aggregates.ts`.
+- **Rounding** — section C form totals (`poz. 22/23/26/27/28/29`) and payment summary (`poz. 51/52`) are rounded to grosz precision. The base and capital-gains tax due (`poz. 31`, `poz. 35`) are rounded to full PLN (`roundToFullPln`). `poz. 49` is computed per component: the dividend part is rounded to full złoty (`roundToFullPln`, art. 63 § 1) and the credit-interest part up to the grosz (`roundToGroszUp`, art. 63 § 1a, pkt 1–3 only); `poz. 47`/`poz. 48` are sums of the parts. See `src/core/tax/pit38.ts`, `src/core/tax/rounding.ts`, and `src/core/tax/aggregates.ts`.
 
 **Parser architecture.** Imports run through `ParserDefinition` implementations in `src/core/parsers/` (Interactive Brokers CSV, IBI Capital PDF, manual entry). More brokers are on the roadmap — see `docs/ROADMAP.md`. Parser PRs are welcome.
