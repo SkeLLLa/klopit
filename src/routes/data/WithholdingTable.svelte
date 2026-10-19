@@ -9,6 +9,7 @@
     deleteWithholdingTax,
   } from '$lib/services/data.js';
   import { formatDate, toDateInput } from '$lib/utils/format-date.js';
+  import { fromDateInput } from '$lib/utils/date-input.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -38,12 +39,14 @@
 
   async function saveEdit() {
     if (editingId === null) return;
+    const date = fromDateInput(editDate);
+    if (!date) return;
     await updateWithholdingTax({
       id: editingId,
       changes: {
         symbol: editSymbol.trim().toUpperCase(),
         isin: editIsin.trim() || undefined,
-        date: new Date(editDate),
+        date,
         amount: parseFloat(editAmount),
         currency: editCurrency.trim().toUpperCase(),
       },

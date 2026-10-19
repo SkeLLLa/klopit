@@ -9,6 +9,7 @@
     deleteCreditInterest,
   } from '$lib/services/data.js';
   import { formatDate, toDateInput } from '$lib/utils/format-date.js';
+  import { fromDateInput } from '$lib/utils/date-input.js';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
 
@@ -35,10 +36,12 @@
 
   async function saveEdit() {
     if (editingId === null) return;
+    const date = fromDateInput(editDate);
+    if (!date) return;
     await updateCreditInterest({
       id: editingId,
       changes: {
-        date: new Date(editDate),
+        date,
         amount: parseFloat(editAmount),
         currency: editCurrency.trim().toUpperCase(),
         description: editDescription.trim(),

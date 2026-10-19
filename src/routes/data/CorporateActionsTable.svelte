@@ -9,6 +9,7 @@
     deleteCorporateAction,
   } from '$lib/services/data.js';
   import { formatDatetime, toDatetimeLocal } from '$lib/utils/format-date.js';
+  import { fromDatetimeLocal } from '$lib/utils/date-input.js';
   import MissingIsinLookup from '$lib/components/ui/MissingIsinLookup.svelte';
   import DeleteConfirm from '$lib/components/DeleteConfirm.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -60,13 +61,15 @@
 
   async function saveEdit() {
     if (editingId === null) return;
+    const datetime = fromDatetimeLocal(editDatetime);
+    if (!datetime) return;
     await updateCorporateAction({
       id: editingId,
       changes: {
         type: editType,
         symbol: editSymbol.trim().toUpperCase(),
         isin: editIsin.trim() || undefined,
-        datetime: new Date(editDatetime),
+        datetime,
         numerator: parseFloat(editNumerator) || 0,
         denominator: parseFloat(editDenominator) || 0,
         targetSymbol: editTargetSymbol.trim().toUpperCase() || undefined,

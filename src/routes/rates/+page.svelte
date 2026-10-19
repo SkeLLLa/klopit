@@ -4,6 +4,7 @@
   import { pageTitle } from '$lib/state/page-title.svelte.js';
   import { db } from '$lib/db.js';
   import { useLiveQuery } from '$lib/utils/live-query.svelte.js';
+  import { fromDateInput } from '$lib/utils/date-input.js';
   import { getCachedRates } from '$lib/services/rates.js';
   import {
     formatDate,
@@ -34,11 +35,10 @@
 
   function handlePickerChange() {
     if (!pickerRef?.value) return;
-    const d = new Date(pickerRef.value);
-    if (!isNaN(d.getTime())) {
-      parsedDate = d;
-      fetchDateText = formatDate(d);
-    }
+    const d = fromDateInput(pickerRef.value);
+    if (!d) return;
+    parsedDate = d;
+    fetchDateText = formatDate(d);
   }
 
   async function handleFetch() {
