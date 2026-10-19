@@ -382,7 +382,7 @@ test/
 
 **What**: Pure `src/core/` functions with mock data  
 **Tools**: Node.js `test` runner + `assert/strict`  
-**Run**: `node --test test/*.test.ts`
+**Run**: `pnpm test:unit:local`
 
 ### Level 2: Service Integration (No full UI)
 
@@ -521,15 +521,15 @@ pnpm build
 
 ## Common Development Tasks
 
-| Task          | Command                      | Files                               |
-| ------------- | ---------------------------- | ----------------------------------- |
-| Run tests     | `node --test test/*.test.ts` | `test/`                             |
-| Type check    | `svelte-check`               | All `.ts` / `.svelte`               |
-| Lint          | `pnpm lint`                  | svelte-check, oxlint, oxfmt --check |
-| Format        | `pnpm format`                | oxfmt, run manually                 |
-| Build         | `pnpm build`                 | → `build/`                          |
-| Dev server    | `pnpm dev`                   | → `http://localhost:5173`           |
-| Generate i18n | (automatic)                  | → `src/lib/paraglide/`              |
+| Task          | Command                | Files                               |
+| ------------- | ---------------------- | ----------------------------------- |
+| Run tests     | `pnpm test:unit:local` | `test/`                             |
+| Type check    | `pnpm lint:types`      | All `.ts` / `.svelte`               |
+| Lint          | `pnpm lint`            | svelte-check, oxlint, oxfmt --check |
+| Format        | `pnpm format`          | oxfmt, run manually                 |
+| Build         | `pnpm build`           | → `build/`                          |
+| Dev server    | `pnpm dev`             | → `http://localhost:5173`           |
+| Generate i18n | (automatic)            | → `src/lib/paraglide/`              |
 
 ---
 

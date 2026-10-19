@@ -70,7 +70,7 @@ Then install dependencies and start developing:
 ```bash
 pnpm install
 pnpm dev   # dev server at http://localhost:5173
-pnpm test  # run all tests
+pnpm test  # lint + unit tests
 pnpm build # production build → build/
 ```
 

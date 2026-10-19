@@ -46,7 +46,7 @@ pnpm build    # production build → build/
 ## Code & Quality Rules
 
 - **All tests must pass** — run `pnpm test` before opening a PR. PRs with failing tests will not be merged.
-- **Type-check** — `pnpm svelte-check` must report 0 errors.
+- **Type-check** — `pnpm lint:types` (svelte-check) must report 0 errors.
 - **TypeScript strictness** — `tsconfig.json` enables `strict`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch` and `noPropertyAccessFromIndexSignature`. With `exactOptionalPropertyTypes`, write optional properties that may receive `undefined` as `foo?: T | undefined`. `noUncheckedIndexedAccess` is deliberately **off**: enabling it produced 649 errors (mostly array/record indexing that is safe by construction), well beyond what is worth annotating. Prefer `.at()`/`Map` and explicit checks in new code, and don't add the flag without a plan to fix those.
 - **Type-aware lint gap in `.svelte`** — as of oxlint 1.88.0 / oxlint-tsgolint 7.0.2004 (the latest releases), `oxlint --type-aware` runs only syntactic rules on `<script lang="ts">` blocks in `.svelte` files (e.g. `no-explicit-any` fires); rules that need type information (`no-floating-promises`, `no-unsafe-*`, `restrict-template-expressions`, `no-unnecessary-condition`, …) are silently skipped there. `svelte-check` still catches type errors in `.svelte` scripts and templates, but not those lint rules, so review promises and `any`-flow in `.svelte` files by hand. Move logic that needs those checks into `.ts` modules where possible.
 - **Formatting & lint** — run `pnpm format` (oxfmt) before committing; `pnpm lint` (oxlint + `oxfmt --check`) must pass. There are no git hooks, so CI enforces this.
@@ -116,4 +116,4 @@ A `.mcp.json` file is included at the repository root. It configures the [**Svel
 **If you use an AI assistant:**
 
 - Verify all generated tax logic against the legal references in the table above — AI can be wrong about specific Polish tax rules.
-- Run `pnpm test` and `pnpm svelte-check` on the final output; do not submit AI-generated code that has not been validated.
+- Run `pnpm test` (lint + unit tests) on the final output; do not submit AI-generated code that has not been validated.
