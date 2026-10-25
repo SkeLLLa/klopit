@@ -68,7 +68,7 @@
   "devDependencies": {
     "@commitlint/config-conventional": "^21.2.4",
     "@inlang/paraglide-js": "^2.29.0",
-    "@oxc-node/core": "^0.1.7",
+    "@oxc-node/core": "^1.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
