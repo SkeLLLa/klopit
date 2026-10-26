@@ -56,18 +56,18 @@
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/onest": "^5.3.1",
-    "@lucide/svelte": "^1.59.0",
+    "@lucide/svelte": "^1.61.0",
     "@unovis/svelte": "^1.7.1",
     "@unovis/ts": "^1.7.1",
-    "dexie": "^4.4.6",
+    "dexie": "^4.4.7",
     "svelte": "^5.57.2",
     "svelty-picker": "^6.1.6",
     "typeid-js": "^1.2.0",
-    "unpdf": "^1.9.0"
+    "unpdf": "^1.9.1"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^21.2.4",
-    "@inlang/paraglide-js": "^2.29.0",
+    "@inlang/paraglide-js": "^2.29.1",
     "@oxc-node/core": "^1.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@semantic-release/changelog": "^7.0.0",
@@ -84,16 +84,16 @@
     "@types/node": "^26.6.5",
     "conventional-changelog-conventionalcommits": "^9.3.1",
     "fake-indexeddb": "^6.2.6",
-    "oxfmt": "^0.73.0",
-    "oxlint": "^1.88.0",
-    "oxlint-tsgolint": "^7.0.2004",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "pdf-lib": "^1.17.1",
     "semantic-release": "^25.0.9",
     "svelte-check": "^4.7.7",
     "svelte-sitemap": "^4.1.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   },
   "devEngines": {
     "runtime": {
