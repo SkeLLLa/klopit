@@ -1,3 +1,13 @@
+## [1.26.1](https://github.com/SkeLLLa/klopit/compare/v1.26.0...v1.26.1) (2026-10-26)
+
+### 🛠 Fixes
+
+* **deps:** bump the all-minor-patch group across 1 directory with 8 updates ([f7420d6](https://github.com/SkeLLLa/klopit/commit/f7420d64316506f727e1251b21c9878d296826dc))
+
+### 🧾 Other
+
+* **deps-dev:** bump @oxc-node/core from 0.1.7 to 1.0.0 ([b498911](https://github.com/SkeLLLa/klopit/commit/b498911ba787274c27ea9002f638063aba66b493))
+
 ## [1.26.0](https://github.com/SkeLLLa/klopit/compare/v1.25.2...v1.26.0) (2026-10-19)
 
 ### 🛠 Fixes
