@@ -1,3 +1,9 @@
+## [1.26.2](https://github.com/SkeLLLa/klopit/compare/v1.26.1...v1.26.2) (2026-11-01)
+
+### 🛠 Fixes
+
+* **deps:** bump the all-minor-patch group with 7 updates ([bd78f3f](https://github.com/SkeLLLa/klopit/commit/bd78f3fef99490fc58060f604be7af42e5f03ec0))
+
 ## [1.26.1](https://github.com/SkeLLLa/klopit/compare/v1.26.0...v1.26.1) (2026-10-26)
 
 ### 🛠 Fixes
